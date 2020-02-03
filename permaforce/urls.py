@@ -1,7 +1,7 @@
 from django.urls import path
 
-from permaforce import views
+from permafrost import views
 
 urlpatterns = [
-    path("", views.PermaforceIndexView.as_view(), name="permaforce-index"),
+    path("", views.PermaforceIndexView.as_view(), name="permafrost-index"),
 ]

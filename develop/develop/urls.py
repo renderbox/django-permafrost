@@ -17,6 +17,6 @@ from django.contrib import admin
 from django.urls import include, path
 
 urlpatterns = [
-    path('', include('permaforce.urls') ),
+    path('', include('permafrost.urls') ),
     path('admin/', admin.site.urls),
 ]

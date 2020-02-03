@@ -6,5 +6,5 @@
 
 from rest_framework import serializers, fields
 
-# from permaforce.models import *
+# from permafrost.models import *
 

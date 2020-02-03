@@ -13,11 +13,11 @@ with open(path.join(file_path, 'README.rst'), encoding='utf-8') as f:
     long_description = f.read()
 
 package_metadata = {
-    'name': 'django-permaforce',
+    'name': 'django-permafrost',
     'version': '0.1.0',
     'description': 'Adds Client Definable Permissions to Django',
     'long_description': long_description,
-    'url': 'https://github.com/renderbox/django-permaforce/',
+    'url': 'https://github.com/renderbox/django-permafrost/',
     'author': 'Grant Viklund',
     'author_email': 'renderbox@gmail.com',
     'license': 'MIT license',
@@ -34,7 +34,7 @@ package_metadata = {
 setup(
     **package_metadata,
     packages=find_packages(),
-    package_data={'permaforce': ['*.html']},
+    package_data={'permafrost': ['*.html']},
     include_package_data=True,
     python_requires=">=3.6",
     install_requires=[
