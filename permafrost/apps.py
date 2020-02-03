@@ -1,5 +1,5 @@
 from django.apps import AppConfig
 
 
-class PermaforceConfig(AppConfig):
+class PermafrostConfig(AppConfig):
     name = 'permafrost'
