@@ -59,12 +59,11 @@ class PermCheckMixin(object):
 
     def dispatch(self, request, *args, **kwargs):
 
-        result = super().dispatch(request, *args, **kwargs)
         user_ip = get_client_ip(request)
 
         try:
-            view_perms = self.get_perms(request)    # set(self.perms + getattr(self, "perms_" + request.method.lower(), [] ))
-            user_perms = request.user.perms()       # todo: Move this to the session variable and update it with Signals on login and change.
+            view_perms = self.get_view_perms(request)            #set(self.perms + getattr(self, "perms_" + request.method.lower(), [] ))
+            user_perms = request.user.get_all_permissions()   
 
             # if view_perms and request.user.is_authenticated:   # If there are any perms to check, check them, otherwise pass by default
             if view_perms:   # If there are any perms to check, check them, otherwise pass by default
@@ -107,11 +106,12 @@ class PermCheckMixin(object):
 
             return HttpResponse('Unauthorized', status=401)
 
-        return result
+        return super().dispatch(request, *args, **kwargs)
 
     @classmethod
-    def get_perms(cls, request):
+    def get_view_perms(cls, request):
         '''
         Class method so its perms can be checked without having to instatiate the view.
         '''
         return set(cls.perms + getattr(cls, "perms_" + request.method.lower(), [] ))
+
