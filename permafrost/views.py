@@ -63,8 +63,8 @@ class PermCheckMixin(object):
         user_ip = get_client_ip(request)
 
         try:
-            view_perms = self.get_perms(request) #set(self.perms + getattr(self, "perms_" + request.method.lower(), [] ))
-            user_perms = request.user.perms()     # todo: Move this to the session variable and update it with Signals on login and change.
+            view_perms = self.get_perms(request)    # set(self.perms + getattr(self, "perms_" + request.method.lower(), [] ))
+            user_perms = request.user.perms()       # todo: Move this to the session variable and update it with Signals on login and change.
 
             # if view_perms and request.user.is_authenticated:   # If there are any perms to check, check them, otherwise pass by default
             if view_perms:   # If there are any perms to check, check them, otherwise pass by default
