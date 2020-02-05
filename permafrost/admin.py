@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-# from .models import Perm
+from .models import Role, RolePermission
 
 # ################
 # # ADMIN ACTIONS
@@ -29,20 +29,27 @@ from django.contrib import admin
 # make_disabled.short_description = "Mark Disabled"
 
 
-# ###############
-# # MODEL ADMINS
-# ###############
+###############
+# MODEL ADMINS
+###############
 
-# class PermAdmin(admin.ModelAdmin):
-#     readonly_fields = ('slug',)
-#     list_display = ('name', 'slug', 'enabled')
-#     ordering = ('name',)
-#     actions = [recreate_slug, make_enabled, make_disabled]
-#     list_per_page = 25
+class RoleAdmin(admin.ModelAdmin):
+    # readonly_fields = ('slug',)
+    # list_display = ('name', 'category')
+    # ordering = ('name',)
+    pass
 
 
-# ###############
-# # REGISTRATION
-# ###############
+class RolePermissionAdmin(admin.ModelAdmin):
+    # readonly_fields = ('slug',)
+    # list_display = ('name', 'category')
+    # ordering = ('name',)
+    pass
 
-# admin.site.register(Perm, PermAdmin)
+
+###############
+# REGISTRATION
+###############
+
+admin.site.register(Role, RoleAdmin)
+admin.site.register(RolePermission, RolePermissionAdmin)
