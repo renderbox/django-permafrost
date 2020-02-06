@@ -127,6 +127,8 @@ class Role(models.Model):
                     perm = Permission.objects.get(codename=values[1], content_type__app_label=values[0])        # TODO: Should ignore but report if it does not exist
                     result.append(perm)
 
+        # TODO: Add "included" permissions to make sure they are always there
+
         return result
 
     def update_permissions(self, permissions=None, clear=False, remove=False):
