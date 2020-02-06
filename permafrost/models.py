@@ -73,6 +73,17 @@ ROLE_CATEGORY_CHOICES = [(value['choice'], key) for key,value in ROLE_CONFIG.ite
 def name_from_choice(choices, value):
     return [x[1] for x in choices if x[0] == value][0]
 
+def value_to_list(value):
+
+    if isinstance(value, str):
+        return [value]
+    
+    if value == None:
+        return []
+
+    return value
+
+
 ###############
 # MODELS
 ###############
@@ -98,9 +109,11 @@ class Role(models.Model):
     def __str__(self):
         return self.name
 
-    def get_permission_models(self, permissions=[]):
+    def get_permission_models(self, permissions=None):
         result = []
         choice = None
+
+        permissions = value_to_list(permissions)
 
         for key, value in ROLE_CONFIG.items():
             if value['choice'] == self.category:
@@ -111,19 +124,25 @@ class Role(models.Model):
             for permission in permissions:                  # Return all available permissions for now, TODO: move this to a query if possible to avoid all the DB hits
                 if permission in choice['permissions']:     # Do a check to make sure it's available to the user catagory
                     values = permission["perm"].split(".")
-                    perm = Permission.objects.get(codename=values[1], content_type__app_label=values[0])
+                    perm = Permission.objects.get(codename=values[1], content_type__app_label=values[0])        # TODO: Should ignore but report if it does not exist
                     result.append(perm)
 
         return result
 
-    def add_permissions(self, permissions=[], clear=False):
+    def update_permissions(self, permissions=None, clear=False, remove=False):
+        '''
+        This will update the permissions attached to the group
+        '''
 
         if clear and self.group.permissions:                                # Clear the perms first if requested
             self.group.permissions.clear()
 
         for p in self.get_permission_models(permissions=permissions):       # Update the Perms with the ones passed in
-            self.group.permissions.add(p)
-
+            if remove and not clear:
+                self.group.permissions.remove(p)
+            else:
+                self.group.permissions.add(p)
+            
     def save(self, *args, **kwargs):
 
         self.slug = slugify(self.name)
@@ -133,7 +152,5 @@ class Role(models.Model):
             new_group, created = Group.objects.get_or_create(name="{0}_{1}_{2}".format( settings.SITE_ID, slugify(category), slugify(self.name) ))
             new_group.save()
             self.group = new_group
-
-        self.add_permissions()
 
         return super().save(*args, **kwargs)
