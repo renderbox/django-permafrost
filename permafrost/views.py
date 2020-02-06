@@ -1,12 +1,11 @@
 import logging
 
 from django.contrib.auth.decorators import login_required
+from django.contrib.auth.mixins import PermissionRequiredMixin
 from django.http import HttpResponse, HttpResponseForbidden
 from django.shortcuts import render
 from django.core.exceptions import PermissionDenied
 from django.views.generic import TemplateView
-
-security_logger = logging.getLogger('security')
 
 #--------------
 # UTILITIES
@@ -25,93 +24,61 @@ def get_client_ip(request):
 # MIXIN VIEWS
 #--------------
 
-class PermCheckMixin(object):
+class MethodPermissionRequiredMixin(PermissionRequiredMixin):
     '''
-    This is a simple mixin that lets a user specify perms required by a
-    user either globally or in order to access a particular http method.  It
-    does a check of what the user has permission to do against what the view
-    requires.  If they don't intersect, then the user is rejected.
+    This is a simple mixin that extend the built in PermissionRequiredMixin 
+    and lets a developer specify perms required by a user either globally or in 
+    order to access a particular http method.  It does a check of what the
+    user has permission to do against what the view requires.  If they don't
+    have the required permissions, then the user is rejected.
 
-    401 -> Non-Logged in users      return HttpResponse('Unauthorized', status=401)
-    403 -> Logged in users          return HttpResponseForbidden()
+    Permissions can also be set per HTTP method, by appending the lowercase
+    method name to 'permission_required_' and providing a set of permissions.
 
-    Perms can also be set per HTTP method, by appending the lowercase
-    method name to 'perms_' and providing a list of perms.
-
-    perms = []
-    perms_get = []
-    perms_post = []
-
-    permission naming convention:
-
-        <role_category>_<perm_group>_do_something
-
-        faculty_student_edit_profile
-
-    There is support for checking modes:
-
-        any -> Any match will work
-        all -> The user needs to match all the perms (perms and
-                perms_<method>).
+    permission_required = ('sites.add_site',)
+    permission_required_get = ()
+    permission_required_post = ()
     '''
-    perms = []
-    mode = "any"
 
-    def dispatch(self, request, *args, **kwargs):
+    def get_permission_required(self):
+        """
+        Override this method to override the permission_required attribute.
+        Must return an iterable.
+        """
+        perms = super().get_permission_required()
 
-        user_ip = get_client_ip(request)
+        method_perms = getattr(self, "permission_required_" + request.method.lower(), set() )       # Extended Perms per method
 
-        try:
-            view_perms = self.get_view_perms(request)            #set(self.perms + getattr(self, "perms_" + request.method.lower(), [] ))
-            user_perms = request.user.get_all_permissions()   
+        if isinstance(method_perms, str):
+            method_perms = (method_perms,)
 
-            # if view_perms and request.user.is_authenticated:   # If there are any perms to check, check them, otherwise pass by default
-            if view_perms:   # If there are any perms to check, check them, otherwise pass by default
-                valid = False       # Default to fail check if perms are provided
-                intersect = view_perms.intersection(user_perms)
+        return set(perms + method_perms)
 
-                if self.mode == "any":
-                    valid = bool( intersect )                 # Returns True if there is anything in the Set
-                if self.mode == "all":
-                    valid = bool( view_perms == intersect )   # Returns True if the view_perms match the intersection with the user
 
-                if not valid:
-                    if request.user.is_authenticated:
-                        security_logger.info("Failed-Permission-Check:403:{0}:{1}:{2}:{3}:{4}:{5}:{6}".format(
-                                                        user_ip,
-                                                        request.user.username, 
-                                                        request.user.pk, 
-                                                        request.method, 
-                                                        request.path,
-                                                        ','.join(user_perms),
-                                                        ','.join(view_perms)
-                                                        )
-                                            )
-                        return HttpResponseForbidden('<h1>403 Forbidden</h1><p>You do not have permission to access this resource on this server</p>', content_type='text/html')
-                    else:
-                        security_logger.info("Failed-Permission-Check:401:ANNONYMOUS:None:{0}:{1}:{2}:{3}".format(
-                                user_ip,
-                                request.method, 
-                                request.path,
-                                ','.join(view_perms)))
+class LogPermissionRequiredMixin(object):
+    '''
+    A mixin that lets you define a logger in which to write failed permission attempts to.
+    '''
 
-                        return HttpResponse('Unauthorized', status=401)
+    no_permission_logger = None
 
-        except AttributeError:
-            security_logger.info("Failed-Permission-Check:401:ANNONYMOUS:None:{0}:{1}:{2}:{3}".format(
-                    user_ip,
-                    request.method, 
-                    request.path,
-                    ','.join(view_perms)))
+    def handle_no_permission(self):
+        
+        if self.no_permission_logger is None:
+            raise ImproperlyConfigured(
+                '{0} is missing the no_permission_logger attribute. Define {0}.no_permission_logger'.format(self.__class__.__name__)
+            )
 
-            return HttpResponse('Unauthorized', status=401)
+        logger = logging.getLogger(self.no_permission_logger)
 
-        return super().dispatch(request, *args, **kwargs)
+        user_ip = get_client_ip(self.request)
+        user_perms = list(self.request.user.get_all_permissions())
+        view_perms = list(self.get_permission_required())
 
-    @classmethod
-    def get_view_perms(cls, request):
-        '''
-        Class method so its perms can be checked without having to instatiate the view.
-        '''
-        return set(cls.perms + getattr(cls, "perms_" + request.method.lower(), [] ))
+        logger.info("Failed-Permission-Check:403:{0}:{1}:{2}:{3}:{4}:{5}:{6}".format(                   # Should be replaced with a Formater
+                                user_ip, self.request.user.username, self.request.user.pk, 
+                                self.request.method, self.request.path, ','.join(user_perms),
+                                ','.join(view_perms) )
+                            )
 
+        super().handle_no_permission()

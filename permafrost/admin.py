@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import Role, RolePermission
+from .models import Role
 
 # ################
 # # ADMIN ACTIONS
@@ -37,14 +37,14 @@ class RoleAdmin(admin.ModelAdmin):
     # readonly_fields = ('slug',)
     # list_display = ('name', 'category')
     # ordering = ('name',)
-    pass
+    readonly_fields=('group','slug')
 
 
-class RolePermissionAdmin(admin.ModelAdmin):
-    # readonly_fields = ('slug',)
-    # list_display = ('name', 'category')
-    # ordering = ('name',)
-    pass
+# class RolePermissionAdmin(admin.ModelAdmin):
+#     # readonly_fields = ('slug',)
+#     # list_display = ('name', 'category')
+#     # ordering = ('name',)
+#     pass
 
 
 ###############
@@ -52,4 +52,4 @@ class RolePermissionAdmin(admin.ModelAdmin):
 ###############
 
 admin.site.register(Role, RoleAdmin)
-admin.site.register(RolePermission, RolePermissionAdmin)
+# admin.site.register(RolePermission, RolePermissionAdmin)

@@ -122,3 +122,41 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/2.2/howto/static-files/
 
 STATIC_URL = '/static/'
+
+PERMAFROST_ROLE_CONFIG = {
+    'User': {
+        'permissions': [
+                {"perm":"permafrost.view_role", "label":"Can view Role"},
+                {"perm":"permafrost.view_rolepermission", "label":"Can view Role Permission"},
+            ],
+        'choice': 1,
+        'included': [
+        ]
+    },
+    'Staff': {
+        'permissions': [
+                {"perm":"permafrost.add_role", "label":"Can add Role"},
+                {"perm":"permafrost.change_role", "label":"Can change Role"},
+                {"perm":"permafrost.view_role", "label":"Can view Role"},
+                {"perm":"permafrost.add_rolepermission", "label":"Can add Role Permission"},
+                {"perm":"permafrost.change_rolepermission", "label":"Can change Role Permission"},
+                {"perm":"permafrost.view_rolepermission", "label":"Can view Role Permission"},
+            ],
+        'choice': 30,
+    },
+    'Administrator': {
+        'permissions': [
+                {"perm":"permafrost.add_role", "label":"Can add Role"},
+                {"perm":"permafrost.change_role", "label":"Can change Role"},
+                {"perm":"permafrost.delete_role", "label":"Can delete Role"},
+                {"perm":"permafrost.view_role", "label":"Can view Role"},
+                {"perm":"permafrost.add_rolepermission", "label":"Can add Role Permission"},
+                {"perm":"permafrost.change_rolepermission", "label":"Can change Role Permission"},
+                {"perm":"permafrost.delete_rolepermission", "label":"Can delete Role Permission"},
+                {"perm":"permafrost.view_rolepermission", "label":"Can view Role Permission"},
+            ],
+        'choice': 50,
+        'included': [
+        ]
+    }
+}
