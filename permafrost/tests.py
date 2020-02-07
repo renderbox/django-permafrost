@@ -32,12 +32,23 @@ class RoleModelTest(TestCase):
 
         self.assertEqual(role.group.name, "1_user_bobs-super-group")        # Checks that the user is created
 
-        perms = [x.name for x in role.group.permissions.all()]
+        # Add the user to the Role with the 
+        role.users_add(self.user)
+
+        # perms = [x.name for x in role.group.permissions.all()]
+        # Get the list from the user?
+        perms = list(self.user.get_all_permissions())
 
         # Test that "included" permissions are always present in the group
         self.assertEqual(perms, [])
 
         # Test that permissions not in the Category's list can not be added to the Role
+
+            # Get a list of the current permissions
+
+            # try to add a permission
+
+            # Check to see if it was added
 
     def test_create_staffuser_role(self):
         # Test that creating a Role creates a matching Group
@@ -47,12 +58,11 @@ class RoleModelTest(TestCase):
 
         self.assertEqual(role.group.name, "1_staff_bobs-staff-group")        # Checks that the user is created
 
-        # perms = [x.name for x in role.group.permissions.all()]
-
         # Add user to the Group
+        role.users_add(self.staffuser)
+        perms = list(self.staffuser.get_all_permissions())
 
         # Check if user has the proper permissions
-
         # Test that "included" permissions are always present in the group
         self.assertEqual(perms, ["permafrost.view_role",  "permafrost.view_rolepermission"])
 
