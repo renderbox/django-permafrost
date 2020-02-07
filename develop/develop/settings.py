@@ -143,6 +143,10 @@ PERMAFROST_ROLE_CONFIG = {
                 {"perm":"permafrost.view_rolepermission", "label":"Can view Role Permission"},
             ],
         'choice': 30,
+        'include': [
+            "permafrost.view_role",
+            "permafrost.view_rolepermission",
+        ]
     },
     'Administrator': {
         'permissions': [

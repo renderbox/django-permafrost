@@ -38,7 +38,10 @@ class MethodPermissionRequiredMixin(PermissionRequiredMixin):
     permission_required = ('sites.add_site',)
     permission_required_get = ()
     permission_required_post = ()
+    permission_mode = "any"/"all"     Can any permission work or are all required?
     '''
+
+    permission_mode = "any"         # TODO: add handling of this
 
     def get_permission_required(self):
         """
