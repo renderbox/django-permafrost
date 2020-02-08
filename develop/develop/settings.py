@@ -129,8 +129,8 @@ PERMAFROST_ROLE_CONFIG = {
                 {"perm":"permafrost.view_role", "label":"Can view Role"},
                 {"perm":"permafrost.view_rolepermission", "label":"Can view Role Permission"},
             ],
-        'choice': 1,
-        'included': [
+        'id': 1,
+        'includes': [
         ]
     },
     'Staff': {
@@ -142,10 +142,10 @@ PERMAFROST_ROLE_CONFIG = {
                 {"perm":"permafrost.change_rolepermission", "label":"Can change Role Permission"},
                 {"perm":"permafrost.view_rolepermission", "label":"Can view Role Permission"},
             ],
-        'choice': 30,
-        'include': [
+        'id': 30,
+        'includes': [
             "permafrost.view_role",
-            "permafrost.view_rolepermission",
+            "permafrost.change_role",
         ]
     },
     'Administrator': {
@@ -159,8 +159,8 @@ PERMAFROST_ROLE_CONFIG = {
                 {"perm":"permafrost.delete_rolepermission", "label":"Can delete Role Permission"},
                 {"perm":"permafrost.view_rolepermission", "label":"Can view Role Permission"},
             ],
-        'choice': 50,
-        'included': [
+        'id': 50,
+        'includes': [
         ]
     }
 }

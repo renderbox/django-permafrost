@@ -5,7 +5,7 @@ from django.contrib.sites.models import Site
 from django.contrib.auth import get_user_model
 from django.db.utils import IntegrityError
 
-from permafrost.models import Role, ROLE_CONFIG
+from permafrost.models import Role, ROLE_CONFIG, get_permission_models
 
 class RoleModelTest(TestCase):
 
@@ -23,6 +23,12 @@ class RoleModelTest(TestCase):
     #     self.client_user = get_user_model().objects.get(pk=5)
     #     self.client_staff = get_user_model().objects.get(pk=6)
     #     self.client_admin = get_user_model().objects.get(pk=7)
+
+    def test_permission_objects_from_string(self):
+        perms = get_permission_models("permafrost.view_role")
+
+    def test_permission_objects_from_string_list(self):
+        perms = get_permission_models( ["permafrost.view_role","permafrost.change_role"] ) 
 
     def test_create_user_role(self):
         # Test that creating a Role creates a matching Group
@@ -63,8 +69,8 @@ class RoleModelTest(TestCase):
         perms = list(self.staffuser.get_all_permissions())
 
         # Check if user has the proper permissions
-        # Test that "included" permissions are always present in the group
-        self.assertEqual(perms, ["permafrost.view_role",  "permafrost.view_rolepermission"])
+        # Test that "included" permissions are the only things present in the group
+        self.assertEqual(perms, ["permafrost.view_role",  "permafrost.change_role"])
 
         # Test that permissions not in the Category's list can not be added to the Role
 
@@ -82,9 +88,9 @@ class RoleModelTest(TestCase):
             role_b.save()
 
 
-    def test_clear_role_permissions(self):
-        # Test that "included" permissions are always present in the group
-        raise NotImplementedError
+    # def test_clear_role_permissions(self):
+    #     # Test that "included" permissions are always present in the group
+    #     raise NotImplementedError
 
     # Test the Client Users permissions
 

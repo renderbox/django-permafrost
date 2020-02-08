@@ -21,8 +21,8 @@ PERMAFROST_ROLE_CONFIG = {
                 {"perm":"permafrost.view_role", "label":"Can view Role"},
                 {"perm":"permafrost.view_rolepermission", "label":"Can view Role Permission"},
             ],
-        'choice': 1,             # The Value stored in the Choice Field
-        'included': [           # Permissions the Group uses that are always included but not editable by the client
+        'id': 1,             # The Value stored in the Choice Field
+        'includes': [           # Permissions the Group uses that are always included but not editable by the client
             '',
             ''
         ]
@@ -36,8 +36,8 @@ PERMAFROST_ROLE_CONFIG = {
                 {"perm":"permafrost.change_rolepermission", "label":"Can change Role Permission"},
                 {"perm":"permafrost.view_rolepermission", "label":"Can view Role Permission"},
             ],
-        'choice': 30,            # The Value stored in the Choice Field
-        'include: [
+        'id': 30,            # The Value stored in the Choice Field
+        'includes: [
             "permafrost.view_role",
             "permafrost.view_rolepermission",
         ]
@@ -53,8 +53,8 @@ PERMAFROST_ROLE_CONFIG = {
                 {"perm":"permafrost.delete_rolepermission", "label":"Can delete Role Permission"},
                 {"perm":"permafrost.view_rolepermission", "label":"Can view Role Permission"},
             ],
-        'choice': 50,
-        'included': [
+        'id': 50,
+        'includes': [
             '',
             ''
         ]
@@ -68,27 +68,33 @@ ROLE_CONFIG = getattr(settings, "PERMAFROST_ROLE_CONFIG")
 # CHOICES
 ###############
 
-ROLE_CATEGORY_CHOICES = [(value['choice'], key) for key,value in ROLE_CONFIG.items()]      # Used to help manage permission presentation
+ROLE_CATEGORY_CHOICES = [(value['id'], key) for key,value in ROLE_CONFIG.items()]      # Used to help manage permission presentation
 
 ###############
 # UTILITIES
 ###############
 
-def name_from_choice(choices, value):
+def lable_from_choice_value(choices, value):
     return [x[1] for x in choices if x[0] == value][0]
 
 def value_as_list(value):
     '''
     Takes whatever is passed in and tries to return it as a list
     '''
-
     if isinstance(value, list):
         return value
     
-    if value == None:
+    if not value:
         return []
 
     return [value]
+
+def get_permission_models(permissions):
+    return [ permission_from_string(p) for p in value_as_list(permissions) ]
+
+def permission_from_string(permission):
+    values = permission.split(".")
+    return Permission.objects.get(codename=values[1], content_type__app_label=values[0])
 
 
 ###############
@@ -116,30 +122,28 @@ class Role(models.Model):
     def __str__(self):
         return self.name
 
-    def get_permission_models(self, permissions=None):
-        result = []
-        choice = None
+    # def get_permission_models(self, permissions=None):
+    #     result = []
+    #     choice = None
 
-        permissions = value_as_list(permissions)
+    #     print("GETTING PERM MODELS")
 
-        for key, value in ROLE_CONFIG.items():
-            if value['choice'] == self.category:
-                choice = value
-                break
+    #     permissions = value_as_list(permissions)
 
-        if choice != None:
-            for permission in permissions:                  # Return all available permissions for now, TODO: move this to a query if possible to avoid all the DB hits
-                if permission in choice['permissions']:     # Do a check to make sure it's available to the user catagory
-                    result.append(permission_from_string(permission))
+    #     for key, value in ROLE_CONFIG.items():
+    #         if value['id'] == self.category:
+    #             choice = value
+    #             break
 
-            # for include in choice['includes']
-            # TODO: Add "included" permissions to make sure they are always there
+    #     if choice != None:
+    #         for permission in permissions:                  # Return all available permissions for now, TODO: move this to a query if possible to avoid all the DB hits
+    #             if permission in choice['permissions']:     # Do a check to make sure it's available to the user catagory
+    #                 result.append(permission_from_string(permission))
 
-        return result
+    #         # for include in choice['includes']
+    #         # TODO: Add "included" permissions to make sure they are always there
 
-    def permission_from_string(self, permission):
-        values = permission.split(".")
-        return Permission.objects.get(codename=values[1], content_type__app_label=values[0])
+    #     return result
 
     #-------------
     # Permissions
@@ -148,27 +152,33 @@ class Role(models.Model):
         '''
         Add permissions to the attached group by name "app.perm"
         '''
-        for p in self.get_permission_models(permissions=permissions):
+        for p in get_permission_models(permissions):
             self.group.permissions.add(p)
 
     def permissions_remove(self, permissions):
         '''
         Remove permissions from the attached group by name "app.perm"
         '''
-        for p in self.get_permission_models(permissions=permissions):
+        for p in get_permission_models(permissions):
             self.group.permissions.remove(p)
 
-    def permissions_clear(self, includes=True):
+    def permissions_set(self, permissions):
         '''
-        Remove all permissions from the attached group
+        This updates the group permissions to only include what was passed in.
         '''
-        self.group.permissions.clear()
+        self.group.permissions.set( value_as_list(permissions) )
 
-        # Add back includes
-        if includes:
-            choice = name_from_choice(self.category)
-            includes = ROLE_CONFIG[choice]['includes']
-            self.permissions_add(includes)
+    def permissions_clear(self):
+        '''
+        Remove all permissions from the group except the defaults.
+        '''
+        category = lable_from_choice_value(ROLE_CATEGORY_CHOICES, self.category)
+
+        if 'includes' in ROLE_CONFIG[category]:
+            self.group.permissions.set( value_as_list(ROLE_CONFIG[category]['includes']) )
+        else:
+            self.group.permissions.clear()
+
 
     #-------------
     # Users
@@ -201,10 +211,14 @@ class Role(models.Model):
         self.slug = slugify(self.name)
 
         if not self.group:
-            category = name_from_choice(ROLE_CATEGORY_CHOICES, self.category)
-            new_group, created = Group.objects.get_or_create( name="{0}_{1}_{2}".format( self.site.pk, slugify(category), slugify(self.name)) )
+            category = lable_from_choice_value(ROLE_CATEGORY_CHOICES, self.category)
+            obj, created = Group.objects.get_or_create( name="{0}_{1}_{2}".format( self.site.pk, slugify(category), slugify(self.name)) )
+
             if created:
-                new_group.save()
-            self.group = new_group
+                print("created new group")
+                obj.save()                  # Save it to create the PK so it can be assigned
+                self.group = obj
+                perms = [ permission_from_string(permission) for permission in value_as_list(ROLE_CONFIG[category]['includes']) ]
+                self.permissions_set( perms )    # If a new group is geenrated, the permissions shoudl be blank by default
 
         return super().save(*args, **kwargs)
