@@ -4,6 +4,7 @@ from django.test import TestCase
 from django.contrib.sites.models import Site
 from django.contrib.auth import get_user_model
 from django.db.utils import IntegrityError
+from django.db import transaction
 
 from permafrost.models import Role, ROLE_CONFIG, get_permission_models
 
@@ -27,8 +28,12 @@ class RoleModelTest(TestCase):
     def test_permission_objects_from_string(self):
         perms = get_permission_models("permafrost.view_role")
 
+        self.assertEqual(1, len(perms))
+
     def test_permission_objects_from_string_list(self):
-        perms = get_permission_models( ["permafrost.view_role","permafrost.change_role"] ) 
+        perms = get_permission_models( ["permafrost.view_role", "permafrost.change_role"] ) 
+
+        self.assertEqual(2, len(perms))
 
     def test_create_user_role(self):
         # Test that creating a Role creates a matching Group
@@ -48,7 +53,10 @@ class RoleModelTest(TestCase):
         # Test that "included" permissions are always present in the group
         self.assertEqual(perms, [])
 
-        # Test that permissions not in the Category's list can not be added to the Role
+    # def test_role_permission_limits(self):
+        # Test that creating a Role creates a matching Group
+
+        # Test that permissions only in the Category's list can be added to the Role
 
             # Get a list of the current permissions
 
@@ -67,13 +75,17 @@ class RoleModelTest(TestCase):
         # Add user to the Group
         role.users_add(self.staffuser)
         perms = list(self.staffuser.get_all_permissions())
+        perms.sort()
 
-        # Check if user has the proper permissions
+        check_list = ["permafrost.view_role",  "permafrost.change_role"]    # Needs to be sorted to try to make sure it's a close to the same as possible
+        check_list.sort()
+
         # Test that "included" permissions are the only things present in the group
-        self.assertEqual(perms, ["permafrost.view_role",  "permafrost.change_role"])
+        self.assertEqual(perms, check_list)
 
+    def test_only_allowed_category_perms_can_be_added(self):
         # Test that permissions not in the Category's list can not be added to the Role
-
+        pass
 
     def test_create_duplicate_role(self):
         # Test that creating a Role of the same name producers and error
@@ -84,20 +96,34 @@ class RoleModelTest(TestCase):
         role_c.save()
 
         with self.assertRaises(IntegrityError):
-            role_b = Role(name="Bobs Super Group", site=self.site_2)
-            role_b.save()
 
+            with transaction.atomic():
+                role_b = Role(name="Bobs Super Group", site=self.site_2)
+                role_b.save()
 
-    # def test_clear_role_permissions(self):
-    #     # Test that "included" permissions are always present in the group
+            with transaction.atomic():
+                role_d = Role(name="Bobs Super Group", site=self.site_2, category=30)
+                role_d.save()
+
+        # TODO: Add check to make sure Role's Groups were not created
+
+    def test_clear_role_permissions(self):
+        # Test that "included" permissions are always present in the group
+
+        role = Role(name="Bobs Staff Group", site=self.site_2, category=30)
+
+    #     Add Extra Permissions from the list
+    #     Clear
+    #     Make sure only the includes are present
     #     raise NotImplementedError
 
     # Test the Client Users permissions
 
-    # Test the Django Users permissions
+    # def test_django_admin_has_all_permissions(self):
+    #     # Test the Django Users permissions
+    #     raise NotImplementedError
 
     # Test that deleting a Role deletes the matching group
-
 
 
 #     def test_superuser_has_perms(self):

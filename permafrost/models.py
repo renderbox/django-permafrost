@@ -122,29 +122,6 @@ class Role(models.Model):
     def __str__(self):
         return self.name
 
-    # def get_permission_models(self, permissions=None):
-    #     result = []
-    #     choice = None
-
-    #     print("GETTING PERM MODELS")
-
-    #     permissions = value_as_list(permissions)
-
-    #     for key, value in ROLE_CONFIG.items():
-    #         if value['id'] == self.category:
-    #             choice = value
-    #             break
-
-    #     if choice != None:
-    #         for permission in permissions:                  # Return all available permissions for now, TODO: move this to a query if possible to avoid all the DB hits
-    #             if permission in choice['permissions']:     # Do a check to make sure it's available to the user catagory
-    #                 result.append(permission_from_string(permission))
-
-    #         # for include in choice['includes']
-    #         # TODO: Add "included" permissions to make sure they are always there
-
-    #     return result
-
     #-------------
     # Permissions
 
@@ -210,15 +187,18 @@ class Role(models.Model):
 
         self.slug = slugify(self.name)
 
+        result = super().save(*args, **kwargs)
+
         if not self.group:
             category = lable_from_choice_value(ROLE_CATEGORY_CHOICES, self.category)
             obj, created = Group.objects.get_or_create( name="{0}_{1}_{2}".format( self.site.pk, slugify(category), slugify(self.name)) )
 
             if created:
-                print("created new group")
                 obj.save()                  # Save it to create the PK so it can be assigned
                 self.group = obj
                 perms = [ permission_from_string(permission) for permission in value_as_list(ROLE_CONFIG[category]['includes']) ]
                 self.permissions_set( perms )    # If a new group is geenrated, the permissions shoudl be blank by default
 
-        return super().save(*args, **kwargs)
+            super().save(*args, **kwargs)   # Save again only if the Group is added
+
+        return result
