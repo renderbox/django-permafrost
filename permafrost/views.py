@@ -27,21 +27,20 @@ def get_client_ip(request):
 class MethodPermissionRequiredMixin(PermissionRequiredMixin):
     '''
     This is a simple mixin that extend the built in PermissionRequiredMixin 
-    and lets a developer specify perms required by a user either globally or in 
-    order to access a particular http method.  It does a check of what the
-    user has permission to do against what the view requires.  If they don't
-    have the required permissions, then the user is rejected.
+    and lets a developer specify perms required by a user for a particular 
+    http method.  For example, a user with a 'get' pemission might not be
+    given permissions to reach a 'post' endpoint in the view.
+    
+    If they don't have the required permissions, then the user
+    is rejected.
 
-    Permissions can also be set per HTTP method, by appending the lowercase
+    Permissions can be set per HTTP method, by appending the lowercase
     method name to 'permission_required_' and providing a set of permissions.
 
     permission_required = ('sites.add_site',)
     permission_required_get = ()
     permission_required_post = ()
-    permission_mode = "any"/"all"     Can any permission work or are all required?
     '''
-
-    permission_mode = "any"         # TODO: add handling of this
 
     def get_permission_required(self):
         """
