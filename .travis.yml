@@ -6,7 +6,7 @@ install:
 - cd develop
 - python manage.py migrate
 script:
-- python manage.py test reacttools
+- python manage.py test permafrost
 - cd ..
 deploy:
   provider: pypi
