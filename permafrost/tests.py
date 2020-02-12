@@ -6,6 +6,8 @@ from django.contrib.auth import get_user_model
 from django.db.utils import IntegrityError
 from django.db import transaction
 
+from rest_framework.test import APIClient
+
 from permafrost.models import Role, ROLE_CONFIG, get_permission_models
 
 class RoleModelTest(TestCase):
@@ -111,11 +113,13 @@ class RoleModelTest(TestCase):
         # Test that "included" permissions are always present in the group
 
         role = Role(name="Bobs Staff Group", site=self.site_2, category=30)
+        role.save()
+
+        # print(role.permissions)
 
     #     Add Extra Permissions from the list
-    #     Clear
+    #     run Clear method on role
     #     Make sure only the includes are present
-    #     raise NotImplementedError
 
     # Test the Client Users permissions
 
@@ -135,3 +139,35 @@ class RoleModelTest(TestCase):
 
 #         response = View.as_view()(request)
 #         self.assertEqual(response.status_code, 200)
+
+
+class PermafrostAPITest(TestCase):
+
+    # fixtures = ['unit_test']
+
+    def setUp(self):
+        User = get_user_model()
+        self.user = User.objects.create_user(username='john', email='jlennon@beatles.com', password='Passw0rd!')
+        self.staffuser = User.objects.create_user(username='staffy', email='staffy@beatles.com', password='Passw0rd!', is_active=True, is_staff=True, )
+        self.adminuser = User.objects.create_user(username='adminy', email='adminy@beatles.com', password='Passw0rd!', is_active=True, is_staff=True, is_superuser=True)
+
+        self.site_1 = Site.objects.create(name="This Site", domain="thissite.com")
+        self.site_2 = Site.objects.create(name="That Site", domain="thatsite.com")
+
+        self.client = APIClient()
+
+    def test_superuser_can_access_api_endpoint(self):
+        '''
+        Uses a user that has all the permissions.
+        '''
+        self.client.force_authenticate(user=self.adminuser)
+        response = self.client.get('/api/', format='json')
+        assert response.status_code == 200
+
+    def test_can_not_access_api_endpoint(self):
+        '''
+        Uses a user that does not have the required permission
+        '''
+        self.client.force_authenticate(user=self.user)
+        response = self.client.get('/api/', format='json')
+        assert response.status_code == 403

@@ -125,6 +125,9 @@ class Role(models.Model):
     #-------------
     # Permissions
 
+    def permissions(self):
+        return self.group.permissions
+
     def permissions_add(self, permissions):
         '''
         Add permissions to the attached group by name "app.perm"

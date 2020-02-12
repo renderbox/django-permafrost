@@ -14,7 +14,7 @@ with open(path.join(file_path, 'README.rst'), encoding='utf-8') as f:
 
 package_metadata = {
     'name': 'django-permafrost',
-    'version': '0.1.6',
+    'version': '0.1.7',
     'description': 'Adds Client Definable Permissions to Django',
     'long_description': long_description,
     'url': 'https://github.com/renderbox/django-permafrost/',
@@ -41,7 +41,9 @@ setup(
         'Django>=2.2,<2.3',
     ],
     extras_require={
-        'dev': [],
+        'dev': [
+            'djangorestframework',
+        ],
         'test': [],
         'prod': [],
         'build': [
