@@ -57,21 +57,21 @@ class PermafrostMixin(PermissionRequiredMixin):
         return set(list(perms) + list(method_perms))
 
 
-class LogPermissionRequiredMixin(object):
+class PermafrostLogMixin(object):
     '''
     A mixin that lets you define a logger in which to write failed permission attempts to.
     '''
 
-    no_permission_logger = None
+    permission_logger = None
 
     def handle_no_permission(self):
         
-        if self.no_permission_logger is None:
+        if self.permission_logger is None:  # TODO Make this assume a default logger called "permafrost"
             raise ImproperlyConfigured(
-                '{0} is missing the no_permission_logger attribute. Define {0}.no_permission_logger'.format(self.__class__.__name__)
+                '{0} is missing the permission_logger attribute. Define {0}.permission_logger'.format(self.__class__.__name__)
             )
 
-        logger = logging.getLogger(self.no_permission_logger)
+        logger = logging.getLogger(self.permission_logger)
 
         user_ip = get_client_ip(self.request)
         user_perms = list(self.request.user.get_all_permissions())
