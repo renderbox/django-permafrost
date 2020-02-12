@@ -93,7 +93,7 @@ class LogPermissionRequiredMixin(object):
 try:
     from rest_framework.permission import BasePermission
 
-    class PermafrostRESTMixin(BasePermission):
+    class PermafrostRESTPermission(BasePermission):
 
         def has_permission(self, request, view):
             perms = getattr(view, "permission_required", set() )
