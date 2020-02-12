@@ -24,7 +24,7 @@ def get_client_ip(request):
 # MIXIN VIEWS
 #--------------
 
-class MethodPermissionRequiredMixin(PermissionRequiredMixin):
+class PermafrostMixin(PermissionRequiredMixin):
     '''
     This is a simple mixin that extend the built in PermissionRequiredMixin 
     and lets a developer specify perms required by a user for a particular 
@@ -93,7 +93,7 @@ class LogPermissionRequiredMixin(object):
 try:
     from rest_framework.permission import BasePermission
 
-    class MethodPermissionRestMixin(BasePermission):
+    class PermafrostRESTMixin(BasePermission):
 
         def has_permission(self, request, view):
             perms = getattr(view, "permission_required", set() )
