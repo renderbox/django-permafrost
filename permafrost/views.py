@@ -49,12 +49,12 @@ class MethodPermissionRequiredMixin(PermissionRequiredMixin):
         """
         perms = super().get_permission_required()
 
-        method_perms = getattr(self, "permission_required_" + request.method.lower(), set() )       # Extended Perms per method
+        method_perms = getattr(self, "permission_required_" + self.request.method.lower(), set() )       # Extended Perms per method
 
         if isinstance(method_perms, str):
             method_perms = (method_perms,)
 
-        return set(perms + method_perms)
+        return set(list(perms) + list(method_perms))
 
 
 class LogPermissionRequiredMixin(object):
