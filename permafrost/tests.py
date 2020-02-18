@@ -156,18 +156,18 @@ class PermafrostAPITest(TestCase):
 
         self.client = APIClient()
 
-    def test_superuser_can_access_api_endpoint(self):
+    def test_superuser_can_access_permissions_endpoint(self):
         '''
         Uses a user that has all the permissions.
         '''
         self.client.force_authenticate(user=self.adminuser)
-        response = self.client.get('/api/', format='json')
+        response = self.client.get('/permissions/', format='json')
         assert response.status_code == 200
 
-    def test_can_not_access_api_endpoint(self):
+    def test_can_not_access_permissions_endpoint(self):
         '''
         Uses a user that does not have the required permission
         '''
         self.client.force_authenticate(user=self.user)
-        response = self.client.get('/api/', format='json')
+        response = self.client.get('/permissions/', format='json')
         assert response.status_code == 403

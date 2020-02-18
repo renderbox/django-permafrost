@@ -18,7 +18,7 @@ from django.urls import include, path
 from example import views
 
 urlpatterns = [
-    path('api/', views.PermCheckAPIView.as_view(), name="permafrost-api-test-endpoint"),
+    path('permissions/', views.PermCheckAPIView.as_view(), name="permafrost-permissions-test-endpoint"),
     path('', include('permafrost.urls') ),
     path('admin/', admin.site.urls),
 ]
