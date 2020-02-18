@@ -4,7 +4,6 @@ from rest_framework.permissions import BasePermission
 # DJANGO REST PERMS
 #--------------
 
-
 class PermafrostRESTPermission(BasePermission):
 
     def has_permission(self, request, view):

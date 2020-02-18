@@ -18,8 +18,7 @@ Example:
 PERMAFROST_ROLE_CONFIG = {
     'User': {                   # Permission Grouping
         'permissions': [        # List of Django Permissions that are client configurable (as string or dict)
-                {"perm":"permafrost.view_role", "label":"Can view Role"},
-                {"perm":"permafrost.view_rolepermission", "label":"Can view Role Permission"},
+                {"perm":"permafrost.view_permafrostrole", "label":"Can view Permafrost Role"},
             ],
         'id': 1,             # The Value stored in the Choice Field
         'includes': [           # Permissions the Group uses that are always included but not editable by the client
@@ -29,29 +28,21 @@ PERMAFROST_ROLE_CONFIG = {
     },
     'Staff': {
         'permissions': [        # List of Django Permissions that are client configurable (as string or dict)
-                {"perm":"permafrost.add_role", "label":"Can add Role"},
-                {"perm":"permafrost.change_role", "label":"Can change Role"},
-                {"perm":"permafrost.view_role", "label":"Can view Role"},
-                {"perm":"permafrost.add_rolepermission", "label":"Can add Role Permission"},
-                {"perm":"permafrost.change_rolepermission", "label":"Can change Role Permission"},
-                {"perm":"permafrost.view_rolepermission", "label":"Can view Role Permission"},
+                {"perm":"permafrost.add_permafrostrole", "label":"Can add Permafrost Role"},
+                {"perm":"permafrost.change_permafrostrole", "label":"Can change Permafrost Role"},
+                {"perm":"permafrost.view_permafrostrole", "label":"Can view Permafrost Role"},
             ],
         'id': 30,            # The Value stored in the Choice Field
         'includes: [
-            "permafrost.view_role",
-            "permafrost.view_rolepermission",
+            "permafrost.view_permafrostrole",
         ]
     },
     'Administrator': {
         'permissions': [        # List of Django Permissions that are client configurable (as string or dict)
-                {"perm":"permafrost.add_role", "label":"Can add Role"},
-                {"perm":"permafrost.change_role", "label":"Can change Role"},
-                {"perm":"permafrost.delete_role", "label":"Can delete Role"},
-                {"perm":"permafrost.view_role", "label":"Can view Role"},
-                {"perm":"permafrost.add_rolepermission", "label":"Can add Role Permission"},
-                {"perm":"permafrost.change_rolepermission", "label":"Can change Role Permission"},
-                {"perm":"permafrost.delete_rolepermission", "label":"Can delete Role Permission"},
-                {"perm":"permafrost.view_rolepermission", "label":"Can view Role Permission"},
+                {"perm":"permafrost.add_permafrostrole", "label":"Can add Permafrost Role"},
+                {"perm":"permafrost.change_permafrostrole", "label":"Can change Permafrost Role"},
+                {"perm":"permafrost.delete_permafrostrole", "label":"Can delete Permafrost Role"},
+                {"perm":"permafrost.view_permafrostrole", "label":"Can view Permafrost Role"},
             ],
         'id': 50,
         'includes': [
@@ -101,15 +92,15 @@ def permission_from_string(permission):
 # MODELS
 ###############
 
-class Role(models.Model):
+class PermafrostRole(models.Model):
     '''
-    Role is Client Defineable and "wraps" around a Django Group
+    PermafrostRole is Client Defineable and "wraps" around a Django Group
     adding a user to this role adds them to the Django Group
     and automatically assignes them the permissions.
     '''
     name = models.CharField(_("Name"), max_length=50)
     slug = models.SlugField(_("Slug"))
-    category = models.IntegerField(_("Role Category"), choices=ROLE_CATEGORY_CHOICES, default=1)
+    category = models.IntegerField(_("Permafrost Role Category"), choices=ROLE_CATEGORY_CHOICES, default=1)
     site = models.ForeignKey(Site, on_delete=models.CASCADE, default=settings.SITE_ID)
     group = models.OneToOneField(Group, verbose_name=_("Group"), on_delete=models.CASCADE, blank=True, null=True)      # Need to be uneditable in the Admin
     locked = models.BooleanField(_("Locked"), default=False)                                                   # If this is locked, it can not be edited by the Client, used for defaults
@@ -165,21 +156,21 @@ class Role(models.Model):
 
     def users_add(self, users=None):
         '''
-        Pass in a User object to add to the Role
+        Pass in a User object to add to the PermafrostRole
         '''
         for user in value_as_list(users):
             user.groups.add(self.group)
 
     def users_remove(self, users=None):
         '''
-        Pass in a User object to remove from the Role
+        Pass in a User object to remove from the PermafrostRole
         '''
         for user in value_as_list(users):
             user.groups.remove(self.group)
 
     def users_clear(self):
         '''
-        Remove all users from the Role
+        Remove all users from the PermafrostRole
         '''
         self.group.clear()
 

@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import Role
+from .models import PermafrostRole
 
 # ################
 # # ADMIN ACTIONS
@@ -33,23 +33,15 @@ from .models import Role
 # MODEL ADMINS
 ###############
 
-class RoleAdmin(admin.ModelAdmin):
-    # readonly_fields = ('slug',)
-    # list_display = ('name', 'category')
-    # ordering = ('name',)
+class PermafrostRoleAdmin(admin.ModelAdmin):
+    readonly_fields = ('slug',)
+    list_display = ('name', 'category')
+    ordering = ('name',)
     readonly_fields=('group','slug')
-
-
-# class RolePermissionAdmin(admin.ModelAdmin):
-#     # readonly_fields = ('slug',)
-#     # list_display = ('name', 'category')
-#     # ordering = ('name',)
-#     pass
 
 
 ###############
 # REGISTRATION
 ###############
 
-admin.site.register(Role, RoleAdmin)
-# admin.site.register(RolePermission, RolePermissionAdmin)
+admin.site.register(PermafrostRole, PermafrostRoleAdmin)

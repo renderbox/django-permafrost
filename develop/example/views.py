@@ -13,7 +13,7 @@ class PermCheckAPIView(APIView):
     """
     # authentication_classes = [authentication.TokenAuthentication]
     permission_classes = [PermafrostRESTPermission]
-    permission_required = ('permafrost.add_role',)
+    permission_required = ('permafrost.add_permafrostrole',)
 
     def get(self, request, format=None):
         """

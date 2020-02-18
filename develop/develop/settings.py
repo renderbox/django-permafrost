@@ -133,8 +133,7 @@ REST_FRAMEWORK = {
 PERMAFROST_ROLE_CONFIG = {
     'User': {
         'permissions': [
-                {"perm":"permafrost.view_role", "label":"Can view Role"},
-                {"perm":"permafrost.view_rolepermission", "label":"Can view Role Permission"},
+                {"perm":"permafrost.view_permafrostrole", "label":"Can view Role"},
             ],
         'id': 1,
         'includes': [
@@ -142,29 +141,22 @@ PERMAFROST_ROLE_CONFIG = {
     },
     'Staff': {
         'permissions': [
-                {"perm":"permafrost.add_role", "label":"Can add Role"},
-                {"perm":"permafrost.change_role", "label":"Can change Role"},
-                {"perm":"permafrost.view_role", "label":"Can view Role"},
-                {"perm":"permafrost.add_rolepermission", "label":"Can add Role Permission"},
-                {"perm":"permafrost.change_rolepermission", "label":"Can change Role Permission"},
-                {"perm":"permafrost.view_rolepermission", "label":"Can view Role Permission"},
+                {"perm":"permafrost.add_permafrostrole", "label":"Can add Role"},
+                {"perm":"permafrost.change_permafrostrole", "label":"Can change Role"},
+                {"perm":"permafrost.view_permafrostrole", "label":"Can view Role"},
             ],
         'id': 30,
         'includes': [
-            "permafrost.view_role",
-            "permafrost.change_role",
+            "permafrost.view_permafrostrole",
+            "permafrost.change_permafrostrole",
         ]
     },
     'Administrator': {
         'permissions': [
-                {"perm":"permafrost.add_role", "label":"Can add Role"},
-                {"perm":"permafrost.change_role", "label":"Can change Role"},
-                {"perm":"permafrost.delete_role", "label":"Can delete Role"},
-                {"perm":"permafrost.view_role", "label":"Can view Role"},
-                {"perm":"permafrost.add_rolepermission", "label":"Can add Role Permission"},
-                {"perm":"permafrost.change_rolepermission", "label":"Can change Role Permission"},
-                {"perm":"permafrost.delete_rolepermission", "label":"Can delete Role Permission"},
-                {"perm":"permafrost.view_rolepermission", "label":"Can view Role Permission"},
+                {"perm":"permafrost.add_permafrostrole", "label":"Can add Role"},
+                {"perm":"permafrost.change_permafrostrole", "label":"Can change Role"},
+                {"perm":"permafrost.delete_permafrostrole", "label":"Can delete Role"},
+                {"perm":"permafrost.view_permafrostrole", "label":"Can view Role"},
             ],
         'id': 50,
         'includes': [
