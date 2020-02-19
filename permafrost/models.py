@@ -106,8 +106,8 @@ class PermafrostRole(models.Model):
     locked = models.BooleanField(_("Locked"), default=False)                                                   # If this is locked, it can not be edited by the Client, used for defaults
 
     class Meta:
-        verbose_name = _("Role")
-        verbose_name_plural = _("Roles")
+        verbose_name = _("Permafrost Role")
+        verbose_name_plural = _("Permafrost Roles")
         unique_together = [['name', 'site']]
 
     def __str__(self):
