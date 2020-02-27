@@ -51,6 +51,8 @@ class PermafrostCategory(models.Model):
     in the given category.  It contains both the "permissions", which are
     client configurable and the "includes" which are always included.
 
+    TODO: Need to add localization support
+
     The permissions are kept in a JSON formatted list in the following structure:
     [
         {"perm":"permafrost.add_permafrostrole", "label":"Can add Permafrost Role"},
