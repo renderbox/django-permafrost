@@ -40,6 +40,7 @@ setup(
     install_requires=[
         'Django>=2.2',
         'djangorestframework',
+        'jsonfield',
     ],
     extras_require={
         'dev': [],

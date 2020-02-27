@@ -8,11 +8,11 @@ from django.db import transaction
 
 from rest_framework.test import APIClient
 
-from permafrost.models import PermafrostRole, ROLE_CONFIG, get_permission_models
+from permafrost.models import PermafrostRole, PermafrostCategory, get_permission_models
 
 class PermafrostRoleModelTest(TestCase):
 
-    # fixtures = ['unit_test']
+    fixtures = ['unit_test']
 
     def setUp(self):
         User = get_user_model()
@@ -20,8 +20,12 @@ class PermafrostRoleModelTest(TestCase):
         self.staffuser = User.objects.create_user(username='staffy', email='staffy@beatles.com', password='Passw0rd!')
         self.adminuser = User.objects.create_user(username='adminy', email='adminy@beatles.com', password='Passw0rd!')
 
-        self.site_1 = Site.objects.create(name="This Site", domain="thissite.com")
-        self.site_2 = Site.objects.create(name="That Site", domain="thatsite.com")
+        self.site_1 = Site.objects.get(pk=1)
+        self.site_2 = Site.objects.get(pk=2)
+
+        self.role_category_1 = PermafrostCategory.objects.get(pk=1)
+        self.role_category_2 = PermafrostCategory.objects.get(pk=2)
+        self.role_category_3 = PermafrostCategory.objects.get(pk=3)
 
     #     self.client_user = get_user_model().objects.get(pk=5)
     #     self.client_staff = get_user_model().objects.get(pk=6)
@@ -69,7 +73,7 @@ class PermafrostRoleModelTest(TestCase):
     def test_create_staffuser_role(self):
         # Test that creating a PermafrostRole creates a matching Group
 
-        role = PermafrostRole(name="Bobs Staff Group", category=30)
+        role = PermafrostRole(name="Bobs Staff Group", category=self.role_category_2)
         role.save()
 
         self.assertEqual(role.group.name, "1_staff_bobs-staff-group")        # Checks that the user is created
@@ -104,7 +108,7 @@ class PermafrostRoleModelTest(TestCase):
                 role_b.save()
 
             with transaction.atomic():
-                role_d = PermafrostRole(name="Bobs Super Group", site=self.site_2, category=30)
+                role_d = PermafrostRole(name="Bobs Super Group", site=self.site_2, category=self.role_category_2)
                 role_d.save()
 
         # TODO: Add check to make sure PermafrostRole's Groups were not created
@@ -112,7 +116,7 @@ class PermafrostRoleModelTest(TestCase):
     def test_clear_role_permissions(self):
         # Test that "included" permissions are always present in the group
 
-        role = PermafrostRole(name="Bobs Staff Group", site=self.site_2, category=30)
+        role = PermafrostRole(name="Bobs Staff Group", site=self.site_2, category=self.role_category_2)
         role.save()
 
         # print(role.permissions)
@@ -143,7 +147,7 @@ class PermafrostRoleModelTest(TestCase):
 
 class PermafrostAPITest(TestCase):
 
-    # fixtures = ['unit_test']
+    fixtures = ['unit_test']
 
     def setUp(self):
         User = get_user_model()
@@ -151,8 +155,12 @@ class PermafrostAPITest(TestCase):
         self.staffuser = User.objects.create_user(username='staffy', email='staffy@beatles.com', password='Passw0rd!', is_active=True, is_staff=True, )
         self.adminuser = User.objects.create_user(username='adminy', email='adminy@beatles.com', password='Passw0rd!', is_active=True, is_staff=True, is_superuser=True)
 
-        self.site_1 = Site.objects.create(name="This Site", domain="thissite.com")
-        self.site_2 = Site.objects.create(name="That Site", domain="thatsite.com")
+        self.site_1 = Site.objects.get(pk=1)
+        self.site_2 = Site.objects.get(pk=2)
+
+        self.role_category_1 = PermafrostCategory.objects.get(pk=1)
+        self.role_category_2 = PermafrostCategory.objects.get(pk=2)
+        self.role_category_3 = PermafrostCategory.objects.get(pk=3)
 
         self.client = APIClient()
 

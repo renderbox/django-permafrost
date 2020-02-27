@@ -41,6 +41,7 @@ INSTALLED_APPS = [
     'django.contrib.sites',
     'rest_framework',
     'permafrost',
+    'example',
 ]
 
 MIDDLEWARE = [
@@ -128,38 +129,4 @@ REST_FRAMEWORK = {
     'DEFAULT_PERMISSION_CLASSES': [
         'rest_framework.permissions.IsAuthenticated',
     ]
-}
-
-PERMAFROST_ROLE_CONFIG = {
-    'User': {
-        'permissions': [
-                {"perm":"permafrost.view_permafrostrole", "label":"Can view Role"},
-            ],
-        'id': 1,
-        'includes': [
-        ]
-    },
-    'Staff': {
-        'permissions': [
-                {"perm":"permafrost.add_permafrostrole", "label":"Can add Role"},
-                {"perm":"permafrost.change_permafrostrole", "label":"Can change Role"},
-                {"perm":"permafrost.view_permafrostrole", "label":"Can view Role"},
-            ],
-        'id': 30,
-        'includes': [
-            "permafrost.view_permafrostrole",
-            "permafrost.change_permafrostrole",
-        ]
-    },
-    'Administrator': {
-        'permissions': [
-                {"perm":"permafrost.add_permafrostrole", "label":"Can add Role"},
-                {"perm":"permafrost.change_permafrostrole", "label":"Can change Role"},
-                {"perm":"permafrost.delete_permafrostrole", "label":"Can delete Role"},
-                {"perm":"permafrost.view_permafrostrole", "label":"Can view Role"},
-            ],
-        'id': 50,
-        'includes': [
-        ]
-    }
 }

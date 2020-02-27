@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import PermafrostRole
+from .models import PermafrostRole, PermafrostCategory
 
 # ################
 # # ADMIN ACTIONS
@@ -39,9 +39,20 @@ class PermafrostRoleAdmin(admin.ModelAdmin):
     ordering = ('name',)
     readonly_fields=('group','slug')
 
+    def get_readonly_fields(self, request, obj=None):
+        if obj: # editing an existing object
+            return self.readonly_fields + ('category',)
+        return self.readonly_fields
+
+class PermafrostCategoryAdmin(admin.ModelAdmin):
+    readonly_fields = ('slug',)
+    list_display = ('name',)
+    ordering = ('name',)
+    readonly_fields=('slug',)
 
 ###############
 # REGISTRATION
 ###############
 
 admin.site.register(PermafrostRole, PermafrostRoleAdmin)
+admin.site.register(PermafrostCategory, PermafrostCategoryAdmin)
