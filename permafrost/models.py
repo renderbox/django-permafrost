@@ -138,9 +138,9 @@ class PermafrostRole(models.Model):
 
     def permissions_set(self, permissions):
         '''
-        This updates the group permissions to only include what was passed in.
+        This updates the group permissions to only include what was passed in by name "app.perm"
         '''
-        self.group.permissions.set( value_as_list(permissions) )
+        self.group.permissions.set( get_permission_models(permissions) )
 
     def permissions_clear(self):
         '''
@@ -182,17 +182,13 @@ class PermafrostRole(models.Model):
 
         self.slug = slugify(self.name)
 
-        result = super().save(*args, **kwargs)
-
         if not self.group:
-            obj, created = Group.objects.get_or_create( name="{0}_{1}_{2}".format( self.site.pk, self.category.slug, slugify(self.name)) )
+            self.group, created = Group.objects.get_or_create( name="{0}_{1}_{2}".format( self.site.pk, self.category.slug, slugify(self.name)) )
 
             if created:
-                obj.save()                  # Save it to create the PK so it can be assigned
-                self.group = obj
-                perms = self.category.get_include_models()
-                self.permissions_set( perms )    # If a new group is geenrated, the permissions shoudl be blank by default
-
-            super().save(*args, **kwargs)   # Save again only if the Group is added
+                self.group.save()                               # Permission relationship is a MTM so it needs to be saved first to create the PK
+                self.permissions_set( self.category.includes )  # If a new group is generated, the permissions should be set to the Role Category 'includes' to start (list of strings, "app.perm")
+            
+        result = super().save(*args, **kwargs)
 
         return result

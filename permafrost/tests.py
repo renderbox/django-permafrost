@@ -44,7 +44,7 @@ class PermafrostRoleModelTest(TestCase):
     def test_create_user_role(self):
         # Test that creating a PermafrostRole creates a matching Group
 
-        role = PermafrostRole(name="Bobs Super Group")
+        role = PermafrostRole(name="Bobs Super Group", category=self.role_category_1)
         role.save()
 
         self.assertEqual(role.group.name, "1_user_bobs-super-group")        # Checks that the user is created
@@ -83,7 +83,7 @@ class PermafrostRoleModelTest(TestCase):
         perms = list(self.staffuser.get_all_permissions())
         perms.sort()
 
-        check_list = ["permafrost.view_permafrostrole",  "permafrost.change_permafrostrole"]    # Needs to be sorted to try to make sure it's a close to the same as possible
+        check_list = ["permafrost.view_permafrostrole"]    # Needs to be sorted to try to make sure it's a close to the same as possible
         check_list.sort()
 
         # Test that "included" permissions are the only things present in the group
@@ -95,16 +95,16 @@ class PermafrostRoleModelTest(TestCase):
 
     def test_create_duplicate_role(self):
         # Test that creating a PermafrostRole of the same name producers and error
-        role_a = PermafrostRole(name="Bobs Super Group", site=self.site_1)
+        role_a = PermafrostRole(name="Bobs Super Group", site=self.site_1, category=self.role_category_1)
         role_a.save()
 
-        role_c = PermafrostRole(name="Bobs Super Group", site=self.site_2)
+        role_c = PermafrostRole(name="Bobs Super Group", site=self.site_2, category=self.role_category_1)
         role_c.save()
 
         with self.assertRaises(IntegrityError):
 
             with transaction.atomic():
-                role_b = PermafrostRole(name="Bobs Super Group", site=self.site_2)
+                role_b = PermafrostRole(name="Bobs Super Group", site=self.site_2, category=self.role_category_1)
                 role_b.save()
 
             with transaction.atomic():
@@ -119,7 +119,9 @@ class PermafrostRoleModelTest(TestCase):
         role = PermafrostRole(name="Bobs Staff Group", site=self.site_2, category=self.role_category_2)
         role.save()
 
-        # print(role.permissions)
+        # print(len(role.permissions()))
+
+        # self.assertEqual()
 
     #     Add Extra Permissions from the list
     #     run Clear method on role
