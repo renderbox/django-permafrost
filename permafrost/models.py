@@ -109,11 +109,17 @@ class PermafrostRole(models.Model):
     site = models.ForeignKey(Site, on_delete=models.CASCADE, default=settings.SITE_ID)
     group = models.OneToOneField(Group, verbose_name=_("Group"), on_delete=models.CASCADE, blank=True, null=True)      # Need to be uneditable in the Admin
     locked = models.BooleanField(_("Locked"), default=False)                                                   # If this is locked, it can not be edited by the Client, used for System Default Roles
+    deleted = models.BooleanField(_("Deleted"), default=False, help_text="Soft Delete the Role")
 
     class Meta:
         verbose_name = _("Permafrost Role")
         verbose_name_plural = _("Permafrost Roles")
         unique_together = [['name', 'site']]
+
+        permissions = (
+            ("add_user_to_role", "Can Add Users to Role"),
+            ("add_user_to_administration", "Can Add Users to the Administration Roles"),
+        )
 
     def __str__(self):
         return self.name
