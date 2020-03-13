@@ -40,6 +40,8 @@ def permission_from_string(permission):
     values = permission.split(".")
     return Permission.objects.get(codename=values[1], content_type__app_label=values[0])
 
+def get_current_site(*args, **kwargs):
+    return Site.objects.get_current()
 
 ###############
 # MODELS
@@ -106,9 +108,9 @@ class PermafrostRole(models.Model):
     name = models.CharField(_("Name"), max_length=50)
     slug = models.SlugField(_("Slug"))
     category = models.ForeignKey(PermafrostCategory, verbose_name=_("Category"), on_delete=models.CASCADE)
-    site = models.ForeignKey(Site, on_delete=models.CASCADE, default=Site.objects.get_current)                      # This uses a callable so it will not trigger a migration with the projects it's included in
-    group = models.OneToOneField(Group, verbose_name=_("Group"), on_delete=models.CASCADE, blank=True, null=True)      # Need to be uneditable in the Admin
-    locked = models.BooleanField(_("Locked"), default=False)                                                   # If this is locked, it can not be edited by the Client, used for System Default Roles
+    site = models.ForeignKey(Site, on_delete=models.CASCADE, default=get_current_site)                      # This uses a callable so it will not trigger a migration with the projects it's included in
+    group = models.OneToOneField(Group, verbose_name=_("Group"), on_delete=models.CASCADE, blank=True, null=True)   # Need to be uneditable in the Admin
+    locked = models.BooleanField(_("Locked"), default=False)                                                        # If this is locked, it can not be edited by the Client, used for System Default Roles
     deleted = models.BooleanField(_("Deleted"), default=False, help_text="Soft Delete the Role")
 
     class Meta:
