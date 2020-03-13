@@ -16,6 +16,6 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='permafrostrole',
             name='site',
-            field=models.ForeignKey(default=django.contrib.sites.models.SiteManager.get_current, on_delete=django.db.models.deletion.CASCADE, to='sites.Site'),
+            field=models.ForeignKey(default=permafrost.models.get_current_site, on_delete=django.db.models.deletion.CASCADE, to='sites.Site'),
         ),
     ]
