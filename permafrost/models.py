@@ -41,7 +41,7 @@ def permission_from_string(permission):
     return Permission.objects.get(codename=values[1], content_type__app_label=values[0])
 
 def get_current_site(*args, **kwargs):
-    return Site.objects.get_current()
+    return Site.objects.get_current().pk
 
 ###############
 # MODELS
