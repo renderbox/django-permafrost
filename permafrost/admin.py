@@ -37,7 +37,7 @@ class PermafrostRoleAdmin(admin.ModelAdmin):
     readonly_fields = ('slug',)
     list_display = ('name', 'category')
     ordering = ('name',)
-    readonly_fields=('group','slug')
+    readonly_fields=('slug',)
 
     def get_readonly_fields(self, request, obj=None):
         if obj: # editing an existing object

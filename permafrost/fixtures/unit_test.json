@@ -586,7 +586,6 @@
         "slug": "student",
         "category": 1,
         "site": 1,
-        "group": 11,
         "locked": false
     }
 },
@@ -598,7 +597,6 @@
         "slug": "councilor",
         "category": 2,
         "site": 1,
-        "group": 12,
         "locked": false
     }
 }

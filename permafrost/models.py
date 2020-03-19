@@ -110,7 +110,6 @@ class PermafrostRole(models.Model):
     slug = models.SlugField(_("Slug"))
     category = models.ForeignKey(PermafrostCategory, verbose_name=_("Category"), on_delete=models.CASCADE)
     site = models.ForeignKey(Site, on_delete=models.CASCADE, default=get_current_site)                      # This uses a callable so it will not trigger a migration with the projects it's included in
-    group = models.OneToOneField(Group, verbose_name=_("Group"), on_delete=models.CASCADE, blank=True, null=True)   # Need to be uneditable in the Admin
     locked = models.BooleanField(_("Locked"), default=False)                                                        # If this is locked, it can not be edited by the Client, used for System Default Roles
     deleted = models.BooleanField(_("Deleted"), default=False, help_text="Soft Delete the Role")
 
@@ -130,37 +129,52 @@ class PermafrostRole(models.Model):
     #-------------
     # Permissions
 
+    def get_group_name(self):
+        return "{0}_{1}_{2}".format( self.site.pk, self.category.slug, self.slug)
+    
+    def get_group(self):
+        '''
+        Done this way to avoid migration issues with fixture race conditions
+        '''
+        group, created = Group.objects.get_or_create( name=self.get_group_name() )
+
+        if created:
+            group.save()                                    # Permission relationship is a MTM so it needs to be saved first to create the PK
+            self.permissions_set( self.category.includes )  # If a new group is generated, the permissions should be set to the Role Category 'includes' to start (list of strings, "app.perm")
+
+        return group
+
     def permissions(self):
-        return self.group.permissions
+        return self.get_group().permissions
 
     def permissions_add(self, permissions):
         '''
         Add permissions to the attached group by name "app.perm"
         '''
         for p in get_permission_models(permissions):
-            self.group.permissions.add(p)
+            self.get_group().permissions.add(p)
 
     def permissions_remove(self, permissions):
         '''
         Remove permissions from the attached group by name "app.perm"
         '''
         for p in get_permission_models(permissions):
-            self.group.permissions.remove(p)
+            self.get_group().permissions.remove(p)
 
     def permissions_set(self, permissions):
         '''
         This updates the group permissions to only include what was passed in by name "app.perm"
         '''
-        self.group.permissions.set( get_permission_models(permissions) )
+        self.get_group().permissions.set( get_permission_models(permissions) )
 
     def permissions_clear(self):
         '''
         Remove all permissions from the group except the defaults.
         '''
         if self.category.includes:
-            self.group.permissions.set( self.category.includes )
+            self.get_group().permissions.set( self.category.includes )
         else:
-            self.group.permissions.clear()
+            self.get_group().permissions.clear()
 
 
     #-------------
@@ -171,20 +185,20 @@ class PermafrostRole(models.Model):
         Pass in a User object to add to the PermafrostRole
         '''
         for user in value_as_list(users):
-            user.groups.add(self.group)
+            user.groups.add(self.get_group())
 
     def users_remove(self, users=None):
         '''
         Pass in a User object to remove from the PermafrostRole
         '''
         for user in value_as_list(users):
-            user.groups.remove(self.group)
+            user.groups.remove(self.get_group())
 
     def users_clear(self):
         '''
         Remove all users from the PermafrostRole
         '''
-        self.group.clear()
+        self.get_group().clear()
 
     #-------------
     # Save
@@ -192,13 +206,6 @@ class PermafrostRole(models.Model):
     def save(self, *args, **kwargs):
 
         self.slug = slugify(self.name)
-
-        if not self.group:
-            self.group, created = Group.objects.get_or_create( name="{0}_{1}_{2}".format( self.site.pk, self.category.slug, slugify(self.name)) )
-
-            if created:
-                self.group.save()                               # Permission relationship is a MTM so it needs to be saved first to create the PK
-                self.permissions_set( self.category.includes )  # If a new group is generated, the permissions should be set to the Role Category 'includes' to start (list of strings, "app.perm")
             
         result = super().save(*args, **kwargs)
 

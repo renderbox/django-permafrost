@@ -47,7 +47,7 @@ class PermafrostRoleModelTest(TestCase):
         role = PermafrostRole(name="Bobs Super Group", category=self.role_category_1)
         role.save()
 
-        self.assertEqual(role.group.name, "1_user_bobs-super-group")        # Checks that the user is created
+        self.assertEqual(role.get_group().name, "1_user_bobs-super-group")        # Checks that the user is created
 
         # Add the user to the PermafrostRole with the 
         role.users_add(self.user)
@@ -76,7 +76,7 @@ class PermafrostRoleModelTest(TestCase):
         role = PermafrostRole(name="Bobs Staff Group", category=self.role_category_2)
         role.save()
 
-        self.assertEqual(role.group.name, "1_staff_bobs-staff-group")        # Checks that the user is created
+        self.assertEqual(role.get_group().name, "1_staff_bobs-staff-group")        # Checks that the user is created
 
         # Add user to the Group
         role.users_add(self.staffuser)
