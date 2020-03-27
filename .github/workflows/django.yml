@@ -28,6 +28,6 @@ jobs:
     - name: Run Tests
       run: |
         cd develop
-        python manage.py test
+        python manage.py test permafrost
 
       
