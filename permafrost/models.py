@@ -5,6 +5,7 @@ from django.contrib.auth.models import Group, Permission
 from django.contrib.sites.shortcuts import get_current_site
 from django.utils.translation import ugettext_lazy as _
 from django.utils.text import slugify
+from django.core.exceptions import ObjectDoesNotExist
 
 from jsonfield import JSONField     # Using this instead of the PSQL one for portability
 
@@ -21,20 +22,23 @@ from jsonfield import JSONField     # Using this instead of the PSQL one for por
 def lable_from_choice_value(choices, value):
     return [x[1] for x in choices if x[0] == value][0]
 
-def value_as_list(value):
+def make_iterable(value):
     '''
     Takes whatever is passed in and tries to return it as a list
     '''
     if isinstance(value, list):
         return value
-    
+
+    if isinstance(value, models.query.QuerySet):
+        return value
+
     if not value:
         return []
 
     return [value]
 
 def get_permission_models(permissions):
-    return [ permission_from_string(p) for p in value_as_list(permissions) ]
+    return [ permission_from_string(p) for p in make_iterable(permissions) ]
 
 def permission_from_string(permission):
     values = permission.split(".")
@@ -113,6 +117,8 @@ class PermafrostRole(models.Model):
     locked = models.BooleanField(_("Locked"), default=False)                                                        # If this is locked, it can not be edited by the Client, used for System Default Roles
     deleted = models.BooleanField(_("Deleted"), default=False, help_text="Soft Delete the Role")
 
+    __original_group = None
+    
     class Meta:
         verbose_name = _("Permafrost Role")
         verbose_name_plural = _("Permafrost Roles")
@@ -123,14 +129,24 @@ class PermafrostRole(models.Model):
             ("add_user_to_administration", "Can Add Users to the Administration Roles"),
         )
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        try:
+            self.__original_group = self.group_name_schema(self.site.pk, self.category.slug, self.slug)
+        except ObjectDoesNotExist:
+            pass
+
     def __str__(self):
         return self.name
 
     #-------------
     # Permissions
 
+    def group_name_schema(self, site_id, category_slug, slug):
+        return "{0}_{1}_{2}".format( site_id, category_slug, slug)
+
     def get_group_name(self):
-        return "{0}_{1}_{2}".format( self.site.pk, self.category.slug, self.slug)
+        return self.group_name_schema(self.site.pk, self.category.slug, self.slug)
     
     def get_group(self):
         '''
@@ -180,18 +196,26 @@ class PermafrostRole(models.Model):
     #-------------
     # Users
 
+    def user_set(self):
+        '''
+        Wrapper around the group that returns a queryset of all the user 
+        included in this role.
+        '''
+        return self.get_group().user_set.all()
+
+
     def users_add(self, users=None):
         '''
         Pass in a User object to add to the PermafrostRole
         '''
-        for user in value_as_list(users):
+        for user in make_iterable(users):
             user.groups.add(self.get_group())
 
     def users_remove(self, users=None):
         '''
         Pass in a User object to remove from the PermafrostRole
         '''
-        for user in value_as_list(users):
+        for user in make_iterable(users):
             user.groups.remove(self.get_group())
 
     def users_clear(self):
@@ -208,5 +232,10 @@ class PermafrostRole(models.Model):
         self.slug = slugify(self.name)
             
         result = super().save(*args, **kwargs)
+
+        new_group_name = self.get_group_name()
+
+        if self.__original_group != new_group_name:     # Keeps the group in sync with the Permafrost Role
+            Group.objects.filter(name=self.__original_group).update(name=new_group_name)
 
         return result

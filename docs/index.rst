@@ -14,9 +14,7 @@ Django Permafrost adds a couple extra pieces of utility to Django's permission s
 
 2. It adds a View Mixin (PermafrostLogMixin) for logging failed login attempts that use the Permission View Mixin.
 
-3. It adds a Permission type (PermafrostRESTPermission) for the Django REST Framework.
-
-4. It adds a PermafrostRole model for creating permissions that can be controlled by a Client for other users on the site.  It relies on and manages Django's built-in permission with groups.
+3. It adds a PermafrostRole model for creating permissions that can be controlled by a Client for other users on the site.  It relies on and manages Django's built-in permission with groups.
 
 
 Updated docs are forthcoming...
