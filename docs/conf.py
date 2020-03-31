@@ -23,7 +23,7 @@ copyright = '2020, Grant Viklund'
 author = 'Grant Viklund'
 
 # The full version, including alpha/beta/rc tags
-release = '0.1.22'
+release = '0.1.23'
 
 
 # -- General configuration ---------------------------------------------------
