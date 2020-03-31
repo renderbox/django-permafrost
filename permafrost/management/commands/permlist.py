@@ -56,7 +56,7 @@ class Command(BaseCommand):
 
         ignore_apps = getattr(settings, "PERMAFROST_IGNORE_APPS", ['admin', 'auth', 'contenttypes', 'sessions', 'sites']) #, 'permafrost'])
 
-        for perm in permissions:            # Permission's Natural Key = codename + content_type.natural_key()
+        for perm in permissions:            # Permission's Natural Key = codename + content_type.natural_key()      "{1}.{0}".format(*perm.natural_key())
             keys = list(perm.natural_key())
             if keys[1] not in ignore_apps:
 
