@@ -5,6 +5,7 @@ from django.contrib.sites.models import Site
 from django.contrib.auth import get_user_model
 from django.db.utils import IntegrityError
 from django.db import transaction
+from django.contrib.auth.models import Group
 
 from rest_framework.test import APIClient
 
@@ -31,6 +32,25 @@ class PermafrostRoleModelTest(TestCase):
     #     self.client_staff = get_user_model().objects.get(pk=6)
     #     self.client_admin = get_user_model().objects.get(pk=7)
 
+    def test_role_rename_updates_group(self):
+
+        role = PermafrostRole(name="Awesome Students", category=self.role_category_1)
+        role.save()
+        print(role.slug)
+
+        role_group = role.get_group()   # This triggers creating the group if it does not exist
+        pk_check = role_group.pk
+        self.assertEqual(role_group.name, "1_user_awesome-students")
+
+        role.name = "OK Students"
+        role.save()
+
+        # new_role_group = role.get_group()
+        new_role_group = Group.objects.get(name=role.get_group_name())
+
+        self.assertEqual(new_role_group.name, "1_user_ok-students")
+        self.assertEqual(role_group.pk, new_role_group.pk)              # Need to be the same PK value
+        
     def test_permission_objects_from_string(self):
         perms = get_permission_models("permafrost.view_permafrostrole")
 

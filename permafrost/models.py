@@ -117,7 +117,7 @@ class PermafrostRole(models.Model):
     locked = models.BooleanField(_("Locked"), default=False)                                                        # If this is locked, it can not be edited by the Client, used for System Default Roles
     deleted = models.BooleanField(_("Deleted"), default=False, help_text="Soft Delete the Role")
 
-    __original_group = None
+    __original_group = None     # Assume there is no previous name
     
     class Meta:
         verbose_name = _("Permafrost Role")
@@ -132,7 +132,9 @@ class PermafrostRole(models.Model):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         try:
-            self.__original_group = self.group_name_schema(self.site.pk, self.category.slug, self.slug)
+            if self.slug:   # If there is no slug, assume it's not yet saved
+                self.__original_group = self.group_name_schema(self.site.pk, self.category.slug, self.slug)
+                # print("NAME IS: " + self.__original_group)
         except ObjectDoesNotExist:
             pass
 
@@ -230,12 +232,15 @@ class PermafrostRole(models.Model):
     def save(self, *args, **kwargs):
 
         self.slug = slugify(self.name)
-            
-        result = super().save(*args, **kwargs)
 
         new_group_name = self.get_group_name()
 
-        if self.__original_group != new_group_name:     # Keeps the group in sync with the Permafrost Role
-            Group.objects.filter(name=self.__original_group).update(name=new_group_name)
+        if self.__original_group:
+            if self.__original_group != new_group_name:
+                Group.objects.filter(name=self.__original_group).update(name=new_group_name)
+
+        result = super().save(*args, **kwargs)
+
+        self.__original_group = self.group_name_schema(self.site.pk, self.category.slug, self.slug)     # Need to make sure to set the name after the save.
 
         return result
