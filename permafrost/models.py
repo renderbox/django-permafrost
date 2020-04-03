@@ -49,6 +49,15 @@ def get_current_site(*args, **kwargs):
 
 
 ###############
+# MANAGERS
+###############
+
+class CategoryManager(models.Manager):
+    def get_by_natural_key(self, slug):
+        return self.get(slug=slug)
+
+
+###############
 # MODELS
 ###############
 
@@ -88,12 +97,17 @@ class PermafrostCategory(models.Model):
     permissions = JSONField(default=list, blank=True)
     includes = JSONField(default=list, blank=True)
 
+    objects = CategoryManager()
+
     class Meta:
         verbose_name = _("Permafrost Category")
         verbose_name_plural = _("Permafrost Categories")
 
     def __str__(self):
         return self.name
+
+    def natural_key(self):
+        return (self.slug)
 
     def save(self, *args, **kwargs):
         self.slug = slugify(self.name)
