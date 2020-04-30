@@ -56,7 +56,9 @@ class PermafrostRoleAdmin(admin.ModelAdmin):
         return self.readonly_fields
 
     def role_group(self, obj):
-        return obj.get_group().name
+        if obj.group:
+            return obj.group.name
+        return None
 
 
 class PermafrostCategoryAdmin(admin.ModelAdmin):

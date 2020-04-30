@@ -14,6 +14,8 @@ from jsonfield import JSONField     # Using this instead of the PSQL one for por
 # CHOICES
 ###############
 
+# CATEGORIES = getAttr(settings, "PERMAFROST_CATEGORIES", {})
+# CATEGORY_CHOICES = getAttr(settings, "PERMAFROST_CATEGORY_CHOICES", [])
 
 ###############
 # UTILITIES
@@ -55,6 +57,11 @@ def get_current_site(*args, **kwargs):
 class CategoryManager(models.Manager):
     def get_by_natural_key(self, slug):
         return self.get(slug=slug)
+
+
+class PermafrostRoleManager(models.Manager):
+    def get_by_natural_key(self, slug, site):
+        return self.get(slug=slug, site=site)
 
 
 ###############
@@ -120,19 +127,21 @@ class PermafrostCategory(models.Model):
 
 class PermafrostRole(models.Model):
     '''
-    PermafrostRole is Client Defineable and "wraps" around a Django Group
-    adding a user to this role adds them to the Django Group
-    and automatically assignes them the permissions.
+    PermafrostRole is Client Defineable and "manages" a Django Group adding a
+    user to this role adds them to the Django Group and automatically assignes
+    them the permissions.
     '''
     name = models.CharField(_("Name"), max_length=50)
     slug = models.SlugField(_("Slug"))
+    # category = models.CharField(_("Category"), choices=CATEGORY_CHOICES)                                  # Should probably switch back to having configurable permissions be included in the code, better for consistency and security
     category = models.ForeignKey(PermafrostCategory, verbose_name=_("Category"), on_delete=models.CASCADE)
     site = models.ForeignKey(Site, on_delete=models.CASCADE, default=get_current_site)                      # This uses a callable so it will not trigger a migration with the projects it's included in
     locked = models.BooleanField(_("Locked"), default=False)                                                        # If this is locked, it can not be edited by the Client, used for System Default Roles
     deleted = models.BooleanField(_("Deleted"), default=False, help_text="Soft Delete the Role")
+    group = models.ForeignKey(Group, verbose_name=_("Category"), on_delete=models.CASCADE, related_name="permafrost_role")                  # NOTE: Need to make sure this is exported with natural key values as it can have a different PK on different servers
 
-    __original_group = None     # Assume there is no previous name
-    
+    objects = PermafrostRoleManager()
+
     class Meta:
         verbose_name = _("Permafrost Role")
         verbose_name_plural = _("Permafrost Roles")
@@ -143,71 +152,69 @@ class PermafrostRole(models.Model):
             ("add_user_to_administration", "Can Add Users to the Administration Roles"),
         )
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        try:
-            if self.slug:   # If there is no slug, assume it's not yet saved
-                self.__original_group = self.group_name_schema(self.site.pk, self.category.slug, self.slug)
-                # print("NAME IS: " + self.__original_group)
-        except ObjectDoesNotExist:
-            pass
-
     def __str__(self):
         return self.name
+
+    def natural_key(self):
+        return (self.slug, self.site)
 
     #-------------
     # Permissions
 
-    def group_name_schema(self, site_id, category_slug, slug):
-        return "{0}_{1}_{2}".format( site_id, category_slug, slug)
+    def available(self):
+        '''
+        TODO!!!
+        Based on the list of permissions in the Category, compile a list of all
+        that are available.
+        '''
+        pass
+
+    def conform_group(self):
+        '''
+        TODO!!!
+        Based on the list of permissions in the Category, make sure the group
+        has the right set.  Make sure no permissions are outside of the
+        optional and required and that all required permissions are added.
+        '''
+        available = self.available()
+
+    def group_name_schema(self, site, category, slug):
+        return "{0}_{1}_{2}".format( site.pk, category.slug, slug)
 
     def get_group_name(self):
-        return self.group_name_schema(self.site.pk, self.category.slug, self.slug)
+        return self.group_name_schema(self.site, self.category, self.slug)
     
-    def get_group(self):
-        '''
-        Done this way to avoid migration issues with fixture race conditions
-        '''
-        group, created = Group.objects.get_or_create( name=self.get_group_name() )
-
-        if created:
-            group.save()                                    # Permission relationship is a MTM so it needs to be saved first to create the PK
-            self.permissions_set( self.category.includes )  # If a new group is generated, the permissions should be set to the Role Category 'includes' to start (list of strings, "app.perm")
-
-        return group
-
     def permissions(self):
-        return self.get_group().permissions
+        return self.group.permissions
 
     def permissions_add(self, permissions):
         '''
         Add permissions to the attached group by name "app.perm"
         '''
         for p in get_permission_models(permissions):
-            self.get_group().permissions.add(p)
+            self.group.permissions.add(p)
 
     def permissions_remove(self, permissions):
         '''
         Remove permissions from the attached group by name "app.perm"
         '''
         for p in get_permission_models(permissions):
-            self.get_group().permissions.remove(p)
+            self.group.permissions.remove(p)
 
     def permissions_set(self, permissions):
         '''
         This updates the group permissions to only include what was passed in by name "app.perm"
         '''
-        self.get_group().permissions.set( get_permission_models(permissions) )
+        self.group.permissions.set( get_permission_models(permissions) )
 
     def permissions_clear(self):
         '''
         Remove all permissions from the group except the defaults.
         '''
         if self.category.includes:
-            self.get_group().permissions.set( self.category.includes )
+            self.group.permissions.set( self.category.includes )
         else:
-            self.get_group().permissions.clear()
-
+            self.group.permissions.clear()
 
     #-------------
     # Users
@@ -217,7 +224,7 @@ class PermafrostRole(models.Model):
         Wrapper around the group that returns a queryset of all the user 
         included in this role.
         '''
-        return self.get_group().user_set.all()
+        return self.group.user_set.all()
 
 
     def users_add(self, users=None):
@@ -225,36 +232,35 @@ class PermafrostRole(models.Model):
         Pass in a User object to add to the PermafrostRole
         '''
         for user in make_iterable(users):
-            user.groups.add(self.get_group())
+            user.groups.add(self.group)
 
     def users_remove(self, users=None):
         '''
         Pass in a User object to remove from the PermafrostRole
         '''
         for user in make_iterable(users):
-            user.groups.remove(self.get_group())
+            user.groups.remove(self.group)
 
     def users_clear(self):
         '''
         Remove all users from the PermafrostRole
         '''
-        self.get_group().clear()
+        self.group.clear()
 
     #-------------
     # Save
 
     def save(self, *args, **kwargs):
-
         self.slug = slugify(self.name)
+        group_name = self.get_group_name()
 
-        new_group_name = self.get_group_name()
-
-        if self.__original_group:
-            if self.__original_group != new_group_name:
-                Group.objects.filter(name=self.__original_group).update(name=new_group_name)
+        if not self.group:  # Make sure there is always a group
+            self.group, created = Group.objects.get_or_create(name=group_name)      # Add the group if one named correctly alreay exists, otherwise create a new one.
+        elif self.group.name != group_name:
+                self.group.update(name=group_name)
 
         result = super().save(*args, **kwargs)
 
-        self.__original_group = self.group_name_schema(self.site.pk, self.category.slug, self.slug)     # Need to make sure to set the name after the save.
+        self.conform_group()                            # Apply after a successful save
 
         return result
