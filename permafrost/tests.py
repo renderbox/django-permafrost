@@ -66,18 +66,16 @@ class PermafrostRoleModelTest(TestCase):
         role = PermafrostRole(name="Awesome Students", category=self.role_category_1)
         role.save()
 
-        role_group = role.get_group()   # This triggers creating the group if it does not exist
-        pk_check = role_group.pk
-        self.assertEqual(role_group.name, "1_user_awesome-students")
+        pk_check = role.group.pk
+        self.assertEqual(role.group.name, "1_user_awesome-students")
 
         role.name = "OK Students"
         role.save()
 
-        # new_role_group = role.get_group()
         new_role_group = Group.objects.get(name=role.get_group_name())
 
-        self.assertEqual(new_role_group.name, "1_user_ok-students")
-        self.assertEqual(role_group.pk, new_role_group.pk)              # Need to be the same PK value
+        self.assertEqual(role.group.name, "1_user_ok-students")
+        self.assertEqual(role.group.pk, pk_check)                   # Make sure a new group was not generated
         
     def test_permission_objects_from_string(self):
         perms = get_permission_models("permafrost.view_permafrostrole")
