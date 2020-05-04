@@ -138,7 +138,7 @@ class PermafrostRole(models.Model):
     site = models.ForeignKey(Site, on_delete=models.CASCADE, default=get_current_site)                      # This uses a callable so it will not trigger a migration with the projects it's included in
     locked = models.BooleanField(_("Locked"), default=False)                                                        # If this is locked, it can not be edited by the Client, used for System Default Roles
     deleted = models.BooleanField(_("Deleted"), default=False, help_text="Soft Delete the Role")
-    group = models.ForeignKey(Group, verbose_name=_("Category"), on_delete=models.CASCADE, related_name="permafrost_role")                  # NOTE: Need to make sure this is exported with natural key values as it can have a different PK on different servers
+    group = models.ForeignKey(Group, verbose_name=_("Group"), on_delete=models.CASCADE, related_name="permafrost_role")                  # NOTE: Need to make sure this is exported with natural key values as it can have a different PK on different servers
 
     objects = PermafrostRoleManager()
 
@@ -254,12 +254,14 @@ class PermafrostRole(models.Model):
         self.slug = slugify(self.name)
         group_name = self.get_group_name()
 
-        if not self.group:  # Make sure there is always a group
+        if not self.pk:                                                             # if this is a new role, create the matching group
             self.group, created = Group.objects.get_or_create(name=group_name)      # Add the group if one named correctly alreay exists, otherwise create a new one.
-        elif self.group.name != group_name:
-                self.group.update(name=group_name)
-
+        
         result = super().save(*args, **kwargs)
+
+        if self.group.name != group_name:                                           # if the role is renamed after successful save, update the group's name
+            self.group.name = group_name
+            self.group.save()
 
         self.conform_group()                            # Apply after a successful save
 
