@@ -11,7 +11,7 @@ class GroupSiteFilterMixin():
         '''
         user_groups_field = get_user_model()._meta.get_field('groups')
         user_groups_query = 'group__%s' % user_groups_field.related_query_name()
-        return Permission.objects.filter(**{user_groups_query: user_obj})
+        return Permission.objects.filter(**{user_groups_query: user_obj})                   # TODO: Should it return Groups that do not have a Permafrost Role also?
 
 
 class PermafrostModelBackend(GroupSiteFilterMixin, ModelBackend):
