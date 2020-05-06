@@ -138,7 +138,7 @@ class PermafrostRole(models.Model):
     site = models.ForeignKey(Site, on_delete=models.CASCADE, default=get_current_site)                      # This uses a callable so it will not trigger a migration with the projects it's included in
     locked = models.BooleanField(_("Locked"), default=False)                                                        # If this is locked, it can not be edited by the Client, used for System Default Roles
     deleted = models.BooleanField(_("Deleted"), default=False, help_text="Soft Delete the Role")
-    group = models.ForeignKey(Group, verbose_name=_("Group"), on_delete=models.CASCADE, related_name="permafrost_role")                  # NOTE: Need to make sure this is exported with natural key values as it can have a different PK on different servers
+    group = models.ForeignKey(Group, verbose_name=_("Group"), on_delete=models.CASCADE, related_name="permafrost_role", blank=True, null=True)                  # NOTE: Need to make sure this is exported with natural key values as it can have a different PK on different servers
 
     objects = PermafrostRoleManager()
 
