@@ -45,20 +45,20 @@ create_missing_groups.short_description = "Create a Django Group if missing"
 
 class PermafrostRoleAdmin(admin.ModelAdmin):
     readonly_fields = ('slug',)
-    list_display = ('name', 'category', 'role_group')
+    list_display = ('name', 'category', 'group', 'site')
     ordering = ('name',)
     readonly_fields=('slug',)
     actions = [create_missing_groups]
 
-    def get_readonly_fields(self, request, obj=None):
-        if obj: # editing an existing object
-            return self.readonly_fields + ('category',)
-        return self.readonly_fields
+    # def get_readonly_fields(self, request, obj=None):
+    #     if obj: # editing an existing object
+    #         return self.readonly_fields + ('category',)
+    #     return self.readonly_fields
 
-    def role_group(self, obj):
-        if obj.group:
-            return obj.group.name
-        return None
+    # def role_group(self, obj):
+    #     if obj.group:
+    #         return obj.group.name
+    #     return None
 
 
 class PermafrostCategoryAdmin(admin.ModelAdmin):
