@@ -114,7 +114,7 @@ class PermafrostCategory(models.Model):
         return self.name
 
     def natural_key(self):
-        return (self.slug)
+        return (self.slug,)
 
     def save(self, *args, **kwargs):
         self.slug = slugify(self.name)
