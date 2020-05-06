@@ -32,7 +32,7 @@ class PermafrostCategoryModelTest(TestCase):
         '''
         This is to really make sure the natural key does not chagnge.
         '''
-        self.assertEqual(self.role_category_1.slug, self.role_category_1.natural_key())     # Make sure it's based on the slug
+        self.assertEqual( (self.role_category_1.slug,), self.role_category_1.natural_key())     # Make sure it's based on the slug
 
     def test_retrieve_by_natural_key(self):
         slug = self.role_category_1.slug
