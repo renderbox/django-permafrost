@@ -20,6 +20,16 @@ class PermafrostModelBackend(GroupSiteFilterMixin, ModelBackend):
     Group permissions via Permafrost Roles.
     '''
     pass
+    # def _get_group_permissions(self, user_obj):
+    #     return super()._get_group_permissions(user_obj).filter(group__permafrost_role__site=current_site)       # filter out groups in permaforstroles within the current site
+        
+        
+    # def get_group_permissions(self, user_obj, obj=None):
+    #     """
+    #     Return a set of permission strings the user `user_obj` has from the
+    #     groups they belong.
+    #     """
+    #     return self._get_permissions(user_obj, obj, 'group')
 
 
 class PermafrostAllowAllUsersModelBackend(GroupSiteFilterMixin, AllowAllUsersModelBackend):
