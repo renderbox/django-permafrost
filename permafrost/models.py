@@ -15,8 +15,8 @@ from jsonfield import JSONField     # Using this instead of the PSQL one for por
 # CHOICES
 ###############
 
-# CATEGORIES = getAttr(settings, "PERMAFROST_CATEGORIES", {})
-# CATEGORY_CHOICES = getAttr(settings, "PERMAFROST_CATEGORY_CHOICES", [])
+CATEGORIES = getattr(settings, "PERMAFROST_CATEGORIES", {})
+# CATEGORY_CHOICES = getattr(settings, "PERMAFROST_CATEGORY_CHOICES", [])
 
 ###############
 # UTILITIES
@@ -134,8 +134,8 @@ class PermafrostRole(models.Model):
     '''
     name = models.CharField(_("Name"), max_length=50)
     slug = models.SlugField(_("Slug"))
-    # category = models.CharField(_("Category"), choices=CATEGORY_CHOICES)                                  # Should probably switch back to having configurable permissions be included in the code, better for consistency and security
-    category = models.ForeignKey(PermafrostCategory, verbose_name=_("Category"), on_delete=models.CASCADE)
+    category = models.CharField(_("Category"), choices=CATEGORY_CHOICES)                                  # Should probably switch back to having configurable permissions be included in the code, better for consistency and security
+    # category = models.ForeignKey(PermafrostCategory, verbose_name=_("Category"), on_delete=models.CASCADE)
     site = models.ForeignKey(Site, on_delete=models.CASCADE, default=get_current_site)                      # This uses a callable so it will not trigger a migration with the projects it's included in
     locked = models.BooleanField(_("Locked"), default=False)                                                        # If this is locked, it can not be edited by the Client, used for System Default Roles
     deleted = models.BooleanField(_("Deleted"), default=False, help_text="Soft Delete the Role")
@@ -227,7 +227,6 @@ class PermafrostRole(models.Model):
         included in this role.
         '''
         return self.group.user_set.all()
-
 
     def users_add(self, users=None):
         '''

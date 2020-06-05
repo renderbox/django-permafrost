@@ -130,3 +130,31 @@ REST_FRAMEWORK = {
         'rest_framework.permissions.IsAuthenticated',
     ]
 }
+
+
+# Permafrost Categories (WIP)
+
+# PERMAFROST_CATEGORIES = {
+#     'user': {
+#         'title': _("User"),
+#         'access_level': 0,
+#         'optional': [
+#             {'title':'Can Add Users to Role', 'permission': ('add_user_to_role', 'permafrost', 'permafrostrole')},
+#         ],
+#         'required': [
+#             {'title':'Can add Role', 'permission': ('add_permafrostrole', 'permafrost', 'permafrostrole')},
+#         ],
+#         'templates' : {
+#             'student': {
+#                 'title': _("Student"),
+#                 'required': [
+
+#                 ],                      # What should be added by the template
+#                 'default': True,        # Is this a default permission that can not be deleted?
+#                 'access_level': 0,      # What's the numeric level of this permission?  Used to do "Users"
+#             }
+#         }
+#     },
+#     'staff': {},
+#     'administration': {},
+# }
