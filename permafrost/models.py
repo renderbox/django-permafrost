@@ -60,9 +60,6 @@ except AttributeError:
 
     See documentation for more information.
     ''')
-    
-# CATEGORY_CHOICES = getattr(settings, "PERMAFROST_CATEGORY_CHOICES", [('administrator', _('Administrator')), ('staff', _('Staff')), ('user', _('User'))])
-CATEGORY_CHOICES = [('administration', _('Administration')), ('staff', _('Staff')), ('user', _('User'))]
 
 
 ###############
@@ -182,6 +179,12 @@ class PermafrostRole(models.Model):
     The role is assigned to one of 3 categories to help group permission
     levels; 'administrator', 'staff' and 'user'.
     '''
+    ADMINISTRATION = 'administration'
+    STAFF = 'staff'
+    USER = 'user'
+
+    CATEGORY_CHOICES = [(ADMINISTRATION, _('Administration')), (STAFF, _('Staff')), (USER, _('User'))]
+
     name = models.CharField(_("Name"), max_length=50)
     slug = models.SlugField(_("Slug"))
     category = models.CharField(_("Category"), max_length=32, choices=CATEGORY_CHOICES)                     # These should stay fixed to not trigger a potenital migration issue with changing choices
@@ -229,11 +232,8 @@ class PermafrostRole(models.Model):
         '''
         available = self.available()
 
-    def group_name_schema(self, site, category, slug):
-        return "{0}_{1}_{2}".format( site.pk, category, slug)
-
     def get_group_name(self):
-        return self.group_name_schema(self.site, self.category, self.slug)
+        return "{0}_{1}_{2}".format(self.site.pk, self.category, self.slug)
     
     def permissions(self):
         return self.group.permissions

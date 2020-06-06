@@ -584,7 +584,7 @@
     "fields": {
         "name": "Student",
         "slug": "student",
-        "category": 1,
+        "category": "user",
         "site": 1,
         "locked": false,
         "deleted": false,
@@ -597,7 +597,7 @@
     "fields": {
         "name": "Councilor",
         "slug": "councilor",
-        "category": 2,
+        "category": "staff",
         "site": 1,
         "locked": false,
         "deleted": false,

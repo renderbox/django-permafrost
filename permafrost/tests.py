@@ -11,34 +11,6 @@ from rest_framework.test import APIClient
 
 from permafrost.models import PermafrostRole, PermafrostCategory, get_permission_models
 
-class PermafrostCategoryModelTest(TestCase):
-
-    fixtures = ['unit_test']
-
-    def setUp(self):
-        User = get_user_model()
-        self.user = User.objects.create_user(username='john', email='jlennon@beatles.com', password='Passw0rd!')
-        self.staffuser = User.objects.create_user(username='staffy', email='staffy@beatles.com', password='Passw0rd!')
-        self.adminuser = User.objects.create_user(username='adminy', email='adminy@beatles.com', password='Passw0rd!')
-
-        self.site_1 = Site.objects.get(pk=1)
-        self.site_2 = Site.objects.get(pk=2)
-
-        self.role_category_1 = PermafrostCategory.objects.get(pk=1)
-        self.role_category_2 = PermafrostCategory.objects.get(pk=2)
-        self.role_category_3 = PermafrostCategory.objects.get(pk=3)
-
-    def test_natural_key(self):
-        '''
-        This is to really make sure the natural key does not chagnge.
-        '''
-        self.assertEqual( (self.role_category_1.slug,), self.role_category_1.natural_key())     # Make sure it's based on the slug
-
-    def test_retrieve_by_natural_key(self):
-        slug = self.role_category_1.slug
-        cat = PermafrostCategory.objects.get_by_natural_key(slug=slug)
-        self.assertEqual(self.role_category_1.pk, cat.pk)
-
 
 class PermafrostRoleModelTest(TestCase):
 
@@ -53,17 +25,13 @@ class PermafrostRoleModelTest(TestCase):
         self.site_1 = Site.objects.get(pk=1)
         self.site_2 = Site.objects.get(pk=2)
 
-        self.role_category_1 = PermafrostCategory.objects.get(pk=1)
-        self.role_category_2 = PermafrostCategory.objects.get(pk=2)
-        self.role_category_3 = PermafrostCategory.objects.get(pk=3)
-
     #     self.client_user = get_user_model().objects.get(pk=5)
     #     self.client_staff = get_user_model().objects.get(pk=6)
     #     self.client_admin = get_user_model().objects.get(pk=7)
 
     def test_role_rename_updates_group(self):
 
-        role = PermafrostRole(name="Awesome Students", category=self.role_category_1)
+        role = PermafrostRole(name="Awesome Students", category="user")
         role.save()
 
         pk_check = role.group.pk
@@ -90,7 +58,7 @@ class PermafrostRoleModelTest(TestCase):
     def test_create_user_role(self):
         # Test that creating a PermafrostRole creates a matching Group
 
-        role = PermafrostRole(name="Bobs Super Group", category=self.role_category_1)
+        role = PermafrostRole(name="Bobs Super Group", category="user")
         role.save()
 
         self.assertEqual(role.group.name, "1_user_bobs-super-group")        # Checks that the user is created
@@ -119,7 +87,7 @@ class PermafrostRoleModelTest(TestCase):
     def test_create_staffuser_role(self):
         # Test that creating a PermafrostRole creates a matching Group
 
-        role = PermafrostRole(name="Bobs Staff Group", category=self.role_category_2)
+        role = PermafrostRole(name="Bobs Staff Group", category="staff")
         role.save()
 
         self.assertEqual(role.group.name, "1_staff_bobs-staff-group")        # Checks that the user is created
@@ -141,20 +109,20 @@ class PermafrostRoleModelTest(TestCase):
 
     def test_create_duplicate_role(self):
         # Test that creating a PermafrostRole of the same name producers and error
-        role_a = PermafrostRole(name="Bobs Super Group", site=self.site_1, category=self.role_category_1)
+        role_a = PermafrostRole(name="Bobs Super Group", site=self.site_1, category="user")
         role_a.save()
 
-        role_c = PermafrostRole(name="Bobs Super Group", site=self.site_2, category=self.role_category_1)
+        role_c = PermafrostRole(name="Bobs Super Group", site=self.site_2, category="user")
         role_c.save()
 
         with self.assertRaises(IntegrityError):
 
             with transaction.atomic():
-                role_b = PermafrostRole(name="Bobs Super Group", site=self.site_2, category=self.role_category_1)
+                role_b = PermafrostRole(name="Bobs Super Group", site=self.site_2, category="user")
                 role_b.save()
 
             with transaction.atomic():
-                role_d = PermafrostRole(name="Bobs Super Group", site=self.site_2, category=self.role_category_2)
+                role_d = PermafrostRole(name="Bobs Super Group", site=self.site_2, category="staff")
                 role_d.save()
 
         # TODO: Add check to make sure PermafrostRole's Groups were not created
@@ -206,10 +174,6 @@ class PermafrostAPITest(TestCase):
 
         self.site_1 = Site.objects.get(pk=1)
         self.site_2 = Site.objects.get(pk=2)
-
-        self.role_category_1 = PermafrostCategory.objects.get(pk=1)
-        self.role_category_2 = PermafrostCategory.objects.get(pk=2)
-        self.role_category_3 = PermafrostCategory.objects.get(pk=3)
 
         self.client = APIClient()
 
