@@ -258,14 +258,14 @@ class PermafrostRole(models.Model):
         '''
         self.group.permissions.set( get_permission_models(permissions) )
 
-    # def permissions_clear(self):          # TODO: Need to update
-    #     '''
-    #     Remove all permissions from the group except the defaults.
-    #     '''
-    #     if self.category.includes:
-    #         self.group.permissions.set( self.category.includes )
-    #     else:
-    #         self.group.permissions.clear()
+    def permissions_clear(self):          # TODO: Need to update
+        '''
+        Remove all permissions from the group except the defaults.
+        '''
+        if CATEGORIES[self.category]['required']:
+            self.group.permissions.set([Permission.objects.get_by_natural_key(*required['permission']) for required in CATEGORIES['administration']['required']])
+        else:
+            self.group.permissions.clear()
 
     #-------------
     # Users
