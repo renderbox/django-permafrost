@@ -15,8 +15,55 @@ from jsonfield import JSONField     # Using this instead of the PSQL one for por
 # CHOICES
 ###############
 
-CATEGORIES = getattr(settings, "PERMAFROST_CATEGORIES", {})
-# CATEGORY_CHOICES = getattr(settings, "PERMAFROST_CATEGORY_CHOICES", [])
+
+try:
+    CATEGORIES = getattr(settings, "PERMAFROST_CATEGORIES")
+except AttributeError:
+    print('''
+    !!! Warning: PERMAFROST_CATEGORIES are not defined!
+
+    They should look something like this and be defined in settings.py
+
+    PERMAFROST_CATEGORIES = {
+        'administration': {
+            'title': _('Administration'),
+            'level': 50,
+            'optional': [
+                {'title': _('Can add Role'), 'permission': ('add_permafrostrole', 'permafrost', 'permafrostrole') },
+                {'title': _('Can change Role'), 'permission': ('change_permafrostrole', 'permafrost', 'permafrostrole') },
+                {'title': _('Can delete Role'), 'permission': ('delete_permafrostrole', 'permafrost', 'permafrostrole') },
+                {'title': _('Can view Role'), 'permission': ('view_permafrostrole', 'permafrost', 'permafrostrole') },
+            ],
+            'required': [],
+        },
+        'staff': {
+            'title': _('Staff'),
+            'level': 30,
+            'optional': [
+                {'title': _('Can add Role'), 'permission': ('add_permafrostrole', 'permafrost', 'permafrostrole') },
+                {'title': _('Can change Role'), 'permission': ('change_permafrostrole', 'permafrost', 'permafrostrole') },
+                {'title': _('Can view Role'), 'permission': ('view_permafrostrole', 'permafrost', 'permafrostrole') },
+            ],
+            'required': [
+                {'title': _('Can view Role'), 'permission': ('view_permafrostrole', 'permafrost', 'permafrostrole') },
+            ],
+        },
+        'user': {
+            'title': _('User'),
+            'level': 1,
+            'optional': [
+                {'title': _('Can view Role'), 'permission': ('view_permafrostrole', 'permafrost', 'permafrostrole') },
+            ],
+            'required': [],
+        },
+    }
+
+    See documentation for more information.
+    ''')
+    
+# CATEGORY_CHOICES = getattr(settings, "PERMAFROST_CATEGORY_CHOICES", [('administrator', _('Administrator')), ('staff', _('Staff')), ('user', _('User'))])
+CATEGORY_CHOICES = [('administration', _('Administration')), ('staff', _('Staff')), ('user', _('User'))]
+
 
 ###############
 # UTILITIES
@@ -79,16 +126,16 @@ class PermafrostCategory(models.Model):
 
     The permissions are kept in a JSON formatted list in the following structure:
     [
-        {"perm":"permafrost.add_permafrostrole", "label":"Can add Permafrost Role"},
-        {"perm":"permafrost.update_permafrostrole", "label":"Can update Permafrost Role"}
+        {'title': _('Can add Role'), 'permission': ('add_permafrostrole', 'permafrost', 'permafrostrole') },
+        {'title': _('Can change Role'), 'permission': ('change_permafrostrole', 'permafrost', 'permafrostrole') },
     ]
 
     They provide the ability to have a lables that are more human readable.
 
     The includes are kept in a JSON formatted list in the following structure:
     [
-        "permafrost.view_permafrostrole",
-        "permafrost.update_permafrostrole"
+        {'title': _('Can add Role'), 'permission': ('add_permafrostrole', 'permafrost', 'permafrostrole') },
+        {'title': _('Can change Role'), 'permission': ('change_permafrostrole', 'permafrost', 'permafrostrole') },
     ]
 
     As they are always present in a role of that Category Type, they don't 
@@ -131,11 +178,13 @@ class PermafrostRole(models.Model):
     PermafrostRole is Client Defineable and "manages" a Django Group adding a
     user to this role adds them to the Django Group and automatically assignes
     them the permissions.
+
+    The role is assigned to one of 3 categories to help group permission
+    levels; 'administrator', 'staff' and 'user'.
     '''
     name = models.CharField(_("Name"), max_length=50)
     slug = models.SlugField(_("Slug"))
-    category = models.CharField(_("Category"), choices=CATEGORY_CHOICES)                                  # Should probably switch back to having configurable permissions be included in the code, better for consistency and security
-    # category = models.ForeignKey(PermafrostCategory, verbose_name=_("Category"), on_delete=models.CASCADE)
+    category = models.CharField(_("Category"), max_length=32, choices=CATEGORY_CHOICES)                     # These should stay fixed to not trigger a potenital migration issue with changing choices
     site = models.ForeignKey(Site, on_delete=models.CASCADE, default=get_current_site)                      # This uses a callable so it will not trigger a migration with the projects it's included in
     locked = models.BooleanField(_("Locked"), default=False)                                                        # If this is locked, it can not be edited by the Client, used for System Default Roles
     deleted = models.BooleanField(_("Deleted"), default=False, help_text="Soft Delete the Role")
@@ -181,7 +230,7 @@ class PermafrostRole(models.Model):
         available = self.available()
 
     def group_name_schema(self, site, category, slug):
-        return "{0}_{1}_{2}".format( site.pk, category.slug, slug)
+        return "{0}_{1}_{2}".format( site.pk, category, slug)
 
     def get_group_name(self):
         return self.group_name_schema(self.site, self.category, self.slug)
@@ -209,14 +258,14 @@ class PermafrostRole(models.Model):
         '''
         self.group.permissions.set( get_permission_models(permissions) )
 
-    def permissions_clear(self):
-        '''
-        Remove all permissions from the group except the defaults.
-        '''
-        if self.category.includes:
-            self.group.permissions.set( self.category.includes )
-        else:
-            self.group.permissions.clear()
+    # def permissions_clear(self):          # TODO: Need to update
+    #     '''
+    #     Remove all permissions from the group except the defaults.
+    #     '''
+    #     if self.category.includes:
+    #         self.group.permissions.set( self.category.includes )
+    #     else:
+    #         self.group.permissions.clear()
 
     #-------------
     # Users

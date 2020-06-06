@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/2.2/ref/settings/
 """
 
 import os
+from django.utils.translation import ugettext_lazy as _
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -131,30 +132,38 @@ REST_FRAMEWORK = {
     ]
 }
 
+PERMAFROST_CATEGORIES = {
+    'administration': {
+        'title': _('Administration'),
+        'level': 50,
+        'optional': [
+            {'title': _('Can add Role'), 'permission': ('add_permafrostrole', 'permafrost', 'permafrostrole') },
+            {'title': _('Can change Role'), 'permission': ('change_permafrostrole', 'permafrost', 'permafrostrole') },
+            {'title': _('Can delete Role'), 'permission': ('delete_permafrostrole', 'permafrost', 'permafrostrole') },
+            {'title': _('Can view Role'), 'permission': ('view_permafrostrole', 'permafrost', 'permafrostrole') },
+        ],
+        'required': [],
+    },
+    'staff': {
+        'title': _('Staff'),
+        'level': 30,
+        'optional': [
+            {'title': _('Can add Role'), 'permission': ('add_permafrostrole', 'permafrost', 'permafrostrole') },
+            {'title': _('Can change Role'), 'permission': ('change_permafrostrole', 'permafrost', 'permafrostrole') },
+            {'title': _('Can view Role'), 'permission': ('view_permafrostrole', 'permafrost', 'permafrostrole') },
+        ],
+        'required': [
+            {'title': _('Can view Role'), 'permission': ('view_permafrostrole', 'permafrost', 'permafrostrole') },
+        ],
+    },
+    'user': {
+        'title': _('User'),
+        'level': 1,
+        'optional': [
+            {'title': _('Can view Role'), 'permission': ('view_permafrostrole', 'permafrost', 'permafrostrole') },
+        ],
+        'required': [],
+    },
+}
 
-# Permafrost Categories (WIP)
 
-# PERMAFROST_CATEGORIES = {
-#     'user': {
-#         'title': _("User"),
-#         'access_level': 0,
-#         'optional': [
-#             {'title':'Can Add Users to Role', 'permission': ('add_user_to_role', 'permafrost', 'permafrostrole')},
-#         ],
-#         'required': [
-#             {'title':'Can add Role', 'permission': ('add_permafrostrole', 'permafrost', 'permafrostrole')},
-#         ],
-#         'templates' : {
-#             'student': {
-#                 'title': _("Student"),
-#                 'required': [
-
-#                 ],                      # What should be added by the template
-#                 'default': True,        # Is this a default permission that can not be deleted?
-#                 'access_level': 0,      # What's the numeric level of this permission?  Used to do "Users"
-#             }
-#         }
-#     },
-#     'staff': {},
-#     'administration': {},
-# }
