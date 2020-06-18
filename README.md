@@ -11,5 +11,4 @@ Adds Client Definable Permissions to Django.
 
 With the v0.1.x versions, there will be some instability with the releases as practical useage is worked out and the docs are formed.
 
-
-![Django CI](https://github.com/renderbox/django-permafrost/workflows/Django%20CI/badge.svg?branch=master)
+![Permafrost CI](https://github.com/renderbox/django-permafrost/workflows/Permafrost%20CI/badge.svg?branch=master)
