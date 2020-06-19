@@ -91,21 +91,3 @@ class Command(BaseCommand):
             print("    },")
         print("}\n")
 
-
-'''
-Sample Format:
-
-PERMAFROST_CATEGORIES = {
-    'user': {
-        'label': _("User"),
-        'access_level': 1,
-        'optional': [
-            {'label':_('Can Add Users to Role'), 'permission': ('add_user_to_role', 'permafrost', 'permafrostrole')},
-        ],
-        'required': [
-            {'label':_('Can add Role'), 'permission': ('add_permafrostrole', 'permafrost', 'permafrostrole')},
-        ],
-    },
-}
-
-'''
