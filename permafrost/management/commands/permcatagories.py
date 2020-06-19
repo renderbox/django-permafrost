@@ -44,7 +44,7 @@ class Command(BaseCommand):
 
         for category in categories:            # Permission's Natural Key = codename + content_type.natural_key()      "{1}.{0}".format(*perm.natural_key())
             data[category.slug] = {
-                "title": category.name,
+                "label": category.name,
                 "level": category.level,
                 "optional": [],
                 "required": []
@@ -69,13 +69,13 @@ class Command(BaseCommand):
 
         for key in key_order:
             print("    '{}': {{".format(key))
-            print("        'title': _('{}'),".format(data[key]['title']))
+            print("        'label': _('{}'),".format(data[key]['label']))
             print("        'level': {},".format(data[key]['level']))
 
             if data[key]['optional']:
                 print("        'optional': [")
                 for item in data[key]['optional']:
-                    print("            {{'title': _('{}'), 'permission': {} }},".format(item.name, item.natural_key()) )
+                    print("            {{'label': _('{}'), 'permission': {} }},".format(item.name, item.natural_key()) )
                 print("        ],")
             else:
                 print("        'optional': [],")
@@ -83,30 +83,29 @@ class Command(BaseCommand):
             if data[key]['required']:
                 print("        'required': [")
                 for item in data[key]['required']:
-                    print("            {{'title': _('{}'), 'permission': {} }},".format(item.name, item.natural_key()) )
+                    print("            {{'label': _('{}'), 'permission': {} }},".format(item.name, item.natural_key()) )
                 print("        ],")
             else:
                 print("        'required': [],")
 
-            print("    }")
+            print("    },")
         print("}\n")
 
-        # pp = pprint.PrettyPrinter(indent=4)
-        # print("PERMAFROST_CATEGORIES = {}".format(pp.pformat(data)))
 
+'''
+Sample Format:
 
+PERMAFROST_CATEGORIES = {
+    'user': {
+        'label': _("User"),
+        'access_level': 1,
+        'optional': [
+            {'label':_('Can Add Users to Role'), 'permission': ('add_user_to_role', 'permafrost', 'permafrostrole')},
+        ],
+        'required': [
+            {'label':_('Can add Role'), 'permission': ('add_permafrostrole', 'permafrost', 'permafrostrole')},
+        ],
+    },
+}
 
-# PERMAFROST_CATEGORIES = {
-#     'user': {
-#         'title': _("User"),
-#         'access_level': 0,
-#         'optional': [
-#             {'title':'Can Add Users to Role', 'permission': ('add_user_to_role', 'permafrost', 'permafrostrole')},
-#         ],
-#         'required': [
-#             {'title':'Can add Role', 'permission': ('add_permafrostrole', 'permafrost', 'permafrostrole')},
-#         ],
-#     },
-#     'staff': {},
-#     'administration': {},
-# }
+'''

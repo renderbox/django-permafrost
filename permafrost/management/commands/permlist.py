@@ -56,14 +56,14 @@ class Command(BaseCommand):
 
         ignore_apps = getattr(settings, "PERMAFROST_IGNORE_APPS", ['admin', 'auth', 'contenttypes', 'sessions', 'sites']) #, 'permafrost'])
 
+        print("Permlist formatted for your PermafrostRoles configuration")
+
         for perm in permissions:            # Permission's Natural Key = codename + content_type.natural_key()      "{1}.{0}".format(*perm.natural_key())
             keys = list(perm.natural_key())
             if keys[1] not in ignore_apps:
+                print("{{'label':_('{0}'), 'permission': {1}}},".format(perm.name, perm.natural_key()) )
 
-                keys[2] = perm.name
-                print( '{' + '"perm":"{1}.{0}", "label":"{2}"'.format( *keys ) + '},' )
-
-        # print("\n")
+        print("\n")
 
         # for perm in permissions:
         #     print( perm )                   # Permission's __str__ = '%s | %s' % (self.content_type, self.name)
