@@ -12,6 +12,33 @@ It adds:
 
 For example, you have a SAAS platform where you have Administrators Clients.  They manage the other users on their master account in the system (like Employees, etc) and want to be able to define different permissions for various users.  They might have one Employee they want to be able to manage email lists but not let them invite users but both are considered in the staff category.
 
+## Installation
+
+To install, just use pip
+
+```shell
+> pip install django-permafrost
+```
+
+To add it to your project, add it to the list of install apps in you `settings.py`...
+
+```python
+
+INSTALLED_APPS = [
+    ...
+    'permafrost',
+    ...
+]
+```
+
+... and migrate
+
+```shell
+> ./manage.py migrate
+```
+
+## The Project
+
 The Goal of Django Permafrost is to allow Clients to create their own Permafrost Roles, under developer defined Categories with developer defined required and optional permissions.
 
 An example of a developer defined categories looks like this:
@@ -59,4 +86,3 @@ Permlist formatted for your PermafrostRoles configuration
 ```
 
 Each line can be copied into the PERMAFROST_CATEGORIES config in the correct format.
- 
