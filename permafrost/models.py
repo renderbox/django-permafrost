@@ -1,8 +1,9 @@
+# import sys
 from django.conf import settings
 from django.contrib.sites.models import Site
 from django.db import models
 from django.contrib.auth.models import Group, Permission
-from django.contrib.sites.shortcuts import get_current_site
+# from django.contrib.sites.shortcuts import get_current_site
 from django.utils.translation import ugettext_lazy as _
 from django.utils.text import slugify
 from django.core.exceptions import ObjectDoesNotExist
@@ -26,70 +27,72 @@ except AttributeError:
 
     PERMAFROST_CATEGORIES = {
         'administration': {
-            'title': _('Administration'),
+            'label': _('Administration'),
             'level': 50,
             'optional': [
-                {'title': _('Can add Role'), 'permission': ('add_permafrostrole', 'permafrost', 'permafrostrole') },
-                {'title': _('Can change Role'), 'permission': ('change_permafrostrole', 'permafrost', 'permafrostrole') },
-                {'title': _('Can delete Role'), 'permission': ('delete_permafrostrole', 'permafrost', 'permafrostrole') },
-                {'title': _('Can view Role'), 'permission': ('view_permafrostrole', 'permafrost', 'permafrostrole') },
+                {'label': _('Can add Role'), 'permission': ('add_permafrostrole', 'permafrost', 'permafrostrole') },
+                {'label': _('Can change Role'), 'permission': ('change_permafrostrole', 'permafrost', 'permafrostrole') },
+                {'label': _('Can delete Role'), 'permission': ('delete_permafrostrole', 'permafrost', 'permafrostrole') },
+                {'label': _('Can view Role'), 'permission': ('view_permafrostrole', 'permafrost', 'permafrostrole') },
             ],
             'required': [],
         },
         'staff': {
-            'title': _('Staff'),
+            'label': _('Staff'),
             'level': 30,
             'optional': [
-                {'title': _('Can add Role'), 'permission': ('add_permafrostrole', 'permafrost', 'permafrostrole') },
-                {'title': _('Can change Role'), 'permission': ('change_permafrostrole', 'permafrost', 'permafrostrole') },
-                {'title': _('Can view Role'), 'permission': ('view_permafrostrole', 'permafrost', 'permafrostrole') },
+                {'label': _('Can add Role'), 'permission': ('add_permafrostrole', 'permafrost', 'permafrostrole') },
+                {'label': _('Can change Role'), 'permission': ('change_permafrostrole', 'permafrost', 'permafrostrole') },
+                {'label': _('Can view Role'), 'permission': ('view_permafrostrole', 'permafrost', 'permafrostrole') },
             ],
             'required': [
-                {'title': _('Can view Role'), 'permission': ('view_permafrostrole', 'permafrost', 'permafrostrole') },
+                {'label': _('Can view Role'), 'permission': ('view_permafrostrole', 'permafrost', 'permafrostrole') },
             ],
         },
         'user': {
-            'title': _('User'),
+            'label': _('User'),
             'level': 1,
             'optional': [
-                {'title': _('Can view Role'), 'permission': ('view_permafrostrole', 'permafrost', 'permafrostrole') },
+                {'label': _('Can view Role'), 'permission': ('view_permafrostrole', 'permafrost', 'permafrostrole') },
             ],
             'required': [],
         },
     }
 
-    See documentation for more information.
+    See README.md for more information.
     ''')
+    # sys.exit()
+    raise
 
 
 ###############
 # UTILITIES
 ###############
 
-def lable_from_choice_value(choices, value):
-    return [x[1] for x in choices if x[0] == value][0]
+# def lable_from_choice_value(choices, value):
+#     return [x[1] for x in choices if x[0] == value][0]
 
-def make_iterable(value):
-    '''
-    Takes whatever is passed in and tries to return it as a list
-    '''
-    if isinstance(value, list):
-        return value
+# def make_iterable(value):
+#     '''
+#     Takes whatever is passed in and tries to return it as a list
+#     '''
+#     if isinstance(value, list):
+#         return value
 
-    if isinstance(value, models.query.QuerySet):
-        return value
+#     if isinstance(value, models.query.QuerySet):
+#         return value
 
-    if not value:
-        return []
+#     if not value:
+#         return []
 
-    return [value]
+#     return [value]
 
-def get_permission_models(permissions):
-    return [ permission_from_string(p) for p in make_iterable(permissions) ]
+# def get_permission_models(permissions):
+#     return [ permission_from_string(p) for p in make_iterable(permissions) ]
 
-def permission_from_string(permission):
-    values = permission.split(".")
-    return Permission.objects.get(codename=values[1], content_type__app_label=values[0])
+# def permission_from_string(permission):
+#     values = permission.split(".")
+#     return Permission.objects.get(codename=values[1], content_type__app_label=values[0])
 
 def get_current_site(*args, **kwargs):
     return settings.SITE_ID
@@ -113,61 +116,11 @@ class PermafrostRoleManager(models.Manager):
 # MODELS
 ###############
 
-class PermafrostCategory(models.Model):
+def get_choices():
     '''
-    This holds the list of permissions that are available to be configured
-    in the given category.  It contains both the "permissions", which are
-    client configurable and the "includes" which are always included.
-
-    TODO: Need to add localization support
-
-    The permissions are kept in a JSON formatted list in the following structure:
-    [
-        {'title': _('Can add Role'), 'permission': ('add_permafrostrole', 'permafrost', 'permafrostrole') },
-        {'title': _('Can change Role'), 'permission': ('change_permafrostrole', 'permafrost', 'permafrostrole') },
-    ]
-
-    They provide the ability to have a lables that are more human readable.
-
-    The includes are kept in a JSON formatted list in the following structure:
-    [
-        {'title': _('Can add Role'), 'permission': ('add_permafrostrole', 'permafrost', 'permafrostrole') },
-        {'title': _('Can change Role'), 'permission': ('change_permafrostrole', 'permafrost', 'permafrostrole') },
-    ]
-
-    As they are always present in a role of that Category Type, they don't 
-    have a lable and are just a simple string list.
-
-    Lists, rather than foreign keys, are used because there is no garuntee
-    that a migration will not break the relationships.  Since this is rarely
-    accessed, it is probably OK to take the DB hit to query this way.
+    Creates a choice list based on the PERMAFROST_CATEGORIES settings.
     '''
-
-    name = models.CharField(_("Name"), max_length=50)
-    slug = models.SlugField(_("Slug"), blank=True, null=True)
-    level = models.IntegerField(_("Security Level"), default=1)     # Scale 1-100, low to high security role category.
-    permissions = JSONField(default=list, blank=True)
-    includes = JSONField(default=list, blank=True)
-
-    objects = CategoryManager()
-
-    class Meta:
-        verbose_name = _("Permafrost Category")
-        verbose_name_plural = _("Permafrost Categories")
-
-    def __str__(self):
-        return self.name
-
-    def natural_key(self):
-        return (self.slug,)
-
-    def save(self, *args, **kwargs):
-        self.slug = slugify(self.name)
-        result = super().save(*args, **kwargs)
-        return result
-
-    def get_include_models(self):
-        return [ permission_from_string(permission) for permission in self.includes ]
+    return [(cat_key, CATEGORIES[cat_key]['label']) for cat_key in CATEGORIES.keys()]
 
 
 class PermafrostRole(models.Model):
@@ -179,15 +132,10 @@ class PermafrostRole(models.Model):
     The role is assigned to one of 3 categories to help group permission
     levels; 'administrator', 'staff' and 'user'.
     '''
-    ADMINISTRATION = 'administration'
-    STAFF = 'staff'
-    USER = 'user'
-
-    CATEGORY_CHOICES = [(ADMINISTRATION, _('Administration')), (STAFF, _('Staff')), (USER, _('User'))]
 
     name = models.CharField(_("Name"), max_length=50)
     slug = models.SlugField(_("Slug"))
-    category = models.CharField(_("Category"), max_length=32, choices=CATEGORY_CHOICES)                     # These should stay fixed to not trigger a potenital migration issue with changing choices
+    category = models.CharField(_("Category"), max_length=32, choices=get_choices(), blank=False, null=False)                     # These should stay fixed to not trigger a potenital migration issue with changing choices
     site = models.ForeignKey(Site, on_delete=models.CASCADE, default=get_current_site)                      # This uses a callable so it will not trigger a migration with the projects it's included in
     locked = models.BooleanField(_("Locked"), default=False)                                                        # If this is locked, it can not be edited by the Client, used for System Default Roles
     deleted = models.BooleanField(_("Deleted"), default=False, help_text="Soft Delete the Role")
@@ -199,7 +147,7 @@ class PermafrostRole(models.Model):
     class Meta:
         verbose_name = _("Permafrost Role")
         verbose_name_plural = _("Permafrost Roles")
-        unique_together = [['name', 'site']]
+        unique_together = (('name', 'site'),)
 
         permissions = (
             ("add_user_to_role", "Can Add Users to Role"),
@@ -215,13 +163,26 @@ class PermafrostRole(models.Model):
     #-------------
     # Permissions
 
-    def available(self):
+    def required_permissions(self):
+        '''
+        TODO: Read from the category and get the list of permissions 
+        '''
+        if 'required' in CATEGORIES[self.category]:
+            return [Permission.objects.get_by_natural_key(*item['permission']) for item in CATEGORIES[self.category]['required']]
+        return []
+
+    def optional_permissions(self):
         '''
         TODO!!!
-        Based on the list of permissions in the Category, compile a list of all
-        that are available.
         '''
-        pass
+        if 'optional' in CATEGORIES[self.category]:
+            return [Permission.objects.get_by_natural_key(*item['permission']) for item in CATEGORIES[self.category]['optional']]
+        return []
+
+    def all_perm_ids(self):
+        req = [ perm.pk for perm in self.required_permissions() ]
+        opt = [ perm.pk for perm in self.optional_permissions() ]
+        return set(req + opt)
 
     def conform_group(self):
         '''
@@ -229,42 +190,58 @@ class PermafrostRole(models.Model):
         Based on the list of permissions in the Category, make sure the group
         has the right set.  Make sure no permissions are outside of the
         optional and required and that all required permissions are added.
+
+        Make sure the Group has the required permissions and all others are
+        within the Optional permissions.
         '''
-        available = self.available()
+        pass
 
     def get_group_name(self):
+        '''
+        Creates the standard name for the group
+        '''
         return "{0}_{1}_{2}".format(self.site.pk, self.category, self.slug)
     
     def permissions(self):
         return self.group.permissions
 
-    def permissions_add(self, permissions):
+    def permissions_add(self, *args):
         '''
-        Add permissions to the attached group by name "app.perm"
+        Add Django permission(s) to the attached group if the permission is in the allowed permissions
         '''
-        for p in get_permission_models(permissions):
-            self.group.permissions.add(p)
+        id_check = self.all_perm_ids()
+        for perm in args:
+            if perm.pk in id_check:
+                self.group.permission.add(perm)
 
-    def permissions_remove(self, permissions):
+    def permissions_remove(self, *args):
         '''
-        Remove permissions from the attached group by name "app.perm"
+        Remove Django permission(s) from the attached group if the permission is not in the list of required permissions
         '''
-        for p in get_permission_models(permissions):
-            self.group.permissions.remove(p)
+        id_check = [required.pk for required in self.required_permissions()]
+        for perm in args:
+            if perm.pk not in id_check:
+                self.group.permission.remove(perm)
 
     def permissions_set(self, permissions):
         '''
-        This updates the group permissions to only include what was passed in by name "app.perm"
+        This updates the group's Django permissions to only include what was passed in and passes the check against optional and required permissions.
         '''
-        self.group.permissions.set( get_permission_models(permissions) )
+        id_check = [required.pk for required in self.optional_permissions()]
+
+        optional_perms = [perm for perm in permissions if perm.pk in id_check]     # perms passed in that meet the optional filter check
+        required_perms = self.required_permissions()
+
+        # Set to values passed in that are in the optional list plus the required permissions.
+        self.group.permissions.set(optional_perms + required_perms)
 
     def permissions_clear(self):          # TODO: Need to update
         '''
-        Remove all permissions from the group except the defaults.
+        Remove all Django permissions from the group except the required.
         '''
-        if CATEGORIES[self.category]['required']:
-            self.group.permissions.set([Permission.objects.get_by_natural_key(*required['permission']) for required in CATEGORIES['administration']['required']])
-        else:
+        if CATEGORIES[self.category]['required']:       # If there are any required permissions, set them
+            self.group.permissions.set(self.required_permissions())
+        else:                                           # Otherwise, clear it out completely
             self.group.permissions.clear()
 
     #-------------
@@ -313,6 +290,6 @@ class PermafrostRole(models.Model):
             self.group.name = group_name
             self.group.save()
 
-        self.conform_group()                            # Apply after a successful save
+        self.conform_group()                            # Apply after a successful save and Group creation (if needed)
 
         return result

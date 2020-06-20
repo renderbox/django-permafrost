@@ -4,7 +4,7 @@ import json
 from django.contrib import admin
 from django.shortcuts import render
 
-from .models import PermafrostRole, PermafrostCategory
+from .models import PermafrostRole#, PermafrostCategory
 
 ################
 # ADMIN ACTIONS
@@ -101,15 +101,15 @@ class PermafrostRoleAdmin(admin.ModelAdmin):
     actions = [create_missing_groups, perms_to_code]
 
 
-class PermafrostCategoryAdmin(admin.ModelAdmin):
-    readonly_fields = ('slug',)
-    list_display = ('name',)
-    ordering = ('name',)
-    readonly_fields=('slug',)
+# class PermafrostCategoryAdmin(admin.ModelAdmin):
+#     readonly_fields = ('slug',)
+#     list_display = ('name',)
+#     ordering = ('name',)
+#     readonly_fields=('slug',)
 
 ###############
 # REGISTRATION
 ###############
 
 admin.site.register(PermafrostRole, PermafrostRoleAdmin)
-admin.site.register(PermafrostCategory, PermafrostCategoryAdmin)
+# admin.site.register(PermafrostCategory, PermafrostCategoryAdmin)

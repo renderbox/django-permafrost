@@ -134,33 +134,33 @@ REST_FRAMEWORK = {
 
 PERMAFROST_CATEGORIES = {
     'administration': {
-        'title': _('Administration'),
+        'label': _('Administration'),
         'level': 50,
         'optional': [
-            {'title': _('Can add Role'), 'permission': ('add_permafrostrole', 'permafrost', 'permafrostrole') },
-            {'title': _('Can change Role'), 'permission': ('change_permafrostrole', 'permafrost', 'permafrostrole') },
-            {'title': _('Can delete Role'), 'permission': ('delete_permafrostrole', 'permafrost', 'permafrostrole') },
-            {'title': _('Can view Role'), 'permission': ('view_permafrostrole', 'permafrost', 'permafrostrole') },
+            {'label': _('Can add Role'), 'permission': ('add_permafrostrole', 'permafrost', 'permafrostrole') },
+            {'label': _('Can change Role'), 'permission': ('change_permafrostrole', 'permafrost', 'permafrostrole') },
+            {'label': _('Can delete Role'), 'permission': ('delete_permafrostrole', 'permafrost', 'permafrostrole') },
+            {'label': _('Can view Role'), 'permission': ('view_permafrostrole', 'permafrost', 'permafrostrole') },
         ],
         'required': [],
     },
     'staff': {
-        'title': _('Staff'),
+        'label': _('Staff'),
         'level': 30,
         'optional': [
-            {'title': _('Can add Role'), 'permission': ('add_permafrostrole', 'permafrost', 'permafrostrole') },
-            {'title': _('Can change Role'), 'permission': ('change_permafrostrole', 'permafrost', 'permafrostrole') },
-            {'title': _('Can view Role'), 'permission': ('view_permafrostrole', 'permafrost', 'permafrostrole') },
+            {'label': _('Can add Role'), 'permission': ('add_permafrostrole', 'permafrost', 'permafrostrole') },
+            {'label': _('Can change Role'), 'permission': ('change_permafrostrole', 'permafrost', 'permafrostrole') },
+            {'label': _('Can view Role'), 'permission': ('view_permafrostrole', 'permafrost', 'permafrostrole') },
         ],
         'required': [
-            {'title': _('Can view Role'), 'permission': ('view_permafrostrole', 'permafrost', 'permafrostrole') },
+            {'label': _('Can view Role'), 'permission': ('view_permafrostrole', 'permafrost', 'permafrostrole') },
         ],
     },
     'user': {
-        'title': _('User'),
+        'label': _('User'),
         'level': 1,
         'optional': [
-            {'title': _('Can view Role'), 'permission': ('view_permafrostrole', 'permafrost', 'permafrostrole') },
+            {'label': _('Can view Role'), 'permission': ('view_permafrostrole', 'permafrost', 'permafrostrole') },
         ],
         'required': [],
     },
