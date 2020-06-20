@@ -254,25 +254,23 @@ class PermafrostRole(models.Model):
         '''
         return self.group.user_set.all()
 
-    def users_add(self, users=None):
+    def users_add(self, *users):
         '''
-        Pass in a User object to add to the PermafrostRole
+        Pass in a User object to add to the PermafrostRole's Group
         '''
-        for user in make_iterable(users):
-            user.groups.add(self.group)
+        self.group.user_set.add(*users)
 
-    def users_remove(self, users=None):
+    def users_remove(self, *users):
         '''
-        Pass in a User object to remove from the PermafrostRole
+        Pass in a User object to remove from the PermafrostRole's Group
         '''
-        for user in make_iterable(users):
-            user.groups.remove(self.group)
+        self.group.user_set.remove(*users)
 
     def users_clear(self):
         '''
-        Remove all users from the PermafrostRole
+        Remove all users from the PermafrostRole's Group
         '''
-        self.group.clear()
+        self.group.user_set.clear()
 
     #-------------
     # Save
