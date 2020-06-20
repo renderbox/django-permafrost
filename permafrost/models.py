@@ -194,7 +194,7 @@ class PermafrostRole(models.Model):
         Make sure the Group has the required permissions and all others are
         within the Optional permissions.
         '''
-        pass
+        self.permissions_set(self.group.permissions)        # This will check out to make sure all required permissions are present and optionals are allowed
 
     def get_group_name(self):
         '''
