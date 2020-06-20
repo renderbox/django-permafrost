@@ -2,12 +2,12 @@
 
 # Django Permafrost
 
-Django Permafrost is an extention to Django's Permissions framework.  It intends to let developers provide certian permissions to users controlled by a Client User on the site.
+Django Permafrost is an extension to Django's Permissions framework.  It intends to let developers provide certain permissions to users controlled by a Client User on the site.
 
 It adds:
 - A View Mixin that supports user permissions based on different HTTP method types (GET, POST, PUT, etc) for extra granular control.
 - A View Mixin that captures into Django's logging setup any failed permission checks.
-- An App that supports Client User defineable roles and permissions.  This uses the underlying Django Permission system and controls which permissions are exposed to the users.
+- An App that supports Client User definable roles and permissions.  This uses the underlying Django Permission system and controls which permissions are exposed to the users.
   - Developers can have both require permissions for the permission classes or optional permission that can be set by the Client.
 
 For example, you have a SAAS platform where you have Administrators Clients.  They manage the other users on their master account in the system (like Employees, etc) and want to be able to define different permissions for various users.  They might have one Employee they want to be able to manage email lists but not let them invite users but both are considered in the staff category.
@@ -44,7 +44,7 @@ The Goal of Django Permafrost is to allow Clients to create their own Permafrost
 An example of a developer defined categories looks like this:
 
 ```python
-Sample Cetegory Permission Format:
+Sample Category Permission Format:
 
 PERMAFROST_CATEGORIES = {
     'user': {
@@ -62,13 +62,13 @@ PERMAFROST_CATEGORIES = {
 
 This would be added to your Django `settings.py` file (or, at least, included into).  
 
-In the above, we define the User category, give it the localizeable label of "User" and provide two permissions in the "Natural Key" format (since PKs can be unreliable with permissions), the first is optional and the second is required.
+In the above, we define the User category, give it the localizable label of "User" and provide two permissions in the "Natural Key" format (since PKs can be unreliable with permissions), the first is optional and the second is required.
 
 There is also an access_level setting to help make sorting access levels more easily.
 
-## Reconmendations
+## Recommendations
 
-It is reconmeded that you update your code to use PermafrotRole's built-in functions to add users and permissions.  They add an extra level of checking to make sure the permissions passed in are allowed by the PERMAFROST_CATEGORIES configuration.
+It is recommended that you update your code to use PermafrotRole's built-in functions to add users and permissions.  They add an extra level of checking to make sure the permissions passed in are allowed by the PERMAFROST_CATEGORIES configuration.
 
 For example, permissions on a Group:
 ```python
@@ -88,16 +88,16 @@ PermafrostRole.permissions_clear()
 
 
 ## Convenience tools
-There is a tool to help the devloper list out the permissions available in the format permafrost expects.
+There is a tool to help the developer list out the permissions available in the format permafrost expects.
 
 ```shell
-> ./manage permalist
+> ./manage permlist
 ```
 
 using the command will produce a list like this
 
 ```shell
-> ./manage.py permalist
+> ./manage.py permlist
 
 Permlist formatted for your PermafrostRoles configuration
 {'label':_('Can add email address'), 'permission': ('add_emailaddress', 'account', 'emailaddress')},
