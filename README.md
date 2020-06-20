@@ -2,7 +2,7 @@
 
 # Django Permafrost
 
-Django Permafrost is an extention to Django's Permissions framework.
+Django Permafrost is an extention to Django's Permissions framework.  It intends to let developers provide certian permissions to users controlled by a Client User on the site.
 
 It adds:
 - A View Mixin that supports user permissions based on different HTTP method types (GET, POST, PUT, etc) for extra granular control.
@@ -37,7 +37,7 @@ INSTALLED_APPS = [
 > ./manage.py migrate
 ```
 
-## The Project
+## Setup
 
 The Goal of Django Permafrost is to allow Clients to create their own Permafrost Roles, under developer defined Categories with developer defined required and optional permissions.
 
@@ -65,6 +65,27 @@ This would be added to your Django `settings.py` file (or, at least, included in
 In the above, we define the User category, give it the localizeable label of "User" and provide two permissions in the "Natural Key" format (since PKs can be unreliable with permissions), the first is optional and the second is required.
 
 There is also an access_level setting to help make sorting access levels more easily.
+
+## Reconmendations
+
+It is reconmeded that you update your code to use PermafrotRole's built-in functions to add users and permissions.  They add an extra level of checking to make sure the permissions passed in are allowed by the PERMAFROST_CATEGORIES configuration.
+
+For example, permissions on a Group:
+```python
+group.permissions.set([permission_list])
+group.permissions.add(permission, permission, ...)
+group.permissions.remove(permission, permission, ...)
+group.permissions.clear()
+```
+
+Can be replaced with:
+```python
+PermafrostRole.permissions_set([permission_list])
+PermafrostRole.permissions_add(permission, permission, ...)
+PermafrostRole.permissions_remove(permission, permission, ...)
+PermafrostRole.permissions_clear()
+```
+
 
 ## Convenience tools
 There is a tool to help the devloper list out the permissions available in the format permafrost expects.
