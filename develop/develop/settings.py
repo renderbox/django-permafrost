@@ -137,12 +137,13 @@ PERMAFROST_CATEGORIES = {
         'label': _('Administration'),
         'level': 50,
         'optional': [
+            {'label': _('Can delete Role'), 'permission': ('delete_permafrostrole', 'permafrost', 'permafrostrole') },
+        ],
+        'required': [
             {'label': _('Can add Role'), 'permission': ('add_permafrostrole', 'permafrost', 'permafrostrole') },
             {'label': _('Can change Role'), 'permission': ('change_permafrostrole', 'permafrost', 'permafrostrole') },
-            {'label': _('Can delete Role'), 'permission': ('delete_permafrostrole', 'permafrost', 'permafrostrole') },
             {'label': _('Can view Role'), 'permission': ('view_permafrostrole', 'permafrost', 'permafrostrole') },
         ],
-        'required': [],
     },
     'staff': {
         'label': _('Staff'),

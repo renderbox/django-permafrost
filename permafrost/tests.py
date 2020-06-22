@@ -5,11 +5,11 @@ from django.contrib.sites.models import Site
 from django.contrib.auth import get_user_model
 from django.db.utils import IntegrityError
 from django.db import transaction
-from django.contrib.auth.models import Group
+from django.contrib.auth.models import Group, Permission
 
 from rest_framework.test import APIClient
 
-from permafrost.models import PermafrostRole, PermafrostCategory, get_permission_models
+from permafrost.models import PermafrostRole
 
 
 class PermafrostRoleModelTest(TestCase):
@@ -20,17 +20,20 @@ class PermafrostRoleModelTest(TestCase):
         User = get_user_model()
         self.user = User.objects.create_user(username='john', email='jlennon@beatles.com', password='Passw0rd!')
         self.staffuser = User.objects.create_user(username='staffy', email='staffy@beatles.com', password='Passw0rd!')
-        self.adminuser = User.objects.create_user(username='adminy', email='adminy@beatles.com', password='Passw0rd!')
+        self.administrationuser = User.objects.create_user(username='adminy', email='adminy@beatles.com', password='Passw0rd!')
 
         self.site_1 = Site.objects.get(pk=1)
         self.site_2 = Site.objects.get(pk=2)
 
-    #     self.client_user = get_user_model().objects.get(pk=5)
-    #     self.client_staff = get_user_model().objects.get(pk=6)
-    #     self.client_admin = get_user_model().objects.get(pk=7)
+        self.perm_view_permafrostrole = Permission.objects.get_by_natural_key(*('view_permafrostrole', 'permafrost', 'permafrostrole')) 
+        self.perm_change_permafrostrole = Permission.objects.get_by_natural_key(*('change_permafrostrole', 'permafrost', 'permafrostrole')) 
+        self.perm_delete_permafrostrole = Permission.objects.get_by_natural_key(*('delete_permafrostrole', 'permafrost', 'permafrostrole')) 
+        self.perm_add_logentry = Permission.objects.get_by_natural_key(*('add_logentry', 'admin', 'logentry')) 
 
     def test_role_rename_updates_group(self):
-
+        '''
+        Make sure renaming the PermafrostRole properly renames the Django Group model.
+        '''
         role = PermafrostRole(name="Awesome Students", category="user")
         role.save()
 
@@ -45,70 +48,174 @@ class PermafrostRoleModelTest(TestCase):
         self.assertEqual(role.group.name, "1_user_ok-students")
         self.assertEqual(role.group.pk, pk_check)                   # Make sure a new group was not generated
         
-    def test_permission_objects_from_string(self):
-        perms = get_permission_models("permafrost.view_permafrostrole")
-
-        self.assertEqual(1, len(perms))
-
-    def test_permission_objects_from_string_list(self):
-        perms = get_permission_models( ["permafrost.view_permafrostrole", "permafrost.change_permafrostrole"] ) 
-
-        self.assertEqual(2, len(perms))
+    # User Roles
 
     def test_create_user_role(self):
-        # Test that creating a PermafrostRole creates a matching Group
-
+        '''
+        Test that creating a PermafrostRole creates a matching Group
+        '''
         role = PermafrostRole(name="Bobs Super Group", category="user")
         role.save()
-
-        self.assertEqual(role.group.name, "1_user_bobs-super-group")        # Checks that the user is created
-
-        # Add the user to the PermafrostRole with the 
         role.users_add(self.user)
-
-        # perms = [x.name for x in role.group.permissions.all()]
-        # Get the list from the user?
         perms = list(self.user.get_all_permissions())
 
-        # Test that "included" permissions are always present in the group
+        self.assertEqual(list(role.group.permissions.all()), [])            # Check the permissions on the group
+        self.assertEqual(role.group.name, "1_user_bobs-super-group")        # Checks that the user is created
         self.assertEqual(perms, [])
 
-    # def test_role_permission_limits(self):
-        # Test that creating a PermafrostRole creates a matching Group
+    def test_add_optional_to_user_role(self):
+        '''
+        Test that the optional role can be added
+        '''
+        role = PermafrostRole(name="Bobs Super Group", category="user")
+        role.save()
+        role.permissions_add(self.perm_view_permafrostrole)
+        role.users_add(self.user)
+        perms = list(self.user.get_all_permissions())
 
-        # Test that permissions only in the Category's list can be added to the PermafrostRole
+        self.assertListEqual(list(role.group.permissions.all()), [self.perm_view_permafrostrole])            # Check the permissions on the group
+        self.assertEqual(role.group.name, "1_user_bobs-super-group")        # Checks that the user is created
+        self.assertListEqual(perms, ["permafrost.view_permafrostrole"])
 
-            # Get a list of the current permissions
+    def test_add_not_allowed_to_user_role(self):
+        '''
+        Test that a permission that is not optional or required can be added
+        '''
+        role = PermafrostRole(name="Bobs Super Group", category="user")
+        role.save()
+        role.permissions_add(self.perm_delete_permafrostrole)
+        role.users_add(self.user)
+        perms = list(self.user.get_all_permissions())
 
-            # try to add a permission
+        self.assertEqual(list(role.group.permissions.all()), [])            # Check the permissions on the group
+        self.assertEqual(role.group.name, "1_user_bobs-super-group")        # Checks that the user is created
+        self.assertListEqual(perms, [])
 
-            # Check to see if it was added
+    def test_clear_permissions_on_user_role(self):
+        '''
+        Test that clearning permissions restores them to just the required.
+        '''
+        role = PermafrostRole(name="Bobs Super Group", category="user")
+        role.save()
+        role.permissions_add(self.perm_view_permafrostrole)
+        role.permissions_clear()
+        role.users_add(self.user)
+        perms = list(self.user.get_all_permissions())
 
-    def test_create_staffuser_role(self):
-        # Test that creating a PermafrostRole creates a matching Group
+        self.assertEqual(list(role.group.permissions.all()), [])            # Check the permissions on the group
+        self.assertEqual(role.group.name, "1_user_bobs-super-group")        # Checks that the user is created
+        self.assertListEqual(perms, [])
 
+    # Staff Roles
+
+    def test_create_staff_role(self):
         role = PermafrostRole(name="Bobs Staff Group", category="staff")
         role.save()
+        role.users_add(self.staffuser)      # Add user to the Group
+        perms = list(self.staffuser.get_all_permissions())
 
+        self.assertEqual([perm.name for perm in role.group.permissions.all()], ['Can view Role'])   # Make sure the required permission is present in the group
         self.assertEqual(role.group.name, "1_staff_bobs-staff-group")        # Checks that the user is created
+        self.assertListEqual(perms, ['permafrost.view_permafrostrole'])
 
-        # Add user to the Group
-        role.users_add(self.staffuser)
+    def test_add_optional_to_staff_role(self):
+        '''
+        Test that the optional role can be added
+        '''
+        role = PermafrostRole(name="Bobs Staff Group", category="staff")
+        role.save()
+        role.permissions_add(self.perm_change_permafrostrole)
+        role.users_add(self.staffuser)      # Add user to the Group
         perms = list(self.staffuser.get_all_permissions())
         perms.sort()
 
-        check_list = ["permafrost.view_permafrostrole"]    # Needs to be sorted to try to make sure it's a close to the same as possible
-        check_list.sort()
+        self.assertListEqual(list(role.group.permissions.all()), [self.perm_change_permafrostrole, self.perm_view_permafrostrole])            # Check the permissions on the group
+        self.assertEqual(role.group.name, "1_staff_bobs-staff-group")        # Checks that the user is created
+        self.assertListEqual(perms, ['permafrost.change_permafrostrole', 'permafrost.view_permafrostrole'])
 
-        # Test that "included" permissions are the only things present in the group
-        self.assertEqual(perms, check_list)
+    def test_add_not_allowed_to_staff_role(self):
+        '''
+        Test that a permission that is not optional or required can be added
+        '''
+        role = PermafrostRole(name="Bobs Staff Group", category="staff")
+        role.save()
+        role.permissions_add(self.perm_delete_permafrostrole)
+        role.users_add(self.staffuser)
+        perms = list(self.staffuser.get_all_permissions())
 
-    def test_only_allowed_category_perms_can_be_added(self):
-        # Test that permissions not in the Category's list can not be added to the PermafrostRole
-        pass
+        self.assertEqual([perm.name for perm in role.group.permissions.all()], ['Can view Role'])   # Make sure the required permission is present in the group
+        self.assertEqual(role.group.name, "1_staff_bobs-staff-group")        # Checks that the user is created
+        self.assertListEqual(perms, ['permafrost.view_permafrostrole'])
+
+    def test_clear_permissions_on_staff_role(self):
+        role = PermafrostRole(name="Bobs Staff Group", category="staff")
+        role.save()
+        role.permissions_add(self.perm_view_permafrostrole)
+        role.permissions_clear()
+        role.users_add(self.staffuser)      # Add user to the Group
+        perms = list(self.staffuser.get_all_permissions())
+
+        self.assertEqual([perm.name for perm in role.group.permissions.all()], ['Can view Role'])   # Make sure the required permission is present in the group
+        self.assertEqual(role.group.name, "1_staff_bobs-staff-group")        # Checks that the user is created
+        self.assertListEqual(perms, ['permafrost.view_permafrostrole'])
+
+    # Administration Roles
+
+    def test_create_administration_role(self):
+        role = PermafrostRole(name="Bobs Administration Group", category="administration")
+        role.save()
+        role.users_add(self.administrationuser)      # Add user to the Group
+        perms = list(self.administrationuser.get_all_permissions())
+        perms.sort()
+
+        self.assertListEqual([perm.name for perm in role.group.permissions.all()], ['Can add Role', 'Can change Role', 'Can view Role'])   # Make sure the required permission is present in the group
+        self.assertEqual(role.group.name, "1_administration_bobs-administration-group")        # Checks that the user is created
+        self.assertListEqual(perms, ['permafrost.add_permafrostrole', 'permafrost.change_permafrostrole', 'permafrost.view_permafrostrole'])
+
+    def test_add_optional_to_administration_role(self):
+        role = PermafrostRole(name="Bobs Administration Group", category="administration")
+        role.save()
+        role.permissions_add(self.perm_delete_permafrostrole)
+        role.users_add(self.administrationuser)      # Add user to the Group
+        perms = list(self.administrationuser.get_all_permissions())
+        perms.sort()
+
+        self.assertListEqual([perm.name for perm in role.group.permissions.all()], ['Can add Role', 'Can change Role', 'Can delete Role', 'Can view Role'])   # Make sure the required permission is present in the group
+        self.assertEqual(role.group.name, "1_administration_bobs-administration-group")        # Checks that the user is created
+        self.assertListEqual(perms, ['permafrost.add_permafrostrole', 'permafrost.change_permafrostrole', 'permafrost.delete_permafrostrole', 'permafrost.view_permafrostrole'])
+
+    def test_add_not_allowed_to_administration_role(self):
+        role = PermafrostRole(name="Bobs Administration Group", category="administration")
+        role.save()
+        role.permissions_add(self.perm_add_logentry)
+        role.permissions_add(self.perm_delete_permafrostrole)
+        role.users_add(self.administrationuser)      # Add user to the Group
+        perms = list(self.administrationuser.get_all_permissions())
+        perms.sort()
+
+        self.assertListEqual([perm.name for perm in role.group.permissions.all()], ['Can add Role', 'Can change Role', 'Can delete Role', 'Can view Role'])   # Make sure the required permission is present in the group
+        self.assertEqual(role.group.name, "1_administration_bobs-administration-group")        # Checks that the user is created
+        self.assertListEqual(perms, ['permafrost.add_permafrostrole', 'permafrost.change_permafrostrole', 'permafrost.delete_permafrostrole', 'permafrost.view_permafrostrole'])
+
+    def test_clear_permissions_on_administration_role(self):
+        role = PermafrostRole(name="Bobs Administration Group", category="administration")
+        role.save()
+        role.permissions_add(self.perm_view_permafrostrole)
+        role.permissions_clear()
+        role.users_add(self.administrationuser)      # Add user to the Group
+        perms = list(self.administrationuser.get_all_permissions())
+        perms.sort()
+
+        self.assertListEqual([perm.name for perm in role.group.permissions.all()], ['Can add Role', 'Can change Role', 'Can view Role'])   # Make sure the required permission is present in the group
+        self.assertEqual(role.group.name, "1_administration_bobs-administration-group")        # Checks that the user is created
+        self.assertListEqual(perms, ['permafrost.add_permafrostrole', 'permafrost.change_permafrostrole', 'permafrost.view_permafrostrole'])
+
+    # Test Role Creation Rules
 
     def test_create_duplicate_role(self):
-        # Test that creating a PermafrostRole of the same name producers and error
+        '''
+        Test that creating a PermafrostRole of the same name producers and error
+        '''
         role_a = PermafrostRole(name="Bobs Super Group", site=self.site_1, category="user")
         role_a.save()
 
@@ -125,41 +232,21 @@ class PermafrostRoleModelTest(TestCase):
                 role_d = PermafrostRole(name="Bobs Super Group", site=self.site_2, category="staff")
                 role_d.save()
 
-        # TODO: Add check to make sure PermafrostRole's Groups were not created
-
-
-    # def test_clear_role_permissions(self):
-    #     # Test that "included" permissions are always present in the group
-
-    #     role = PermafrostRole(name="Bobs Staff Group", site=self.site_2, category=self.role_category_2)
-    #     role.save()
-
-        # print(len(role.permissions()))
-
-        # self.assertEqual()
-
-    #     Add Extra Permissions from the list
-    #     run Clear method on role
-    #     Make sure only the includes are present
-
-    # Test the Client Users permissions
-
-    # def test_django_admin_has_all_permissions(self):
-    #     # Test the Django Users permissions
-    #     raise NotImplementedError
-
     # Test that deleting a PermafrostRole deletes the matching group
 
+    def test_delete_role_deletes_group(self):
+        role = PermafrostRole(name="Awesome Students", category="user")
+        role.save()
 
-#     def test_superuser_has_perms(self):
-#         '''
-#         Test that a user with
-#         '''
-#         View = self.get_view("any", ['edit-step', 'edit-path'])
-#         request = self.get_request('/', self.superuser)
+        group = role.group
+        group_name = group.name
 
-#         response = View.as_view()(request)
-#         self.assertEqual(response.status_code, 200)
+        self.assertEqual(role.group.name, "1_user_awesome-students")
+
+        role.delete()
+
+        with self.assertRaises(Group.DoesNotExist):
+            group = Group.objects.get(name=group_name)
 
 
 class PermafrostAPITest(TestCase):

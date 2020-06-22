@@ -104,39 +104,6 @@
     }
 },
 {
-    "model": "permafrost.permafrostcategory",
-    "pk": 1,
-    "fields": {
-        "name": "User",
-        "slug": "user",
-        "level": 1,
-        "permissions": "[{\"perm\": \"permafrost.view_permafrostrole\", \"label\": \"Can view Permafrost Role\"}]",
-        "includes": "[]"
-    }
-},
-{
-    "model": "permafrost.permafrostcategory",
-    "pk": 2,
-    "fields": {
-        "name": "Staff",
-        "slug": "staff",
-        "level": 30,
-        "permissions": "[{\"perm\": \"permafrost.add_permafrostrole\", \"label\": \"Can add Permafrost Role\"}, {\"perm\": \"permafrost.change_permafrostrole\", \"label\": \"Can change Permafrost Role\"}, {\"perm\": \"permafrost.view_permafrostrole\", \"label\": \"Can view Permafrost Role\"}]",
-        "includes": "[\"permafrost.view_permafrostrole\"]"
-    }
-},
-{
-    "model": "permafrost.permafrostcategory",
-    "pk": 3,
-    "fields": {
-        "name": "Administrator",
-        "slug": "administrator",
-        "level": 50,
-        "permissions": "[{\"perm\": \"permafrost.add_permafrostrole\", \"label\": \"Can add Permafrost Role\"}, {\"perm\": \"permafrost.change_permafrostrole\", \"label\": \"Can change Permafrost Role\"}, {\"perm\": \"permafrost.delete_permafrostrole\", \"label\": \"Can delete Permafrost Role\"}, {\"perm\": \"permafrost.view_permafrostrole\", \"label\": \"Can view Permafrost Role\"}]",
-        "includes": "[]"
-    }
-},
-{
     "model": "auth.permission",
     "pk": 1,
     "fields": {

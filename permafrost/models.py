@@ -8,6 +8,8 @@ from django.utils.translation import ugettext_lazy as _
 from django.utils.text import slugify
 from django.core.exceptions import ObjectDoesNotExist
 from django.contrib.sites.managers import CurrentSiteManager
+from django.db.models.signals import post_delete
+from django.dispatch import receiver
 
 from jsonfield import JSONField     # Using this instead of the PSQL one for portability
 
@@ -30,12 +32,13 @@ except AttributeError:
             'label': _('Administration'),
             'level': 50,
             'optional': [
+                {'label': _('Can delete Role'), 'permission': ('delete_permafrostrole', 'permafrost', 'permafrostrole') },
+            ],
+            'required': [
                 {'label': _('Can add Role'), 'permission': ('add_permafrostrole', 'permafrost', 'permafrostrole') },
                 {'label': _('Can change Role'), 'permission': ('change_permafrostrole', 'permafrost', 'permafrostrole') },
-                {'label': _('Can delete Role'), 'permission': ('delete_permafrostrole', 'permafrost', 'permafrostrole') },
                 {'label': _('Can view Role'), 'permission': ('view_permafrostrole', 'permafrost', 'permafrostrole') },
             ],
-            'required': [],
         },
         'staff': {
             'label': _('Staff'),
@@ -69,34 +72,8 @@ except AttributeError:
 # UTILITIES
 ###############
 
-# def lable_from_choice_value(choices, value):
-#     return [x[1] for x in choices if x[0] == value][0]
-
-# def make_iterable(value):
-#     '''
-#     Takes whatever is passed in and tries to return it as a list
-#     '''
-#     if isinstance(value, list):
-#         return value
-
-#     if isinstance(value, models.query.QuerySet):
-#         return value
-
-#     if not value:
-#         return []
-
-#     return [value]
-
-# def get_permission_models(permissions):
-#     return [ permission_from_string(p) for p in make_iterable(permissions) ]
-
-# def permission_from_string(permission):
-#     values = permission.split(".")
-#     return Permission.objects.get(codename=values[1], content_type__app_label=values[0])
-
 def get_current_site(*args, **kwargs):
     return settings.SITE_ID
-
 
 ###############
 # MANAGERS
@@ -212,7 +189,7 @@ class PermafrostRole(models.Model):
         id_check = self.all_perm_ids()
         for perm in args:
             if perm.pk in id_check:
-                self.group.permission.add(perm)
+                self.group.permissions.add(perm)
 
     def permissions_remove(self, *args):
         '''
@@ -221,7 +198,7 @@ class PermafrostRole(models.Model):
         id_check = [required.pk for required in self.required_permissions()]
         for perm in args:
             if perm.pk not in id_check:
-                self.group.permission.remove(perm)
+                self.group.permissions.remove(perm)
 
     def permissions_set(self, permissions):
         '''
@@ -229,7 +206,7 @@ class PermafrostRole(models.Model):
         '''
         id_check = [required.pk for required in self.optional_permissions()]
 
-        optional_perms = [perm for perm in permissions if perm.pk in id_check]     # perms passed in that meet the optional filter check
+        optional_perms = [perm for perm in permissions.all() if perm.pk in id_check]     # perms passed in that meet the optional filter check
         required_perms = self.required_permissions()
 
         # Set to values passed in that are in the optional list plus the required permissions.
@@ -291,3 +268,8 @@ class PermafrostRole(models.Model):
         self.conform_group()                            # Apply after a successful save and Group creation (if needed)
 
         return result
+
+
+@receiver(post_delete, sender=PermafrostRole, dispatch_uid='delete_matching_permafrost_role_group')
+def delete_matching_group(sender, instance, using, **kwargs):
+    instance.group.delete()
