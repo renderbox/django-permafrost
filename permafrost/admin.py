@@ -1,32 +1,25 @@
 from django.contrib import admin
+from django.shortcuts import render
 
 from .models import PermafrostRole, PermafrostCategory
 
-# ################
-# # ADMIN ACTIONS
-# ################
-
-# def recreate_slug(modeladmin, request, queryset):
-#     '''
-#     This uses the save() instead of update() since the AutoSlugField is only generated on save().
-#     '''
-#     for item in queryset.all():
-#         item.slug = ""
-#         item.save()
-
-# recreate_slug.short_description = "Regenerate the Slug Field"
+################
+# ADMIN ACTIONS
+################
 
 
-# def make_enabled(modeladmin, request, queryset):
-#     queryset.update(enabled=True)
-
-# make_enabled.short_description = "Mark Enabled"
+def perms_to_code(modeladmin, request, queryset):
 
 
-# def make_disabled(modeladmin, request, queryset):
-#     queryset.update(enabled=False)
+    # Based on the selected Roles, what are the permissions in code format?
 
-# make_disabled.short_description = "Mark Disabled"
+    
+
+
+    return render(request, 'permafrost/admin/perms_to_code.html', context={'json_data':"BOBS STUFF\nHere"})
+
+
+perms_to_code.short_description = "Convert Model Permissions to Code"
 
 
 def create_missing_groups(modeladmin, request, queryset):
@@ -48,17 +41,7 @@ class PermafrostRoleAdmin(admin.ModelAdmin):
     list_display = ('name', 'category', 'group', 'site')
     ordering = ('name',)
     readonly_fields=('slug',)
-    actions = [create_missing_groups]
-
-    # def get_readonly_fields(self, request, obj=None):
-    #     if obj: # editing an existing object
-    #         return self.readonly_fields + ('category',)
-    #     return self.readonly_fields
-
-    # def role_group(self, obj):
-    #     if obj.group:
-    #         return obj.group.name
-    #     return None
+    actions = [create_missing_groups, perms_to_code]
 
 
 class PermafrostCategoryAdmin(admin.ModelAdmin):
