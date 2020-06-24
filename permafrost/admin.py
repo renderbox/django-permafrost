@@ -18,11 +18,9 @@ def perms_to_code(modeladmin, request, queryset):
     for role in queryset.all():
 
         key = role.category.name.lower()
-        print(role.name)
-        print(role.category.name)
 
         if not key in result:       # First time though, assume everything available is required
-            result[key] = {'req':list(role.group.permissions.all()), 'opt':[]}
+            result[key] = {'req':list(role.group.permissions.all()), 'opt':[], 'label':role.category.name, 'access_level':role.category.level}
         else:
             new_perms = list(role.group.permissions.all())
 
@@ -39,16 +37,16 @@ def perms_to_code(modeladmin, request, queryset):
 
             result[key]['req'] = new_req
 
-    for key in result.keys():
-        
-
-        # Reformat for Use
-
     pprint(result, indent=4)
-    # print(json.dumps(result, indent=4))
 
-    # return render(request, 'permafrost/admin/perms_to_code.html', context={'json_data':pprint(result, indent=4)})
-    return render(request, 'permafrost/admin/perms_to_code.html', context={'json_data':json.dumps(result, indent=4)})
+    ordered = list(result.keys())
+    ordered.sort()
+
+    for key in ordered:
+        result[key]['optional'] = [{'label':perm.name, 'permission':perm.natural_key()} for perm in result[key].pop('opt')]
+        result[key]['required'] = [{'label':perm.name, 'permission':perm.natural_key()} for perm in result[key].pop('req')]
+
+    return render(request, 'permafrost/admin/perms_to_code.html', context={'json_data':"PERMAFROST_CATEGORIES = {}".format(json.dumps(result, indent=4))})
 
 
 perms_to_code.short_description = "Convert Model Permissions to Code"
