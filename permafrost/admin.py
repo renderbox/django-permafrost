@@ -1,3 +1,6 @@
+from pprint import pprint
+import json
+
 from django.contrib import admin
 from django.shortcuts import render
 
@@ -10,13 +13,42 @@ from .models import PermafrostRole, PermafrostCategory
 
 def perms_to_code(modeladmin, request, queryset):
 
+    result = {}
 
-    # Based on the selected Roles, what are the permissions in code format?
+    for role in queryset.all():
 
-    
+        key = role.category.name.lower()
+        print(role.name)
+        print(role.category.name)
 
+        if not key in result:       # First time though, assume everything available is required
+            result[key] = {'req':list(role.group.permissions.all()), 'opt':[]}
+        else:
+            new_perms = list(role.group.permissions.all())
 
-    return render(request, 'permafrost/admin/perms_to_code.html', context={'json_data':"BOBS STUFF\nHere"})
+            for perm in new_perms:
+                if perm.pk not in [p.pk for p in result[key]['req']]:      # If the perm not shared with the previous, make it optional
+                    result[key]['opt'].append(perm)
+
+            new_req = []                            # Check previous required against the current
+            for perm in result[key]['req']:
+                if perm not in new_perms:               # If it's not shared, it's optional
+                    result[key]['opt'].append(perm)
+                else:                               # if it is shared, it's required
+                    new_req.append(perm)
+
+            result[key]['req'] = new_req
+
+    for key in result.keys():
+        
+
+        # Reformat for Use
+
+    pprint(result, indent=4)
+    # print(json.dumps(result, indent=4))
+
+    # return render(request, 'permafrost/admin/perms_to_code.html', context={'json_data':pprint(result, indent=4)})
+    return render(request, 'permafrost/admin/perms_to_code.html', context={'json_data':json.dumps(result, indent=4)})
 
 
 perms_to_code.short_description = "Convert Model Permissions to Code"
