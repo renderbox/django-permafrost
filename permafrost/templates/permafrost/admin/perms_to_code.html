@@ -1,11 +1,11 @@
 {% extends "admin/base_site.html" %}
 
 {% block content %}
-Compiled permissions based on selection...
+Compiled permissions based on your selection.  This can be copied and pasted directly (or placed in a sepreate .py file and imported) into your settings.py.
 <div>
 <pre>
 <code>
-{{ json_data }}
+{{ data }}
 </code>
 </pre>
 </div>

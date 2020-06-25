@@ -13,40 +13,67 @@ from .models import PermafrostRole, PermafrostCategory
 
 def perms_to_code(modeladmin, request, queryset):
 
-    result = {}
+    data = {}
 
     for role in queryset.all():
 
         key = role.category.name.lower()
 
-        if not key in result:       # First time though, assume everything available is required
-            result[key] = {'req':list(role.group.permissions.all()), 'opt':[], 'label':role.category.name, 'access_level':role.category.level}
+        if not key in data:       # First time though, assume everything available is required
+            data[key] = {'req':list(role.group.permissions.all()), 'opt':[], 'label':role.category.name, 'level':role.category.level}
         else:
             new_perms = list(role.group.permissions.all())
 
             for perm in new_perms:
-                if perm.pk not in [p.pk for p in result[key]['req']]:      # If the perm not shared with the previous, make it optional
-                    result[key]['opt'].append(perm)
+                if perm.pk not in [p.pk for p in data[key]['req']]:      # If the perm not shared with the previous, make it optional
+                    data[key]['opt'].append(perm)
 
             new_req = []                            # Check previous required against the current
-            for perm in result[key]['req']:
+            for perm in data[key]['req']:
                 if perm not in new_perms:               # If it's not shared, it's optional
-                    result[key]['opt'].append(perm)
+                    data[key]['opt'].append(perm)
                 else:                               # if it is shared, it's required
                     new_req.append(perm)
 
-            result[key]['req'] = new_req
+            data[key]['req'] = new_req
 
-    pprint(result, indent=4)
+    # pprint(data, indent=4)
 
-    ordered = list(result.keys())
-    ordered.sort()
+    key_order = list(data.keys())
+    key_order.sort()
 
-    for key in ordered:
-        result[key]['optional'] = [{'label':perm.name, 'permission':perm.natural_key()} for perm in result[key].pop('opt')]
-        result[key]['required'] = [{'label':perm.name, 'permission':perm.natural_key()} for perm in result[key].pop('req')]
+    result = ["from django.utils.translation import ugettext_lazy as _\n", "PERMAFROST_CATEGORIES = {"]
 
-    return render(request, 'permafrost/admin/perms_to_code.html', context={'json_data':"PERMAFROST_CATEGORIES = {}".format(json.dumps(result, indent=4))})
+    for key in key_order:
+        result.append("    '{}': {{".format(key))
+        result.append("        'label': _('{}'),".format(data[key]['label']))
+        result.append("        'level': {},".format(data[key]['level']))
+        
+        if data[key]['opt']:
+            result.append("        'optional': [")
+            for perm in data[key]['opt']:
+                result.append("            {{'label': _('{}'), 'permission': {} }},".format(perm.name, perm.natural_key()) )
+            result.append("        ],")
+        else:
+            result.append("        'optional': [],")
+
+        if data[key]['req']:
+            result.append("        'required': [")
+            for perm in data[key]['req']:
+                result.append("            {{'label': _('{}'), 'permission': {} }},".format(perm.name, perm.natural_key()) )
+            result.append("        ],")
+        else:
+            result.append("        'required': [],")
+
+        result.append("    },")
+    result.append("}\n")
+
+
+        # data[key]['optional'] = [{'label':perm.name, 'permission':perm.natural_key()} for perm in data[key].pop('opt')]
+        # data[key]['required'] = [{'label':perm.name, 'permission':perm.natural_key()} for perm in data[key].pop('req')]
+
+    return render(request, 'permafrost/admin/perms_to_code.html', context={'data':"\n".join(result)})
+    # return render(request, 'permafrost/admin/perms_to_code.html', context={'json_data':"PERMAFROST_CATEGORIES = {}".format(json.dumps(data, indent=4))})
 
 
 perms_to_code.short_description = "Convert Model Permissions to Code"
