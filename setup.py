@@ -14,7 +14,7 @@ with open(path.join(file_path, 'README.md'), encoding='utf-8') as f:
 
 package_metadata = {
     'name': 'django-permafrost',
-    'version': '0.1.32',
+    'version': '0.1.33',
     'description': 'Adds Client Definable Permissions to Django',
     'long_description': long_description,
     'url': 'https://github.com/renderbox/django-permafrost/',
@@ -34,7 +34,7 @@ package_metadata = {
 setup(
     **package_metadata,
     packages=find_packages(),
-    package_data={'permafrost': ['*.html', 'management/commands/*.py']},
+    package_data={'permafrost': ['*.html', 'management/commands/*.py', 'templates/permafrost/admin/*.html']},
     include_package_data=True,
     python_requires=">=3.6",
     install_requires=[
