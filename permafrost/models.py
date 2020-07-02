@@ -6,6 +6,7 @@ from django.contrib.sites.shortcuts import get_current_site
 from django.utils.translation import ugettext_lazy as _
 from django.utils.text import slugify
 from django.core.exceptions import ObjectDoesNotExist
+from django.contrib.sites.managers import CurrentSiteManager
 
 from jsonfield import JSONField     # Using this instead of the PSQL one for portability
 
@@ -141,6 +142,7 @@ class PermafrostRole(models.Model):
     group = models.ForeignKey(Group, verbose_name=_("Group"), on_delete=models.CASCADE, related_name="permafrost_role", blank=True, null=True)                  # NOTE: Need to make sure this is exported with natural key values as it can have a different PK on different servers
 
     objects = PermafrostRoleManager()
+    on_site = CurrentSiteManager()
 
     class Meta:
         verbose_name = _("Permafrost Role")
