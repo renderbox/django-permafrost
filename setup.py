@@ -6,11 +6,23 @@
 
 from os import path
 from setuptools import setup, find_packages
+from m2r import parse_from_file
 
-file_path = path.abspath(path.dirname(__file__))
+# file_path = path.abspath(path.dirname(__file__))
 
-with open(path.join(file_path, 'README.md'), encoding='utf-8') as f:
-    long_description = f.read()
+# with open(path.join(file_path, 'README.md'), encoding='utf-8') as f:
+#     long_description = parse_from_file('markdown_file.md')f.read()
+
+readme_file = path.join(path.dirname(path.abspath(__file__)), 'README.md')
+
+try:
+    from m2r import parse_from_file
+    long_description = parse_from_file(readme_file)
+except ImportError:
+    # m2r may not be installed in user environment
+    with open(readme_file) as f:
+        long_description = f.read()
+
 
 package_metadata = {
     'name': 'django-permafrost',
@@ -50,11 +62,13 @@ setup(
             'setuptools',
             'wheel',
             'twine',
+            'm2r',
         ],
         'docs': [
             'coverage',
             'Sphinx',
             'sphinx-rtd-theme',
+            'm2r',
         ],
     }
 )
