@@ -22,8 +22,9 @@ jobs:
     - name: Install Dependencies
       run: |
         python -m pip install --upgrade pip
+        python -m pip install m2r
         python -m pip install -e . pip
-        pip install setuptools wheel twine m2r
+        pip install setuptools wheel twine 
     - name: Run Tests
       run: |
         cd develop
