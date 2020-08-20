@@ -79,12 +79,10 @@ def get_current_site(*args, **kwargs):
 # MANAGERS
 ###############
 
-class CategoryManager(models.Manager):
-    def get_by_natural_key(self, slug):
-        return self.get(slug=slug)
-
-
 class PermafrostRoleManager(models.Manager):
+    '''
+    Standard Django manager with natural key support added.
+    '''
     def get_by_natural_key(self, slug, site):
         return self.get(slug=slug, site=site)
 
