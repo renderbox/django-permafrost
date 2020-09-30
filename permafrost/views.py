@@ -6,6 +6,7 @@ from django.http import HttpResponse, HttpResponseForbidden
 from django.shortcuts import render
 from django.core.exceptions import PermissionDenied
 from django.views.generic import TemplateView
+from unittest import skipIf
 
 #--------------
 # UTILITIES
@@ -86,3 +87,10 @@ class PermafrostLogMixin(object):
         super().handle_no_permission()
 
 
+# Create Permission Group
+
+# List Permission Groups
+
+# Update Permission Group
+
+# Delete Permission Groups

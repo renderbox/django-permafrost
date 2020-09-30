@@ -1,18 +1,24 @@
 import json
 
-from django.test import TestCase 
+from unittest import TestCase, skipIf, skipUnless
+
+from django.test import TestCase as DjangoTestCase
 from django.contrib.sites.models import Site
 from django.contrib.auth import get_user_model
 from django.db.utils import IntegrityError
 from django.db import transaction
 from django.contrib.auth.models import Group, Permission
 
-from rest_framework.test import APIClient
+try:
+    from rest_framework.test import APIClient
+    SKIP_DRF_TESTS = False
+except ImportError:
+    SKIP_DRF_TESTS = True
 
 from permafrost.models import PermafrostRole
 
 
-class PermafrostRoleModelTest(TestCase):
+class PermafrostRoleModelTest(DjangoTestCase):
 
     fixtures = ['unit_test']
 
@@ -249,6 +255,8 @@ class PermafrostRoleModelTest(TestCase):
             group = Group.objects.get(name=group_name)
 
 
+# Don't run the following tests if DRF is not loaded
+@skipIf(SKIP_DRF_TESTS, "Django Rest Framework not installed, skipping tests")
 class PermafrostAPITest(TestCase):
 
     fixtures = ['unit_test']

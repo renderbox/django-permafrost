@@ -1,4 +1,12 @@
-from rest_framework.permissions import BasePermission
+"""
+This is a permission class that will only work for Django Rest Framework.
+"""
+
+try:
+    from rest_framework.permissions import BasePermission
+except ImportError:
+    # If django rest framework is not installed, make it a useless object
+    BasePermission = object
 
 #--------------
 # DJANGO REST PERMS
