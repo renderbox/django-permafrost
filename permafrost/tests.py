@@ -257,7 +257,7 @@ class PermafrostRoleModelTest(DjangoTestCase):
 
 # Don't run the following tests if DRF is not loaded
 @skipIf(SKIP_DRF_TESTS, "Django Rest Framework not installed, skipping tests")
-class PermafrostAPITest(TestCase):
+class PermafrostAPITest(DjangoTestCase):
 
     fixtures = ['unit_test']
 
