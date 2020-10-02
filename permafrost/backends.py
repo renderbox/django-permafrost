@@ -1,7 +1,7 @@
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Permission
 from django.contrib.auth.backends import ModelBackend, AllowAllUsersModelBackend, RemoteUserBackend, AllowAllUsersRemoteUserBackend
-
+from django.contrib.sites.models import Site
 
 class GroupSiteFilterMixin():
 
@@ -9,9 +9,11 @@ class GroupSiteFilterMixin():
         '''
         Adds the SiteID for filtering Groups
         '''
+        current_site = Site.objects.get_current()
         user_groups_field = get_user_model()._meta.get_field('groups')
         user_groups_query = 'group__%s' % user_groups_field.related_query_name()
-        return Permission.objects.filter(**{user_groups_query: user_obj})                   # TODO: Should it return Groups that do not have a Permafrost Role also?
+
+        return Permission.objects.filter(**{user_groups_query: user_obj}).filter(group__permafrost_role__site=current_site)                   # TODO: Should it return Groups that do not have a Permafrost Role also?
 
 
 class PermafrostModelBackend(GroupSiteFilterMixin, ModelBackend):
@@ -20,16 +22,6 @@ class PermafrostModelBackend(GroupSiteFilterMixin, ModelBackend):
     Group permissions via Permafrost Roles.
     '''
     pass
-    # def _get_group_permissions(self, user_obj):
-    #     return super()._get_group_permissions(user_obj).filter(group__permafrost_role__site=current_site)       # filter out groups in permaforstroles within the current site
-        
-        
-    # def get_group_permissions(self, user_obj, obj=None):
-    #     """
-    #     Return a set of permission strings the user `user_obj` has from the
-    #     groups they belong.
-    #     """
-    #     return self._get_permissions(user_obj, obj, 'group')
 
 
 class PermafrostAllowAllUsersModelBackend(GroupSiteFilterMixin, AllowAllUsersModelBackend):
