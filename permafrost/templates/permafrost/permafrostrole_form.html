@@ -1,5 +1,5 @@
 {% extends "permafrost/base.html" %}
-{% comment %} {% load crispy_forms_tags %} {% endcomment %}
+{% load crispy_forms_tags %}
 {% load i18n %}
 {% load static %}
 
@@ -10,8 +10,14 @@
 
 <form method="post">
     {% csrf_token %}
-    {% comment %} {{form|crispy}} {% endcomment %}
-    {{form}}
+    {{form|crispy}}
+    <h3>Perms:</h3>
+    <ul>
+    {% for perm in object.optional_permissions %}
+    <li>{{perm.name}}</li>
+    {% endfor %}
+    </ul>
+
     <button type="submit" class="btn btn-primary"> {% trans 'Submit' %}</button>
 </form>
 {% endblock %}

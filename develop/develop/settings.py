@@ -42,6 +42,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'django.contrib.sites',
+    'crispy_forms',
     'permafrost',
     'example',
 ]
@@ -132,6 +133,8 @@ REST_FRAMEWORK = {
         'rest_framework.permissions.IsAuthenticated',
     ]
 }
+
+CRISPY_TEMPLATE_PACK = 'bootstrap4'
 
 PERMAFROST_CATEGORIES = {
     'administration': {
