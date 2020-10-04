@@ -109,3 +109,12 @@ class PermafrostRoleUpdateView(UpdateView):
 # Delete Permission Groups
 class PermafrostRoleDeleteView(DeleteView):
     model = PermafrostRole
+
+
+# Future Views
+
+# TODO: Role User List (For easier pagination) & bulk editing
+
+# TODO: User Roles on a given Site
+
+# TODO: Roles with a given permission
