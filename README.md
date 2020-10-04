@@ -1,4 +1,6 @@
-![Permafrost CI](https://github.com/renderbox/django-permafrost/workflows/Permafrost%20CI/badge.svg?branch=master)
+![Permafrost Develop](https://github.com/renderbox/django-permafrost/workflows/Permafrost%20Develop/badge.svg)
+
+![Permafrost CI](https://github.com/renderbox/django-permafrost/workflows/Permafrost%20CI/badge.svg)
 
 # Django Permafrost
 
