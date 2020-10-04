@@ -4,6 +4,7 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import authentication, permissions
 from django.contrib.auth.models import User
+from django.views.generic import TemplateView
 
 from permafrost.permissions import PermafrostRESTPermission
 
@@ -22,3 +23,7 @@ class PermCheckAPIView(APIView):
         perm_list = list(request.user.get_all_permissions())
         perm_list.sort()
         return Response(perm_list)
+
+
+class IndexView(TemplateView):
+    template_name = "example/index.html"

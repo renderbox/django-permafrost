@@ -1,0 +1,10 @@
+{% extends "permafrost/base.html" %}
+
+{% block title %}Permafrost - Home{% endblock %}
+
+{% block content %}
+<h1>Home</h1>
+<ul>
+<li><a href="{% url "permafrost:role-list" %}">List of Roles</a></li>
+</ul>
+{% endblock %}
