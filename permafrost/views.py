@@ -5,8 +5,10 @@ from django.contrib.auth.mixins import PermissionRequiredMixin
 from django.http import HttpResponse, HttpResponseForbidden
 from django.shortcuts import render
 from django.core.exceptions import PermissionDenied
-from django.views.generic import TemplateView
+from django.views.generic import TemplateView, ListView, DetailView
 from unittest import skipIf
+
+from .models import PermafrostRole
 
 #--------------
 # UTILITIES
@@ -88,8 +90,16 @@ class PermafrostLogMixin(object):
 
 
 # Create Permission Group
+class PermafrostRoleCreateView(ListView):
+    model = PermafrostRole
 
 # List Permission Groups
+class PermafrostRoleListView(ListView):
+    model = PermafrostRole
+
+# Detail Permission Groups
+class PermafrostRoleDetailView(DetailView):
+    model = PermafrostRole
 
 # Update Permission Group
 
