@@ -41,7 +41,7 @@ package_metadata = {
 setup(
     **package_metadata,
     packages=find_packages(),
-    package_data={'permafrost': ['*.html', 'management/commands/*.py', 'templates/permafrost/admin/*.html']},
+    package_data={'permafrost': ['*.html', 'management/commands/*.py', 'templates/permafrost/*.html', 'templates/permafrost/admin/*.html']},
     include_package_data=True,
     python_requires=">=3.6",
     install_requires=[
