@@ -13,27 +13,6 @@ jobs:
       matrix:
         python-version: [3.7]
 
-    # # Uncomment if working with Postgres
-    # # Service containers to run with `container-job`
-    # services:
-    #   # Label used to access the service container
-    #   postgres:
-    #     # Docker Hub image
-    #     image: postgres:11
-    #     # Provide the password for postgres
-    #     env:
-    #       POSTGRES_USER: postgres
-    #       POSTGRES_PASSWORD: postgres
-    #       POSTGRES_DB: permafrost
-    #     # Set health checks to wait until postgres has started
-    #     ports:
-    #       - 5432:5432
-    #     options: >-
-    #       --health-cmd pg_isready
-    #       --health-interval 10s
-    #       --health-timeout 5s
-    #       --health-retries 5
-
     steps:
     - uses: actions/checkout@v2
     - name: Set up Python ${{ matrix.python-version }}
@@ -51,4 +30,3 @@ jobs:
         python manage.py test permafrost
       env: 
         DJANGO_DEBUG: 1
-        # DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/permafrost

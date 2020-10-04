@@ -18,6 +18,7 @@
     {% endfor %}
     </ul>
 
+    <a href="{{object.get_absolute_url}}" class="btn btn-warning">Cancel</a>
     <button type="submit" class="btn btn-primary"> {% trans 'Submit' %}</button>
 </form>
 {% endblock %}
