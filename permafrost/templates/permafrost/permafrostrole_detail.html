@@ -10,5 +10,21 @@
 <p>Locked: {{ object.locked }}</p>
 <p>Deleted: {{ object.deleted }}</p>
 
+    <h3>Perms:</h3>
+    <ul>
+    {% for perm in object.optional_permissions %}
+    <li>{{perm.name}}</li>
+    {% endfor %}
+    </ul>
+    <hr>
+
+    <h3>Users:</h3>
+    <ul>
+    {% for user in object.user_set %}
+    <li>{{user.username}}</li>
+    {% endfor %}
+    </ul>
+    <hr>
+
 <p><a href="{{object.get_update_url}}">Update</a></p>
 {% endblock %}

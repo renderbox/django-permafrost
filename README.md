@@ -4,7 +4,7 @@
 
 # Django Permafrost
 
-Django Permafrost is an extension to Django's Permissions framework.  It intends to let developers provide certain permissions to users controlled by a Client User on the site.
+Django Permafrost is an extension to Django's Permissions framework.  It's goal is to allow developers to expose some permissions to Client Users on the site so they can create and manage custom User Roles.
 
 It adds:
 - A View Mixin that supports user permissions based on different HTTP method types (GET, POST, PUT, etc) for extra granular control.
