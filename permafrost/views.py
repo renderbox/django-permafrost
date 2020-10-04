@@ -5,7 +5,7 @@ from django.contrib.auth.mixins import PermissionRequiredMixin
 from django.http import HttpResponse, HttpResponseForbidden
 from django.shortcuts import render
 from django.core.exceptions import PermissionDenied
-from django.views.generic import TemplateView, ListView, DetailView
+from django.views.generic import TemplateView, ListView, DetailView, UpdateView
 from unittest import skipIf
 
 from .models import PermafrostRole
@@ -102,5 +102,8 @@ class PermafrostRoleDetailView(DetailView):
     model = PermafrostRole
 
 # Update Permission Group
+class PermafrostRoleUpdateView(UpdateView):
+    model = PermafrostRole
+    fields = ['name', 'locked', 'deleted']
 
 # Delete Permission Groups

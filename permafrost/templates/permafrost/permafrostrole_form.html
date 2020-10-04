@@ -1,0 +1,17 @@
+{% extends "permafrost/base.html" %}
+{% comment %} {% load crispy_forms_tags %} {% endcomment %}
+{% load i18n %}
+{% load static %}
+
+{% block title %}Permafrost - Roles{% endblock %}
+
+{% block content %}
+<h1>Update: {{object.name}}</h1>
+
+<form method="post">
+    {% csrf_token %}
+    {% comment %} {{form|crispy}} {% endcomment %}
+    {{form}}
+    <button type="submit" class="btn btn-primary"> {% trans 'Submit' %}</button>
+</form>
+{% endblock %}

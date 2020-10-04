@@ -10,6 +10,7 @@ from django.core.exceptions import ObjectDoesNotExist
 from django.contrib.sites.managers import CurrentSiteManager
 from django.db.models.signals import post_delete
 from django.dispatch import receiver
+from django.urls import reverse
 
 from jsonfield import JSONField     # Using this instead of the PSQL one for portability
 
@@ -134,6 +135,12 @@ class PermafrostRole(models.Model):
 
     def natural_key(self):
         return (self.slug, self.site)
+
+    def get_absolute_url(self):
+        return reverse("permafrost:role-detail", kwargs={"slug": self.slug})
+    
+    def get_update_url(self):
+        return reverse("permafrost:role-update", kwargs={"slug": self.slug})
 
     #-------------
     # Permissions

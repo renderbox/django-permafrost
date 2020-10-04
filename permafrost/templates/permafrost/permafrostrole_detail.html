@@ -1,0 +1,14 @@
+{% extends "permafrost/base.html" %}
+
+{% block title %}Permafrost - Roles{% endblock %}
+
+{% block content %}
+<h1>Details: {{object.name}}</h1>
+
+<p>Role Name: {{ object.name }}</p>
+<p>Category: {{ object.category }}</p>
+<p>Locked: {{ object.locked }}</p>
+<p>Deleted: {{ object.deleted }}</p>
+
+<p><a href="{{object.get_update_url}}">Update</a></p>
+{% endblock %}

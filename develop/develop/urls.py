@@ -20,6 +20,6 @@ from example import views
 urlpatterns = [
     path('', views.IndexView.as_view()),
     path('permissions/', views.PermCheckAPIView.as_view(), name="permafrost-permissions-test-endpoint"),
-    path('perms', include('permafrost.urls') ),
+    path('permafrost/', include('permafrost.urls') ),
     path('admin/', admin.site.urls),
 ]

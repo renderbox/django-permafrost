@@ -4,4 +4,11 @@
 
 {% block content %}
 <h1>Roles</h1>
+
+<ul>
+{% for object in object_list %}
+<li><a href="{{object.get_absolute_url}}">{{object.name}}</a></li>
+{% endfor %}
+</ul>
+
 {% endblock %}
