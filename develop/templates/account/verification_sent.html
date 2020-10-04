@@ -1,0 +1,15 @@
+{% extends "account/layout_card.html" %}
+
+{% load i18n %}
+
+{% block head_title %}{% trans "Verify Your Email Address" %}{% endblock %}
+
+{% block content %}
+  <h5 class="card-title">
+    {% trans "Verify Your Email Address" %}
+  </h5>
+
+  <p>{% blocktrans %}We have sent an e-mail to you for verification. Follow the link provided to finalize the signup process. Please contact us if you do not receive it within a few minutes.{% endblocktrans %}
+  </p>
+
+{% endblock %}

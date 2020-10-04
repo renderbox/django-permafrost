@@ -1,0 +1,21 @@
+{% load account %}
+{% load i18n %}
+{% user_display user as user_display %}
+
+{% autoescape off %}
+{% blocktrans with site_name=current_site.name site_domain=current_site.domain %}
+Hello from {{ site_name }}!
+
+You're receiving this e-mail because a new user has signed up with your address.
+
+To confirm this is correct, go to {{ activate_url }}{% endblocktrans %}{% endautoescape %}
+
+{% blocktrans with site_name=current_site.name site_domain=current_site.domain test=2 %}
+If you didn't register for a new account with {{ site_domain }}, please ignore this message, and we will cancel that account and forget your address within a few days.
+{% endblocktrans %}
+
+{% blocktrans with site_name=current_site.name site_domain=current_site.domain test=2 %}
+Thank you!
+{{ site_domain }}
+{% endblocktrans %}
+

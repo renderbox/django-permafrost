@@ -17,12 +17,14 @@ Django Permafrost adds a couple extra pieces of utility to Django's permission s
 3. It adds a PermafrostRole model for creating permissions that can be controlled by a Client for other users on the site.  It relies on and manages Django's built-in permission with groups.
 
 
-Updated docs are forthcoming...
-
 .. toctree::
    :maxdepth: 2
    :caption: Contents:
 
+   modules/about.rst
+   modules/installation.rst
+   modules/models.rst
+   modules/views.rst
 
 
 Indices and tables

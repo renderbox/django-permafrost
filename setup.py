@@ -7,6 +7,8 @@
 from os import path
 from setuptools import setup, find_packages
 
+from permafrost.__version__ import VERSION
+
 readme_file = path.join(path.dirname(path.abspath(__file__)), 'README.md')
 
 try:
@@ -17,11 +19,10 @@ except ImportError:
     with open(readme_file) as f:
         long_description = f.read()
 
-
 package_metadata = {
     'name': 'django-permafrost',
-    'version': '0.2.1',
     'description': 'Adds Client Definable Permissions to Django',
+    'version': VERSION,
     'long_description': long_description,
     'url': 'https://github.com/renderbox/django-permafrost/',
     'author': 'Grant Viklund',
@@ -48,23 +49,25 @@ setup(
         'jsonfield',
     ],
     extras_require={
-        'dev': [
-            'djangorestframework',
+        'dev': [                            # Packages needed by developers
+            'django-crispy-forms',
+            'django-allauth',
+            'django-extensions',
         ],
-        'test': [],
-        'prod': [],
-        'build': [
+        'test': [],                         # Packages needed to run tests
+        'prod': [],                         # Packages needed to run in the deployment
+        'build': [                          # Packages needed to build the package
             'setuptools',
             'wheel',
             'twine',
             'm2r',
         ],
-        'docs': [
+        'docs': [                           # Packages needed to generate docs
             'coverage',
             'Sphinx',
-            'sphinx-rtd-theme',
             'recommonmark',
             'rstcheck',
+            'sphinx-rtd-theme',  # Assumes a Read The Docs theme for opensource projects
         ],
     }
 )

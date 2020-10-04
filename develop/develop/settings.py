@@ -30,6 +30,8 @@ ALLOWED_HOSTS = []
 
 SITE_ID = 1
 
+LOGIN_REDIRECT_URL = '/'
+
 # Application definition
 
 INSTALLED_APPS = [
@@ -40,7 +42,6 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'django.contrib.sites',
-    'rest_framework',
     'permafrost',
     'example',
 ]

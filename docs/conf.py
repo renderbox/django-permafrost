@@ -9,22 +9,24 @@
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
-#
-# import os
-# import sys
-# sys.path.insert(0, os.path.abspath('.'))
-import sphinx_rtd_theme
+
+import os
+import sys
+import django
+
+sys.path.insert(0, os.path.abspath('../develop'))
+os.environ['DJANGO_SETTINGS_MODULE'] = 'develop.settings'
+django.setup()
 
 
 # -- Project information -----------------------------------------------------
 
-project = 'Django Permafrost'
+project = 'Permafrost'
 copyright = '2020, Grant Viklund'
 author = 'Grant Viklund'
 
 # The full version, including alpha/beta/rc tags
-release = '0.2.1'
-
+release = version = django.conf.settings.BUILD_VERSION
 
 # -- General configuration ---------------------------------------------------
 
@@ -32,14 +34,10 @@ release = '0.2.1'
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
 extensions = [
-    'sphinx_rtd_theme',
-    'recommonmark',
+    'm2r',
 ]
 
-source_suffix = {
-    '.rst': 'restructuredtext',
-    '.md': 'markdown',
-}
+source_suffix = ['.rst', '.md']
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
