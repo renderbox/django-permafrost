@@ -3,7 +3,7 @@ from django.contrib.auth.models import Permission
 from django.contrib.auth.backends import ModelBackend, AllowAllUsersModelBackend, RemoteUserBackend, AllowAllUsersRemoteUserBackend
 from django.contrib.sites.models import Site
 
-class GroupSiteFilterMixin():
+class GroupSiteModelBackendMixin():
 
     def _get_group_permissions(self, user_obj):
         '''
@@ -16,7 +16,7 @@ class GroupSiteFilterMixin():
         return Permission.objects.filter(**{user_groups_query: user_obj}).filter(group__permafrost_role__site=current_site)                   # TODO: Should it return Groups that do not have a Permafrost Role also?
 
 
-class PermafrostModelBackend(GroupSiteFilterMixin, ModelBackend):
+class PermafrostModelBackend(GroupSiteModelBackendMixin, ModelBackend):
     '''
     Permafrost ModelBackend that takes into account SiteID when filtering on
     Group permissions via Permafrost Roles.
@@ -24,7 +24,7 @@ class PermafrostModelBackend(GroupSiteFilterMixin, ModelBackend):
     pass
 
 
-class PermafrostAllowAllUsersModelBackend(GroupSiteFilterMixin, AllowAllUsersModelBackend):
+class PermafrostAllowAllUsersModelBackend(GroupSiteModelBackendMixin, AllowAllUsersModelBackend):
     '''
     Permafrost AllowAllUsersModelBackend that takes into account SiteID when filtering on
     Group permissions via Permafrost Roles.
@@ -32,7 +32,7 @@ class PermafrostAllowAllUsersModelBackend(GroupSiteFilterMixin, AllowAllUsersMod
     pass
 
 
-class PermafrostRemoteUserBackend(GroupSiteFilterMixin, RemoteUserBackend):
+class PermafrostRemoteUserBackend(GroupSiteModelBackendMixin, RemoteUserBackend):
     '''
     Permafrost RemoteUserBackend that takes into account SiteID when filtering on
     Group permissions via Permafrost Roles.
@@ -40,7 +40,7 @@ class PermafrostRemoteUserBackend(GroupSiteFilterMixin, RemoteUserBackend):
     pass
 
 
-class PermafrostAllowAllUsersRemoteUserBackend(GroupSiteFilterMixin, AllowAllUsersRemoteUserBackend):
+class PermafrostAllowAllUsersRemoteUserBackend(GroupSiteModelBackendMixin, AllowAllUsersRemoteUserBackend):
     '''
     Permafrost AllowAllUsersRemoteUserBackend that takes into account SiteID when filtering on
     Group permissions via Permafrost Roles.
