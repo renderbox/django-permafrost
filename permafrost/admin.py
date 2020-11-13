@@ -16,11 +16,16 @@ def perms_to_code(modeladmin, request, queryset):
     data = {}
 
     for role in queryset.all():
-
-        key = role.category.name.lower()
-
+        
+        if hasattr(role.category, 'name'):
+            key = role.category.name.lower()
+            label = role.category.name
+        else:
+            key = role.category
+            label = role.get_category_display()
+    
         if not key in data:       # First time though, assume everything available is required
-            data[key] = {'req':list(role.group.permissions.all()), 'opt':[], 'label':role.category.name, 'level':role.category.level}
+            data[key] = {'req':list(role.group.permissions.all()), 'opt':[], 'label':label}
         else:
             new_perms = list(role.group.permissions.all())
 
