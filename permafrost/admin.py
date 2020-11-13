@@ -52,7 +52,6 @@ def perms_to_code(modeladmin, request, queryset):
     for key in key_order:
         result.append("    '{}': {{".format(key))
         result.append("        'label': _('{}'),".format(data[key]['label']))
-        result.append("        'level': {},".format(data[key]['level']))
         
         if data[key]['opt']:
             result.append("        'optional': [")
