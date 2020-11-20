@@ -34,5 +34,6 @@ jobs:
       run: |
         cd develop
         python manage.py test permafrost
+        python manage.py makemigrations --check --dry-run
       env: 
         DJANGO_DEBUG: 1
