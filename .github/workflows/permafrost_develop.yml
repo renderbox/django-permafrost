@@ -24,12 +24,6 @@ jobs:
         python -m pip install --upgrade pip
         python -m pip install m2r
         python -m pip install -e .[dev,test]
-    - name: Run System Tests
-      run: |
-        cd develop
-        python manage.py test
-      env: 
-        DJANGO_DEBUG: 1
     - name: Run Tests
       run: |
         cd develop
