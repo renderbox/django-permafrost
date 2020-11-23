@@ -8,7 +8,7 @@ from django.core.exceptions import PermissionDenied
 from django.views.generic import TemplateView, ListView, DetailView, UpdateView, DeleteView
 from unittest import skipIf
 
-from .models import PermafrostRole
+from permafrost.models import PermafrostRole
 
 #--------------
 # UTILITIES
