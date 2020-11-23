@@ -25,7 +25,7 @@ django.setup()
 
 project = 'Permafrost'
 copyright = '2020, Grant Viklund'
-author = 'Grant Viklund'
+author = 'Grant Viklund, Devon Jackson'
 
 # The full version, including alpha/beta/rc tags
 release = version = VERSION
