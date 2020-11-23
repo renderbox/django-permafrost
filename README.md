@@ -2,6 +2,8 @@
 
 ![Permafrost CI](https://github.com/renderbox/django-permafrost/workflows/Permafrost%20CI/badge.svg)
 
+[![Documentation Status](https://readthedocs.org/projects/django-permafrost/badge/?version=latest)](https://django-permafrost.readthedocs.io/en/latest/?badge=latest)
+
 # Django Permafrost
 
 Django Permafrost is an extension to Django's Permissions framework.  It's goal is to allow developers to expose some permissions to Client Users on the site so they can create and manage custom User Roles.
