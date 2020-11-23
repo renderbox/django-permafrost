@@ -2,13 +2,15 @@ import json
 
 from unittest import skipIf
 
-from django.test import TestCase
+from django.test import TestCase, tag
 from django.contrib.sites.models import Site
 from django.contrib.auth import get_user_model
 from django.db.utils import IntegrityError
 from django.db import transaction
 from django.contrib.auth.models import Group, Permission
-
+from django.urls import reverse_lazy
+from django.urls.base import resolve
+from .views import PermafrostRoleAdminView
 try:
     from rest_framework.test import APIClient
     SKIP_DRF_TESTS = False
@@ -287,3 +289,10 @@ class PermafrostAPITest(TestCase):
         self.client.force_authenticate(user=self.user)
         response = self.client.get('/permissions/', format='json')
         assert response.status_code == 403
+
+@tag('admin_tests')
+class PermafrostAdminViewTests(TestCase):
+
+    def test_administration_base_url_resolves(self):
+        found = resolve('/')
+        self.assertEqual(found.func, AdminPermafrostRoleAdminView.as_view)
