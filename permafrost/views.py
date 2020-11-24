@@ -8,8 +8,10 @@ from django.core.exceptions import PermissionDenied
 from django.views.generic import TemplateView, ListView, DetailView, UpdateView, DeleteView
 from unittest import skipIf
 
-from permafrost.models import PermafrostRole
+from django.views.generic.edit import CreateView
 
+from .models import PermafrostRole
+from .forms import PermafrostRoleCreateForm
 #--------------
 # UTILITIES
 #--------------
@@ -90,8 +92,9 @@ class PermafrostLogMixin(object):
 
 
 # Create Permission Group
-class PermafrostRoleCreateView(ListView):
+class PermafrostRoleCreateView(CreateView):
     model = PermafrostRole
+    form_class = PermafrostRoleCreateForm
 
 # List Permission Groups
 class PermafrostRoleListView(ListView):
