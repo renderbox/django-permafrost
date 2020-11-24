@@ -111,6 +111,7 @@ class PermafrostRole(models.Model):
 
     name = models.CharField(_("Name"), max_length=50)
     slug = models.SlugField(_("Slug"))
+    description = models.CharField(_('Description'), null=True, blank=True, max_length=200)
     category = models.CharField(_("Category"), max_length=32, choices=get_choices(), blank=False, null=False)                     # These should stay fixed to not trigger a potenital migration issue with changing choices
     site = models.ForeignKey(Site, on_delete=models.CASCADE, default=get_current_site)                      # This uses a callable so it will not trigger a migration with the projects it's included in
     locked = models.BooleanField(_("Locked"), default=False)                                                        # If this is locked, it can not be edited by the Client, used for System Default Roles
