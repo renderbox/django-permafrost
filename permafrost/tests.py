@@ -8,9 +8,9 @@ from django.contrib.auth import get_user_model
 from django.db.utils import IntegrityError
 from django.db import transaction
 from django.contrib.auth.models import Group, Permission
-from django.urls import reverse_lazy
-from django.urls.base import resolve
-from .views import PermafrostRoleAdminView
+from django.test.client import Client
+from django.urls.base import resolve, reverse
+from .views import PermafrostRoleListView, PermafrostRoleCreateView
 try:
     from rest_framework.test import APIClient
     SKIP_DRF_TESTS = False
@@ -291,8 +291,40 @@ class PermafrostAPITest(TestCase):
         assert response.status_code == 403
 
 @tag('admin_tests')
-class PermafrostAdminViewTests(TestCase):
+class PermafrostViewTests(TestCase):
+
+    def setUp(self):
+        self.client = Client()
 
     def test_administration_base_url_resolves(self):
-        found = resolve('/')
-        self.assertEqual(found.func, AdminPermafrostRoleAdminView.as_view)
+        found = resolve("/permafrost/roles/")
+        self.assertEqual(found.view_name, "permafrost:role-list")
+        self.assertEqual(found.func.view_class, PermafrostRoleListView)
+    
+    def test_administration_create_url_resolves(self):
+        found = resolve("/permafrost/role/add/")
+        self.assertEqual(found.view_name, "permafrost:role-create")
+        self.assertEqual(found.func.view_class, PermafrostRoleCreateView)
+    
+    def test_administration_create_url_response_with_correct_template(self):
+        url = reverse("permafrost:role-create")
+        response = self.client.get(url)
+        ## ensure _create.html extends the base template
+        self.assertTemplateUsed(response, "permafrost/base.html")
+        
+        self.assertTemplateUsed(response, "permafrost/permafrostrole_form.html")
+
+    def test_create_form_renders_on_GET(self):
+        url = reverse("permafrost:role-create")
+        response = self.client.get(url)
+        try:
+            self.assertContains(response, "Create Role")
+            self.assertContains(response, 'id="create_role_form"')
+            self.assertContains(response, 'name="name"')
+            self.assertContains(response, 'name="description"')
+            self.assertContains(response, 'name="category"')
+        except:
+            print("")
+            print(response.content.decode())
+            raise
+       
