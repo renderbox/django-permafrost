@@ -11,7 +11,7 @@ from unittest import skipIf
 from django.views.generic.edit import CreateView
 
 from .models import PermafrostRole
-from .forms import PermafrostRoleCreateForm
+from .forms import PermafrostRoleCreateForm, SelectPermafostRoleTypeForm
 #--------------
 # UTILITIES
 #--------------
@@ -91,10 +91,36 @@ class PermafrostLogMixin(object):
         super().handle_no_permission()
 
 
+def select_role_type(request):
+    """
+    Switch the form based on whether or not a role categor has been selected
+    """
+    if request.method == 'POST':
+        submitted =  SelectPermafostRoleTypeForm(request.POST)
+        if submitted.is_valid():
+            form = PermafrostRoleCreateForm(initial=submitted.cleaned_data)
+        else:
+            form = submitted
+    else:
+        form = SelectPermafostRoleTypeForm()
+
+    return render(
+        request, 
+        'permafrost/permafrostrole_form.html', 
+        context={ 'form': form },
+    )
+        
+
 # Create Permission Group
 class PermafrostRoleCreateView(CreateView):
     model = PermafrostRole
-    form_class = PermafrostRoleCreateForm
+
+    def get_form_class(self):
+        if self.request.method == 'GET':
+            return SelectPermafostRoleTypeForm
+        return PermafrostRoleCreateForm
+
+
 
 # List Permission Groups
 class PermafrostRoleListView(ListView):
