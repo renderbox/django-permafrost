@@ -1,4 +1,5 @@
 # Permafrost Forms
+from django.contrib.auth.models import Permission
 from django.forms import ModelForm, MultipleChoiceField, CheckboxSelectMultiple
 from django.forms.fields import CharField, ChoiceField
 from django.forms.widgets import Textarea
@@ -13,9 +14,9 @@ def assemble_options(permissions):
     if permissions:
         for perm in permissions:
             if perm.content_type.model in optgroups:
-                optgroups[perm.content_type.app_label].append((perm.pk, perm.name,))
+                optgroups[perm.content_type.model].append((perm.pk, perm.name,))
             else:
-                optgroups[perm.content_type.app_label] = [(perm.pk, perm.name,)]
+                optgroups[perm.content_type.model] = [(perm.pk, perm.name,)]
 
     for model_name, options in optgroups.items():
         choices.append([model_name, options])
@@ -57,6 +58,16 @@ class PermafrostRoleCreateForm(ModelForm):
             
             self.fields[f'required_{category}_perms'] = MultipleChoiceField(label=_("Required Permissions"), initial=initial, choices=required_choices, widget=CheckboxSelectMultiple(attrs={'readonly':True, 'disabled': True}))
             self.fields[f'optional_{category}_perms'] = MultipleChoiceField(label=_("Optional Permissions"), choices=optional_choices, widget=CheckboxSelectMultiple())
+
+    def save(self, commit=True):
+        instance = super().save(commit)
+        category = self.cleaned_data.get('category', None)
+        perm_ids =[]
+        if category:
+            perm_ids = self.data.getlist(f'optional_{category}_perms')
+        if perm_ids:
+            instance.permissions_set(Permission.objects.filter(id__in=perm_ids))
+        return instance
 
 # class PermafrostRoleEditForm(ModelForm):
 #     class Meta:
