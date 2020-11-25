@@ -5,7 +5,7 @@
 {% block title %}{% trans 'Create Role' %}{% endblock %}
 
 {% block content %}
-<form method="post" id="create_role_form">
+<form method="POST" id="create_role_form" action="{% url 'permafrost:role-create' %}">
     {% csrf_token %}
     <h1>{% trans 'Create Role' %}</h1>
     <div class="card">
@@ -31,3 +31,18 @@
     {% endcomment %}
 </form>
 {% endblock %}
+
+
+{% block extra_js %}
+    <script>
+        $(document).ready(function(){
+            $('#id_category').on('change', function(){
+                $(this)
+                .closest('form')
+                .attr('action', "{% url 'permafrost:role-select' %}")
+                .submit()
+            })
+        })
+    </script>
+{% endblock %}
+    
