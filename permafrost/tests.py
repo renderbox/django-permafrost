@@ -10,7 +10,8 @@ from django.db import transaction
 from django.contrib.auth.models import Group, Permission
 from django.test.client import Client
 from django.urls.base import resolve, reverse
-from .views import PermafrostRoleListView, PermafrostRoleCreateView
+from .views import select_role_type, PermafrostRoleListView
+from .forms import SelectPermafostRoleTypeForm
 try:
     from rest_framework.test import APIClient
     SKIP_DRF_TESTS = False
@@ -303,19 +304,19 @@ class PermafrostViewTests(TestCase):
     
     def test_administration_create_url_resolves(self):
         found = resolve("/permafrost/role/add/")
-        self.assertEqual(found.view_name, "permafrost:role-create")
-        self.assertEqual(found.func.view_class, PermafrostRoleCreateView)
+        self.assertEqual(found.view_name, "permafrost:role-select")
+        self.assertEqual(found.func, select_role_type)
     
     def test_administration_create_url_response_with_correct_template(self):
-        url = reverse("permafrost:role-create")
+        url = reverse("permafrost:role-select")
         response = self.client.get(url)
         ## ensure _create.html extends the base template
         self.assertTemplateUsed(response, "permafrost/base.html")
         
         self.assertTemplateUsed(response, "permafrost/permafrostrole_form.html")
 
-    def test_create_form_renders_on_GET(self):
-        url = reverse("permafrost:role-create")
+    def test_select_role_type_form_renders_on_GET(self):
+        url = reverse("permafrost:role-select")
         response = self.client.get(url)
         try:
             self.assertContains(response, "Create Role")
@@ -323,6 +324,8 @@ class PermafrostViewTests(TestCase):
             self.assertContains(response, 'name="name"')
             self.assertContains(response, 'name="description"')
             self.assertContains(response, 'name="category"')
+
+            self.assertIsInstance(response.context['form'], SelectPermafostRoleTypeForm)
         except:
             print("")
             print(response.content.decode())
