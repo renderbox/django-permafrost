@@ -37,13 +37,13 @@ class PermafrostRoleCreateForm(ModelForm):
     class Meta:
         model = PermafrostRole
         fields = ('name', 'description', 'category',)
-    
+        widgets = {
+            'description': Textarea(),
+        }
+        
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        attrs = self.fields['description'].widget.attrs
-        
-        # add Textarea w/o overwriting attrs
-        self.fields['description'].widget = Textarea(attrs=attrs)
+
         self.fields['category'].choices = CHOICES
         category = self.initial.get('category', None)
         
