@@ -13,7 +13,7 @@ from django.contrib.auth.models import Group, Permission
 from django.test.client import Client
 from django.urls.base import resolve, reverse
 from .views import PermafrostRoleUpdateView, select_role_type, PermafrostRoleListView
-from .forms import PermafrostRoleCreateForm, SelectPermafostRoleTypeForm
+from .forms import PermafrostRoleCreateForm, PermafrostRoleUpdateForm, SelectPermafostRoleTypeForm
 try:
     from rest_framework.test import APIClient
     SKIP_DRF_TESTS = False
@@ -295,6 +295,7 @@ class PermafrostAPITest(TestCase):
 
 @tag('admin_tests')
 class PermafrostViewTests(TestCase):
+    fixtures = ['unit_test']
 
     def setUp(self):
         self.client = Client()
@@ -357,7 +358,7 @@ class PermafrostViewTests(TestCase):
             self.assertContains(response, 'name="description"')
             self.assertContains(response, 'name="category"')
             self.assertContains(response, 'name="deleted"')
-            self.assertIsInstance(response.context['form'], Form)
+            self.assertEqual(response.context['form'].__class__.__name__, 'PermafrostRoleForm')
         except:
             print("")
             print(response.content.decode())
@@ -365,24 +366,51 @@ class PermafrostViewTests(TestCase):
 
 @tag('admin_tests')
 class PermafrostFormTests(TestCase):
+    fixtures = ['unit_test']
+
     def setUp(self):
         self.create_form = PermafrostRoleCreateForm()
-        # self.update_form = PermafrostRoleCreateForm()
-    
-    def test_description_uses_textarea(self):
+        self.update_form = PermafrostRoleUpdateForm()
+        self.pf_role = PermafrostRole.objects.get(slug="councilor")
+
+    def test_create_form_description_uses_textarea(self):
         self.assertIsInstance(self.create_form.fields['description'].widget, Textarea)
     
-    def test_first_category_choice_is_blank(self):
+    def test_create_form_first_category_choice_is_blank(self):
         self.assertEqual(self.create_form.fields['category'].choices[0], ('', "Choose Role Type"))
 
-    def test_optional_required_permission_field_dynamic_based_initial_selected_category(self):
+    def test_create_form_optional_required_permission_field_dynamic_based_initial_selected_category(self):
         form = PermafrostRoleCreateForm(initial={'category':'staff'})
+        
         self.assertIn('optional_staff_perms', form.fields)
         self.assertIn('required_staff_perms', form.fields)
+        
         form_2 = PermafrostRoleCreateForm(initial={'category':'administration'})
+        
         self.assertIn('optional_administration_perms', form_2.fields)
         self.assertIn('required_administration_perms', form_2.fields)
+        
         form_3 = PermafrostRoleCreateForm(initial={'category':'user'})
+        
         self.assertIn('optional_user_perms', form_3.fields)
         self.assertIn('required_user_perms', form_3.fields)
 
+    def test_update_form_category_is_read_only(self):
+        self.assertTrue(self.update_form.fields['category'].widget.attrs['readonly'])
+
+    def test_update_form_name_is_read_only(self):
+        self.assertTrue(self.update_form.fields['name'].widget.attrs['readonly'])
+
+    def test_update_form_description_is_read_only(self):
+        self.assertTrue(self.update_form.fields['description'].widget.attrs['readonly'])
+    
+    #TODO see what happens when we change form.fields['category] = 'some value'
+    def test_update_form_has_selected_optional_permission(self):
+        ## add optional permissions
+        self.pf_role.permissions_set(Permission.objects.filter(codename__in=['add_permafrostrole', 'change_permafrostrole']))
+        
+        form = PermafrostRoleUpdateForm(instance=self.pf_role)
+
+        self.assertEqual(form.fields['optional_staff_perms'].initial, [37,38])
+        self.assertEqual(form.fields['required_staff_perms'].initial, [40])
+    
