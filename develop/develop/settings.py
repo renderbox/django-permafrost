@@ -155,7 +155,6 @@ PERMAFROST_CATEGORIES = {
         'optional': [
             {'label': _('Can add Role'), 'permission': ('add_permafrostrole', 'permafrost', 'permafrostrole') },
             {'label': _('Can change Role'), 'permission': ('change_permafrostrole', 'permafrost', 'permafrostrole') },
-            {'label': _('Can view Role'), 'permission': ('view_permafrostrole', 'permafrost', 'permafrostrole') },
         ],
         'required': [
             {'label': _('Can view Role'), 'permission': ('view_permafrostrole', 'permafrost', 'permafrostrole') },

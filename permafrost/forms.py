@@ -8,7 +8,7 @@ from .models import PermafrostRole, get_optional_by_category, get_required_by_ca
 
 CHOICES = [('', _("Choose Role Type"))] + get_choices()
 
-def assemble_options(permissions):
+def assemble_optiongroups_for_widget(permissions):
     choices = []
     optgroups = {}
     if permissions:
@@ -40,7 +40,7 @@ class PermafrostRoleCreateForm(ModelForm):
         widgets = {
             'description': Textarea(),
         }
-        
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
@@ -51,8 +51,8 @@ class PermafrostRoleCreateForm(ModelForm):
               
             required_perms = get_required_by_category(category)
             optional_perms = get_optional_by_category(category)
-            required_choices = assemble_options(required_perms)
-            optional_choices = assemble_options(optional_perms)
+            required_choices = assemble_optiongroups_for_widget(required_perms)
+            optional_choices = assemble_optiongroups_for_widget(optional_perms)
             
             initial = [perm.pk for perm in required_perms]
             
@@ -69,8 +69,43 @@ class PermafrostRoleCreateForm(ModelForm):
             instance.permissions_set(Permission.objects.filter(id__in=perm_ids))
         return instance
 
-# class PermafrostRoleEditForm(ModelForm):
-#     class Meta:
-#         model = PermafrostRole
-#         fields = ('name', 'description',)
-#         read_only= ('category',)
+class PermafrostRoleUpdateForm(PermafrostRoleCreateForm):
+     
+     def __init__(self, *args, **kwargs):
+            super().__init__(*args, **kwargs)
+            
+            for field in self.fields:
+                self.fields[field].widget.attrs['readonly'] = True
+
+            if self.instance:
+                
+                if self.instance.category: 
+                    
+                    required_perms = self.instance.required_permissions()
+                    optional_perms = self.instance.optional_permissions()
+                    required_choices = assemble_optiongroups_for_widget(required_perms)
+                    optional_choices = assemble_optiongroups_for_widget(optional_perms)
+                    initial = [perm.pk for perm in required_perms]
+
+                    available_optional_ids = [permission.id for permission in optional_perms]
+                    all_permissions = self.instance.permissions().all()
+                    preselected_optional = [permission.id for permission in all_permissions if permission.id in available_optional_ids]
+
+                    self.fields.update({
+                        f'required_{self.instance.category}_perms': MultipleChoiceField(
+                            label=_("Required Permissions"), 
+                            initial=initial, 
+                            choices=required_choices, 
+                            widget=CheckboxSelectMultiple(attrs={
+                                'readonly':True, 
+                                'disabled': True
+                            })
+                        ),
+
+                        f'optional_{self.instance.category}_perms': MultipleChoiceField(
+                            label=_("Optional Permissions"), 
+                            initial=preselected_optional, 
+                            choices=optional_choices, 
+                            widget=CheckboxSelectMultiple()
+                        )
+                    })
