@@ -1,6 +1,8 @@
 import json
 
 from unittest import skipIf
+from django.forms.forms import Form
+from django.forms.widgets import Textarea
 
 from django.test import TestCase, tag
 from django.contrib.sites.models import Site
@@ -10,15 +12,15 @@ from django.db import transaction
 from django.contrib.auth.models import Group, Permission
 from django.test.client import Client
 from django.urls.base import resolve, reverse
-from .views import select_role_type, PermafrostRoleListView
-from .forms import SelectPermafostRoleTypeForm
+from .views import PermafrostRoleUpdateView, select_role_type, PermafrostRoleListView
+from .forms import PermafrostRoleCreateForm, SelectPermafostRoleTypeForm
 try:
     from rest_framework.test import APIClient
     SKIP_DRF_TESTS = False
 except ImportError:
     SKIP_DRF_TESTS = True
 
-from permafrost.models import PermafrostRole
+from permafrost.models import PermafrostRole, get_current_site
 
 
 class PermafrostRoleModelTest(TestCase):
@@ -296,6 +298,7 @@ class PermafrostViewTests(TestCase):
 
     def setUp(self):
         self.client = Client()
+        self.pf_role = PermafrostRole.objects.create(category="user", name="Test Role")
 
     def test_administration_base_url_resolves(self):
         found = resolve("/permafrost/roles/")
@@ -320,7 +323,7 @@ class PermafrostViewTests(TestCase):
         response = self.client.get(url)
         try:
             self.assertContains(response, "Create Role")
-            self.assertContains(response, 'id="create_role_form"')
+            self.assertContains(response, 'id="role_form"')
             self.assertContains(response, 'name="name"')
             self.assertContains(response, 'name="description"')
             self.assertContains(response, 'name="category"')
@@ -330,7 +333,35 @@ class PermafrostViewTests(TestCase):
             print("")
             print(response.content.decode())
             raise
-       
+    
+    def test_role_edit_url_resolves(self):
+        found = resolve(f"/permafrost/role/{self.pf_role.slug}/")
+        self.assertEqual(found.view_name, "permafrost:role-update")
+        self.assertEqual(found.func.view_class, PermafrostRoleUpdateView)
+    
+    def test_administration_edit_url_response_with_correct_template(self):
+        url = reverse("permafrost:role-update", kwargs={'slug': self.pf_role.slug})
+        response = self.client.get(url)
+        ## ensure _create.html extends the base template
+        self.assertTemplateUsed(response, "permafrost/base.html")
+        
+        self.assertTemplateUsed(response, "permafrost/permafrostrole_form.html")
+    
+    def test_update_role_form_renders_on_GET(self):
+        url = reverse("permafrost:role-update",  kwargs={'slug': self.pf_role.slug})
+        response = self.client.get(url)
+        try:
+            self.assertContains(response, "Edit Permissions: Test Role")
+            self.assertContains(response, 'id="role_form"')
+            self.assertContains(response, 'name="name"')
+            self.assertContains(response, 'name="description"')
+            self.assertContains(response, 'name="category"')
+            self.assertContains(response, 'name="deleted"')
+            self.assertIsInstance(response.context['form'], Form)
+        except:
+            print("")
+            print(response.content.decode())
+            raise
 
 @tag('admin_tests')
 class PermafrostFormTests(TestCase):
