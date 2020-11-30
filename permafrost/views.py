@@ -133,7 +133,7 @@ class PermafrostRoleDetailView(DetailView):
 # Update Permission Group
 class PermafrostRoleUpdateView(UpdateView):
     model = PermafrostRole
-    fields = ['name', 'locked', 'deleted']
+    fields = ['name', 'description', 'category', 'locked', 'deleted']
 
 # Delete Permission Groups
 class PermafrostRoleDeleteView(DeleteView):
