@@ -331,3 +331,27 @@ class PermafrostViewTests(TestCase):
             print(response.content.decode())
             raise
        
+
+@tag('admin_tests')
+class PermafrostFormTests(TestCase):
+    def setUp(self):
+        self.create_form = PermafrostRoleCreateForm()
+        # self.update_form = PermafrostRoleCreateForm()
+    
+    def test_description_uses_textarea(self):
+        self.assertIsInstance(self.create_form.fields['description'].widget, Textarea)
+    
+    def test_first_category_choice_is_blank(self):
+        self.assertEqual(self.create_form.fields['category'].choices[0], ('', "Choose Role Type"))
+
+    def test_optional_required_permission_field_dynamic_based_initial_selected_category(self):
+        form = PermafrostRoleCreateForm(initial={'category':'staff'})
+        self.assertIn('optional_staff_perms', form.fields)
+        self.assertIn('required_staff_perms', form.fields)
+        form_2 = PermafrostRoleCreateForm(initial={'category':'administration'})
+        self.assertIn('optional_administration_perms', form_2.fields)
+        self.assertIn('required_administration_perms', form_2.fields)
+        form_3 = PermafrostRoleCreateForm(initial={'category':'user'})
+        self.assertIn('optional_user_perms', form_3.fields)
+        self.assertIn('required_user_perms', form_3.fields)
+
