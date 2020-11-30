@@ -5,9 +5,15 @@
 {% block title %}{% trans 'Create Role' %}{% endblock %}
 
 {% block content %}
-<form method="POST" id="create_role_form" action="{% url 'permafrost:role-create' %}">
+<form method="POST" id="role_form" action="{% url 'permafrost:role-create' %}">
     {% csrf_token %}
-    <h1>{% trans 'Create Role' %}</h1>
+    <h1>
+        {% if object %}
+            {% trans 'Edit Permissions' %}: {{ object.name }}
+        {% else %}
+            {% trans 'Create Role' %}
+        {% endif %}
+    </h1>
     <div class="card">
         <div class="card-body">
             <table>
