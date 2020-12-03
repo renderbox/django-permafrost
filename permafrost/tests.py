@@ -2,6 +2,7 @@ import json
 
 from unittest import skipIf
 from django.forms.forms import Form
+from django.forms.models import model_to_dict
 from django.forms.widgets import Textarea
 
 from django.test import TestCase, tag
@@ -13,7 +14,7 @@ from django.contrib.auth.models import Group, Permission
 from django.test.client import Client
 from django.urls.base import resolve, reverse
 from .views import PermafrostRoleUpdateView, select_role_type, PermafrostRoleListView
-from .forms import PermafrostRoleCreateForm, PermafrostRoleUpdateForm, SelectPermafostRoleTypeForm
+from .forms import PermafrostRoleCreateForm, PermafrostRoleUpdateForm, SelectPermafrostRoleTypeForm
 try:
     from rest_framework.test import APIClient
     SKIP_DRF_TESTS = False
@@ -329,7 +330,7 @@ class PermafrostViewTests(TestCase):
             self.assertContains(response, 'name="description"')
             self.assertContains(response, 'name="category"')
 
-            self.assertIsInstance(response.context['form'], SelectPermafostRoleTypeForm)
+            self.assertIsInstance(response.context['form'], SelectPermafrostRoleTypeForm)
         except:
             print("")
             print(response.content.decode())
@@ -358,11 +359,39 @@ class PermafrostViewTests(TestCase):
             self.assertContains(response, 'name="description"')
             self.assertContains(response, 'name="category"')
             self.assertContains(response, 'name="deleted"')
-            self.assertEqual(response.context['form'].__class__.__name__, 'PermafrostRoleForm')
+            self.assertIsInstance(response.context['form'], PermafrostRoleUpdateForm)
         except:
             print("")
             print(response.content.decode())
             raise
+    
+    def test_role_update_resolves(self):
+        found = resolve('/permafrost/role/test-role/')
+        self.assertEqual(found.view_name, "permafrost:role-update")
+        self.assertEqual(found.func.view_class, PermafrostRoleUpdateView)
+
+    def test_role_update_GET_returns_correct_template(self):
+        uri = reverse('permafrost:role-update', kwargs={'slug': 'test-role'})
+        response = self.client.get(uri)
+        self.assertTemplateUsed(response, 'permafrost/base.html')
+        self.assertTemplateUsed(response, 'permafrost/permafrostrole_form.html')
+    
+    def test_role_update_POST_returns_correct_template(self):
+        uri = reverse('permafrost:role-update', kwargs={'slug': 'test-role'})
+        response = self.client.post(uri)
+        self.assertTemplateUsed(response, 'permafrost/base.html')
+        self.assertTemplateUsed(response, 'permafrost/permafrostrole_form.html')
+    
+    def test_role_update_POST_returns_correct_template(self):
+        uri = reverse('permafrost:role-update', kwargs={'slug': 'test-role'})
+        response = self.client.post(uri)
+        self.assertTemplateUsed(response, 'permafrost/base.html')
+        self.assertTemplateUsed(response, 'permafrost/permafrostrole_form.html')
+    
+    def test_role_update_POST_updates_name(self):
+        uri = reverse('permafrost:role-update', kwargs={'slug': 'test-role'})
+        response = self.client.post(uri, data={'name': 'Test Change'}, follow=True)
+        self.assertEqual(self.pf_role.name, "Test Change")
 
 @tag('admin_tests')
 class PermafrostFormTests(TestCase):
@@ -395,22 +424,27 @@ class PermafrostFormTests(TestCase):
         self.assertIn('optional_user_perms', form_3.fields)
         self.assertIn('required_user_perms', form_3.fields)
 
-    def test_update_form_category_is_read_only(self):
+    def test_update_form_category_is_read_only_and_disabled(self):
         self.assertTrue(self.update_form.fields['category'].widget.attrs['readonly'])
-
-    def test_update_form_name_is_read_only(self):
-        self.assertTrue(self.update_form.fields['name'].widget.attrs['readonly'])
-
-    def test_update_form_description_is_read_only(self):
-        self.assertTrue(self.update_form.fields['description'].widget.attrs['readonly'])
+        self.assertTrue(self.update_form.fields['category'].disabled)
     
-    #TODO see what happens when we change form.fields['category] = 'some value'
     def test_update_form_has_selected_optional_permission(self):
         ## add optional permissions
         self.pf_role.permissions_set(Permission.objects.filter(codename__in=['add_permafrostrole', 'change_permafrostrole']))
         
-        form = PermafrostRoleUpdateForm(instance=self.pf_role)
+        data = model_to_dict(self.pf_role)
+        data.update({'all_permissions_ids': [permission.id for permission in self.pf_role.permissions().all()]})
+        form = PermafrostRoleUpdateForm(initial=data)
 
         self.assertEqual(form.fields['optional_staff_perms'].initial, [37,38])
         self.assertEqual(form.fields['required_staff_perms'].initial, [40])
     
+    def test_update_form_field_values_when_passed_initial_data_from_model_instance(self):
+        
+        data = model_to_dict(self.pf_role)
+        data.update({'all_permissions_ids': [permission.id for permission in self.pf_role.permissions().all()]})
+        form = PermafrostRoleUpdateForm(initial=data)
+        self.assertEqual(form.fields['name'].initial, data['name'])
+        self.assertEqual(form.fields['category'].initial, data['category'])
+        self.assertEqual(form.fields['description'].initial, data['description'])
+        self.assertEqual(form.fields['deleted'].initial, data['deleted'])

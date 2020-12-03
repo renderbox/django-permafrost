@@ -2,16 +2,18 @@ import logging
 
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import PermissionRequiredMixin
+from django.forms.models import model_to_dict
 from django.http import HttpResponse, HttpResponseForbidden
-from django.shortcuts import render
-from django.core.exceptions import PermissionDenied
+from django.http.response import Http404
+from django.shortcuts import get_object_or_404, render
+from django.urls.base import reverse, reverse_lazy
 from django.views.generic import TemplateView, ListView, DetailView, UpdateView, DeleteView
 from unittest import skipIf
 
-from django.views.generic.edit import CreateView
+from django.views.generic.edit import CreateView, FormView
 
 from .models import PermafrostRole
-from .forms import PermafrostRoleCreateForm, SelectPermafostRoleTypeForm
+from .forms import PermafrostRoleCreateForm, PermafrostRoleUpdateForm, SelectPermafrostRoleTypeForm
 #--------------
 # UTILITIES
 #--------------
@@ -96,20 +98,19 @@ def select_role_type(request):
     Switch the form based on whether or not a role categor has been selected
     """
     if request.method == 'POST':
-        submitted =  SelectPermafostRoleTypeForm(request.POST)
+        submitted =  SelectPermafrostRoleTypeForm(request.POST)
         if submitted.is_valid():
             form = PermafrostRoleCreateForm(initial=submitted.cleaned_data)
         else:
             form = submitted
     else:
-        form = SelectPermafostRoleTypeForm()
+        form = SelectPermafrostRoleTypeForm()
 
     return render(
         request, 
         'permafrost/permafrostrole_form.html', 
         context={ 'form': form },
-    )
-        
+    )   
 
 # Create Permission Group
 class PermafrostRoleCreateView(CreateView):
@@ -117,7 +118,7 @@ class PermafrostRoleCreateView(CreateView):
 
     def get_form_class(self):
         if self.request.method == 'GET':
-            return SelectPermafostRoleTypeForm
+            return SelectPermafrostRoleTypeForm
         return PermafrostRoleCreateForm
 
 
@@ -131,9 +132,25 @@ class PermafrostRoleDetailView(DetailView):
     model = PermafrostRole
 
 # Update Permission Group
-class PermafrostRoleUpdateView(UpdateView):
-    model = PermafrostRole
-    fields = ['name', 'description', 'category', 'locked', 'deleted']
+class PermafrostRoleUpdateView(FormView):
+    template_name = 'permafrost/permafrostrole_form.html'
+    form_class = PermafrostRoleUpdateForm
+    success_url = reverse_lazy('permafrost:role-list')
+    def get_initial(self):
+        initial = super().get_initial()
+
+        role =  get_object_or_404(PermafrostRole, slug=self.kwargs.get('slug', None))
+        data = model_to_dict(role)
+        data.update({'all_permissions_ids': [permission.id for permission in role.permissions().all()]})
+        
+        initial.update(data)
+        
+        return initial
+    
+    # def form_valid(self, form):
+    #     print(form)
+    #     print("Fadjfkjdsfklsd;fjlksdjfals;dkj")
+    #     return super().form_valid(form)
 
 # Delete Permission Groups
 class PermafrostRoleDeleteView(DeleteView):
