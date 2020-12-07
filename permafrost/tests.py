@@ -1,10 +1,7 @@
-import json
-
 from unittest import skipIf
 from django.forms.forms import Form
 from django.forms.models import model_to_dict
 from django.forms.widgets import Textarea
-
 from django.test import TestCase, tag
 from django.contrib.sites.models import Site
 from django.contrib.auth import get_user_model
@@ -300,7 +297,7 @@ class PermafrostViewTests(TestCase):
 
     def setUp(self):
         self.client = Client()
-        self.pf_role = PermafrostRole.objects.create(category="user", name="Test Role")
+        self.pf_role = PermafrostRole.objects.create(category="staff", name="Test Role")
 
     def test_administration_base_url_resolves(self):
         found = resolve("/permafrost/roles/")
@@ -376,30 +373,78 @@ class PermafrostViewTests(TestCase):
         self.assertTemplateUsed(response, 'permafrost/base.html')
         self.assertTemplateUsed(response, 'permafrost/permafrostrole_form.html')
     
-    def test_role_update_POST_returns_correct_template(self):
-        uri = reverse('permafrost:role-update', kwargs={'slug': 'test-role'})
-        response = self.client.post(uri)
-        self.assertTemplateUsed(response, 'permafrost/base.html')
-        self.assertTemplateUsed(response, 'permafrost/permafrostrole_form.html')
-    
-    def test_role_update_POST_returns_correct_template(self):
-        uri = reverse('permafrost:role-update', kwargs={'slug': 'test-role'})
-        response = self.client.post(uri)
-        self.assertTemplateUsed(response, 'permafrost/base.html')
-        self.assertTemplateUsed(response, 'permafrost/permafrostrole_form.html')
-    
     def test_role_update_POST_updates_name(self):
         uri = reverse('permafrost:role-update', kwargs={'slug': 'test-role'})
         response = self.client.post(uri, data={'name': 'Test Change'}, follow=True)
-        self.assertEqual(self.pf_role.name, "Test Change")
+        self.assertContains(response, "Test Change")
+        updated_role = PermafrostRole.objects.get(pk=self.pf_role.pk)
+        self.assertEqual(updated_role.name, "Test Change")
+    
+    def test_optional_permissions_are_updated_on_POST(self):
+        test_role = PermafrostRole.objects.get(slug=self.pf_role.slug)
+
+        ## ensure role currently has no optional permissions
+        allowed_optional_permission_ids =[permission.id for permission in self.pf_role.optional_permissions()]
+        current_permission_ids = [permission.id for permission in self.pf_role.permissions().all()]
+        current_optional_permission_ids = [id for id in current_permission_ids if id in allowed_optional_permission_ids]
+        
+        self.assertFalse(current_optional_permission_ids)
+        
+        uri = reverse('permafrost:role-update', kwargs={'slug': 'test-role'})
+        data = model_to_dict(self.pf_role)
+        data.update({'optional_staff_perms': ['37','38']})
+        ## listcomp below used to remove 'description': None
+        post_data = {k: v for k, v in data.items() if v is not None}
+        self.client.post(uri, data=post_data, follow=True)
+        
+        updated_permission_ids_1 = [permission.id for permission in self.pf_role.permissions().all() if permission.id in allowed_optional_permission_ids]
+        
+        self.assertEqual(updated_permission_ids_1, [37, 38])
+        
+        ## remove one permission
+        
+        data.update({'optional_staff_perms': ['37']})
+        ## listcomp below used to remove 'description': None
+        post_data = {k: v for k, v in data.items() if v is not None}
+        self.client.post(uri, data=post_data, follow=True)
+
+        updated_permission_ids_2 = [permission.id for permission in self.pf_role.permissions().all() if permission.id in allowed_optional_permission_ids]
+        
+        self.assertEqual(updated_permission_ids_2, [37])
+
+    def test_optional_permissions_are_removed_when_empty_array_submitted_to_POST(self):
+        ## arrange: add optional permissions
+        self.pf_role.permissions_set(Permission.objects.filter(codename__in=['add_permafrostrole', 'change_permafrostrole']))
+        
+        ## ensure optional role count is 2
+        allowed_optional_permission_ids =[permission.id for permission in self.pf_role.optional_permissions()]
+        current_permission_ids = [permission.id for permission in self.pf_role.permissions().all()]
+        current_optional_permission_ids = [id for id in current_permission_ids if id in allowed_optional_permission_ids]
+        self.assertEqual(len(current_optional_permission_ids), 2)
+        
+        uri = reverse('permafrost:role-update', kwargs={'slug': 'test-role'})
+        data = model_to_dict(self.pf_role)
+        data.update({'optional_staff_perms': []})
+        ## iterator below used to remove 'description': None
+        data = {k: v for k, v in data.items() if v is not None}
+        response = self.client.post(uri, data=data, follow=True)
+        
+        updated_permission_ids = [permission.id for permission in self.pf_role.permissions().all() if permission.id in allowed_optional_permission_ids]
+        
+        try:
+            self.assertEqual(updated_permission_ids, [])
+        except:
+            print("")
+            print(response.content.decode())
+            print("")
+            raise
 
 @tag('admin_tests')
-class PermafrostFormTests(TestCase):
+class PermafrostFormClassTests(TestCase):
     fixtures = ['unit_test']
 
     def setUp(self):
         self.create_form = PermafrostRoleCreateForm()
-        self.update_form = PermafrostRoleUpdateForm()
         self.pf_role = PermafrostRole.objects.get(slug="councilor")
 
     def test_create_form_description_uses_textarea(self):
@@ -425,26 +470,24 @@ class PermafrostFormTests(TestCase):
         self.assertIn('required_user_perms', form_3.fields)
 
     def test_update_form_category_is_read_only_and_disabled(self):
-        self.assertTrue(self.update_form.fields['category'].widget.attrs['readonly'])
-        self.assertTrue(self.update_form.fields['category'].disabled)
+        form = PermafrostRoleUpdateForm(instance=self.pf_role)
+        self.assertTrue(form.fields['category'].widget.attrs['readonly'])
+        self.assertTrue(form.fields['category'].disabled)
+    
+    def test_update_form_field_values_when_passed_model_instance(self):
+        
+        form = PermafrostRoleUpdateForm(instance=self.pf_role)
+
+        self.assertEqual(form['name'].value(), self.pf_role.name)
+        self.assertEqual(form['category'].value(), self.pf_role.category)
+        self.assertEqual(form['description'].value(), self.pf_role.description)
+        self.assertEqual(form['deleted'].value(), self.pf_role.deleted)
     
     def test_update_form_has_selected_optional_permission(self):
         ## add optional permissions
         self.pf_role.permissions_set(Permission.objects.filter(codename__in=['add_permafrostrole', 'change_permafrostrole']))
         
-        data = model_to_dict(self.pf_role)
-        data.update({'all_permissions_ids': [permission.id for permission in self.pf_role.permissions().all()]})
-        form = PermafrostRoleUpdateForm(initial=data)
+        form = PermafrostRoleUpdateForm(instance=self.pf_role)
 
-        self.assertEqual(form.fields['optional_staff_perms'].initial, [37,38])
-        self.assertEqual(form.fields['required_staff_perms'].initial, [40])
-    
-    def test_update_form_field_values_when_passed_initial_data_from_model_instance(self):
-        
-        data = model_to_dict(self.pf_role)
-        data.update({'all_permissions_ids': [permission.id for permission in self.pf_role.permissions().all()]})
-        form = PermafrostRoleUpdateForm(initial=data)
-        self.assertEqual(form.fields['name'].initial, data['name'])
-        self.assertEqual(form.fields['category'].initial, data['category'])
-        self.assertEqual(form.fields['description'].initial, data['description'])
-        self.assertEqual(form.fields['deleted'].initial, data['deleted'])
+        self.assertEqual(form['required_staff_perms'].value(), [40])
+        self.assertEqual(form['optional_staff_perms'].value(), [37,38])
