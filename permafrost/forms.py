@@ -1,7 +1,8 @@
 # Permafrost Forms
 from django.contrib.auth.models import Permission
+from django.db.models.base import Model
 from django.forms import ModelForm, MultipleChoiceField, CheckboxSelectMultiple
-from django.forms.fields import CharField, ChoiceField
+from django.forms.fields import CharField, ChoiceField, BooleanField
 from django.forms.widgets import HiddenInput, Textarea
 from django.utils.translation import ugettext_lazy as _
 from .models import PermafrostRole, get_optional_by_category, get_required_by_category, get_choices
@@ -78,12 +79,8 @@ class PermafrostRoleUpdateForm(PermafrostRoleCreateForm):
      Only allowed to edit optional permissions, name and description
      Category and required permissions stay locked
     """
-    class Meta:
-        model = PermafrostRole
-        fields = ('name', 'description', 'category', 'deleted')
-        widgets = {
-            'description': Textarea(),
-        }
+    category = ChoiceField(choices=CHOICES, required=False)
+    deleted = BooleanField(required=False)
     
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -91,6 +88,7 @@ class PermafrostRoleUpdateForm(PermafrostRoleCreateForm):
         self.fields['category'].widget.attrs.update({'readonly': True, 'disabled': True})
         self.fields['category'].disabled = True
         self.fields['category'].required = False
+        self.fields['category'].initial = self.instance.category
         
         self.fields['deleted'].initial = self.instance.deleted
         
@@ -112,3 +110,10 @@ class PermafrostRoleUpdateForm(PermafrostRoleCreateForm):
                 required=False
             )
         })
+
+    def save(self, commit=True):
+        if self.cleaned_data['deleted']:
+            self.instance.deleted = self.cleaned_data['deleted']
+        instance = super().save(commit)
+        return instance
+        
