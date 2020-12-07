@@ -93,29 +93,27 @@ class PermafrostLogMixin(object):
         super().handle_no_permission()
 
 
-def select_role_type(request):
-    """
-    Switch the form based on whether or not a role category has been selected
-    """
-    if request.method == 'POST':
-        submitted =  SelectPermafrostRoleTypeForm(request.POST)
-        if submitted.is_valid():
-            form = PermafrostRoleCreateForm(initial=submitted.cleaned_data)
-        else:
-            form = submitted
-    else:
-        form = SelectPermafrostRoleTypeForm()
-
-    return render(
-        request, 
-        'permafrost/permafrostrole_form.html', 
-        context={ 'form': form },
-    )   
 
 # Create Permission Group
 class PermafrostRoleCreateView(CreateView):
     model = PermafrostRole
+    success_url = reverse_lazy('permafrost:role-list')
 
+    def post(self, request, *args, **kwargs):
+        if self.request.POST.get('select_role', False):
+            submitted =  SelectPermafrostRoleTypeForm(request.POST)
+            if submitted.is_valid():
+                form = PermafrostRoleCreateForm(initial=submitted.cleaned_data)
+            else:
+                form = submitted
+            return render(
+                request, 
+                'permafrost/permafrostrole_form.html', 
+                context={ 'form': form },
+            )
+
+        return super().post(request, *args, **kwargs)
+    
     def get_form_class(self):
         if self.request.method == 'GET':
             return SelectPermafrostRoleTypeForm

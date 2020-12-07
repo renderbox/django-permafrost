@@ -31,16 +31,6 @@
             </button>
         </div>
     </div>
-    
-    
-    {% comment %}
-    <h3>Perms:</h3>
-    <ul>
-        {% for perm in object.optional_permissions %}
-        <li>{{perm.name}}</li>
-        {% endfor %}
-    </ul>
-    {% endcomment %}
 </form>
 {% endblock %}
 
@@ -50,10 +40,11 @@
     <script>
         $(document).ready(function(){
             $('#id_category').on('change', function(){
-                $(this)
-                .closest('form')
-                .attr('action', "{% url 'permafrost:role-select' %}")
-                .submit()
+                if ($(this).val()){
+                    $form = $(this).closest('form')
+                    $form.append('<input type="hidden" name="select_role" value="on"/>')
+                    $form.submit()
+                }
             })
         })
     </script>
