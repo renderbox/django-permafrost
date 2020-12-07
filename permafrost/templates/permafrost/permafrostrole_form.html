@@ -1,4 +1,4 @@
-`{% extends "permafrost/base.html" %}
+{% extends "permafrost/base.html" %}
 {% load i18n %}
 {% load static %}
 
@@ -8,7 +8,7 @@
 <form method="POST" id="role_form">
     {% csrf_token %}
     <h1>
-        {% if form.initial.name %}
+        {% if object %}
             {% trans 'Edit Permissions' %}: {{ form.initial.name }}
         {% else %}
             {% trans 'Create Role' %}
@@ -22,7 +22,13 @@
         </div>
         <div class="card-footer">
             <a href="{% url 'permafrost:role-list' %}" class="btn btn-warning">{% trans 'Cancel' %}</a>
-            <button type="submit" class="btn btn-primary"> {% trans 'Create' %}</button>
+            <button type="submit" class="btn btn-primary">
+                {% if object %}
+                    {% trans 'Save' %}                
+                {% else %}
+                    {% trans 'Create' %}    
+                {% endif %}
+            </button>
         </div>
     </div>
     
@@ -40,6 +46,7 @@
 
 
 {% block extra_js %}
+    {% if not object %} {# "Hide JS change handler on edit " #}
     <script>
         $(document).ready(function(){
             $('#id_category').on('change', function(){
@@ -50,5 +57,6 @@
             })
         })
     </script>
+    {% endif %}
 {% endblock %}
     
