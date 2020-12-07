@@ -95,7 +95,7 @@ class PermafrostLogMixin(object):
 
 def select_role_type(request):
     """
-    Switch the form based on whether or not a role categor has been selected
+    Switch the form based on whether or not a role category has been selected
     """
     if request.method == 'POST':
         submitted =  SelectPermafrostRoleTypeForm(request.POST)
