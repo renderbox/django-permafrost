@@ -10,7 +10,7 @@ from django.db import transaction
 from django.contrib.auth.models import Group, Permission
 from django.test.client import Client
 from django.urls.base import resolve, reverse
-from .views import PermafrostRoleUpdateView, select_role_type, PermafrostRoleListView
+from .views import PermafrostRoleCreateView, PermafrostRoleUpdateView, PermafrostRoleListView
 from .forms import PermafrostRoleCreateForm, PermafrostRoleUpdateForm, SelectPermafrostRoleTypeForm
 try:
     from rest_framework.test import APIClient
@@ -305,12 +305,12 @@ class PermafrostViewTests(TestCase):
         self.assertEqual(found.func.view_class, PermafrostRoleListView)
     
     def test_administration_create_url_resolves(self):
-        found = resolve("/permafrost/role/add/")
-        self.assertEqual(found.view_name, "permafrost:role-select")
-        self.assertEqual(found.func, select_role_type)
+        found = resolve("/permafrost/role/create/")
+        self.assertEqual(found.view_name, "permafrost:role-create")
+        self.assertEqual(found.func.view_class, PermafrostRoleCreateView)
     
     def test_administration_create_url_response_with_correct_template(self):
-        url = reverse("permafrost:role-select")
+        url = reverse("permafrost:role-create")
         response = self.client.get(url)
         ## ensure _create.html extends the base template
         self.assertTemplateUsed(response, "permafrost/base.html")
@@ -318,7 +318,7 @@ class PermafrostViewTests(TestCase):
         self.assertTemplateUsed(response, "permafrost/permafrostrole_form.html")
 
     def test_select_role_type_form_renders_on_GET(self):
-        url = reverse("permafrost:role-select")
+        url = reverse("permafrost:role-create")
         response = self.client.get(url)
         try:
             self.assertContains(response, "Create Role")
