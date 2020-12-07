@@ -132,20 +132,11 @@ class PermafrostRoleDetailView(DetailView):
     model = PermafrostRole
 
 # Update Permission Group
-class PermafrostRoleUpdateView(FormView):
+class PermafrostRoleUpdateView(UpdateView):
     template_name = 'permafrost/permafrostrole_form.html'
     form_class = PermafrostRoleUpdateForm
     success_url = reverse_lazy('permafrost:role-list')
-    def get_initial(self):
-        initial = super().get_initial()
-
-        role =  get_object_or_404(PermafrostRole, slug=self.kwargs.get('slug', None))
-        data = model_to_dict(role)
-        data.update({'all_permissions_ids': [permission.id for permission in role.permissions().all()]})
-        
-        initial.update(data)
-        
-        return initial
+    model = PermafrostRole
     
     # def form_valid(self, form):
     #     print(form)
