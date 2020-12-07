@@ -291,7 +291,7 @@ class PermafrostAPITest(TestCase):
         response = self.client.get('/permissions/', format='json')
         assert response.status_code == 403
 
-@tag('admin_tests')
+# @tag('admin_tests')
 class PermafrostViewTests(TestCase):
     fixtures = ['unit_test']
 
@@ -381,8 +381,6 @@ class PermafrostViewTests(TestCase):
         self.assertEqual(updated_role.name, "Test Change")
     
     def test_optional_permissions_are_updated_on_POST(self):
-        test_role = PermafrostRole.objects.get(slug=self.pf_role.slug)
-
         ## ensure role currently has no optional permissions
         allowed_optional_permission_ids =[permission.id for permission in self.pf_role.optional_permissions()]
         current_permission_ids = [permission.id for permission in self.pf_role.permissions().all()]
@@ -439,7 +437,24 @@ class PermafrostViewTests(TestCase):
             print("")
             raise
 
-@tag('admin_tests')
+    def test_delete_role_POST(self):
+        uri = reverse('permafrost:role-update', kwargs={'slug': 'test-role'})
+        data = model_to_dict(self.pf_role)
+        data.update({'deleted': True})
+        ## iterator below used to remove 'description': None
+        data = {k: v for k, v in data.items() if v is not None}
+        response = self.client.post(uri, data=data, follow=True)
+        
+        try:
+            updated_role = PermafrostRole.objects.get(slug=self.pf_role.slug)
+            self.assertEqual(updated_role.deleted, True)
+        except:
+            print("")
+            print(model_to_dict(PermafrostRole.objects.get(slug=self.pf_role.slug)))
+            print("")
+            raise
+
+# @tag('admin_tests')
 class PermafrostFormClassTests(TestCase):
     fixtures = ['unit_test']
 
