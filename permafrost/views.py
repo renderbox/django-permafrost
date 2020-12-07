@@ -2,14 +2,18 @@ import logging
 
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import PermissionRequiredMixin
+from django.forms.models import model_to_dict
 from django.http import HttpResponse, HttpResponseForbidden
-from django.shortcuts import render
-from django.core.exceptions import PermissionDenied
+from django.http.response import Http404
+from django.shortcuts import get_object_or_404, render
+from django.urls.base import reverse, reverse_lazy
 from django.views.generic import TemplateView, ListView, DetailView, UpdateView, DeleteView
 from unittest import skipIf
 
-from .models import PermafrostRole
+from django.views.generic.edit import CreateView, FormView
 
+from .models import PermafrostRole
+from .forms import PermafrostRoleCreateForm, PermafrostRoleUpdateForm, SelectPermafrostRoleTypeForm
 #--------------
 # UTILITIES
 #--------------
@@ -89,9 +93,33 @@ class PermafrostLogMixin(object):
         super().handle_no_permission()
 
 
+
 # Create Permission Group
-class PermafrostRoleCreateView(ListView):
+class PermafrostRoleCreateView(CreateView):
     model = PermafrostRole
+    success_url = reverse_lazy('permafrost:role-list')
+
+    def post(self, request, *args, **kwargs):
+        if self.request.POST.get('select_role', False):
+            submitted =  SelectPermafrostRoleTypeForm(request.POST)
+            if submitted.is_valid():
+                form = PermafrostRoleCreateForm(initial=submitted.cleaned_data)
+            else:
+                form = submitted
+            return render(
+                request, 
+                'permafrost/permafrostrole_form.html', 
+                context={ 'form': form },
+            )
+
+        return super().post(request, *args, **kwargs)
+    
+    def get_form_class(self):
+        if self.request.method == 'GET':
+            return SelectPermafrostRoleTypeForm
+        return PermafrostRoleCreateForm
+
+
 
 # List Permission Groups
 class PermafrostRoleListView(ListView):
@@ -103,8 +131,11 @@ class PermafrostRoleDetailView(DetailView):
 
 # Update Permission Group
 class PermafrostRoleUpdateView(UpdateView):
+    template_name = 'permafrost/permafrostrole_form.html'
+    form_class = PermafrostRoleUpdateForm
+    success_url = reverse_lazy('permafrost:role-list')
     model = PermafrostRole
-    fields = ['name', 'locked', 'deleted']
+    
 
 # Delete Permission Groups
 class PermafrostRoleDeleteView(DeleteView):

@@ -1,24 +1,53 @@
 {% extends "permafrost/base.html" %}
-{% load crispy_forms_tags %}
 {% load i18n %}
 {% load static %}
 
-{% block title %}Permafrost - Roles{% endblock %}
+{% block title %}{% trans 'Create Role' %}{% endblock %}
 
 {% block content %}
-<h1>Update: {{object.name}}</h1>
-
-<form method="post">
+<form method="POST" id="role_form">
     {% csrf_token %}
-    {{form|crispy}}
-    <h3>Perms:</h3>
-    <ul>
-    {% for perm in object.optional_permissions %}
-    <li>{{perm.name}}</li>
-    {% endfor %}
-    </ul>
-
-    <a href="{{object.get_absolute_url}}" class="btn btn-warning">Cancel</a>
-    <button type="submit" class="btn btn-primary"> {% trans 'Submit' %}</button>
+    <h1>
+        {% if object %}
+            {% trans 'Edit Permissions' %}: {{ form.initial.name }}
+        {% else %}
+            {% trans 'Create Role' %}
+        {% endif %}
+    </h1>
+    <div class="card">
+        <div class="card-body">
+            <table>
+                {{ form.as_table }}
+            </table>
+        </div>
+        <div class="card-footer">
+            <a href="{% url 'permafrost:role-list' %}" class="btn btn-warning">{% trans 'Cancel' %}</a>
+            <button type="submit" class="btn btn-primary">
+                {% if object %}
+                    {% trans 'Save' %}                
+                {% else %}
+                    {% trans 'Create' %}    
+                {% endif %}
+            </button>
+        </div>
+    </div>
 </form>
 {% endblock %}
+
+
+{% block extra_js %}
+    {% if not object %} {# "Hide JS change handler on edit " #}
+    <script>
+        $(document).ready(function(){
+            $('#id_category').on('change', function(){
+                if ($(this).val()){
+                    $form = $(this).closest('form')
+                    $form.append('<input type="hidden" name="select_role" value="on"/>')
+                    $form.submit()
+                }
+            })
+        })
+    </script>
+    {% endif %}
+{% endblock %}
+    

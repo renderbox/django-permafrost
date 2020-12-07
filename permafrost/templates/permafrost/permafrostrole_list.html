@@ -7,7 +7,7 @@
 
 <ul>
 {% for object in object_list %}
-<li><a href="{{object.get_absolute_url}}">{{object.name}}</a></li>
+ <li><a href="{{object.get_update_url}}">{{object.name}}</a></li>
 {% endfor %}
 </ul>
 
