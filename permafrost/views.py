@@ -138,10 +138,6 @@ class PermafrostRoleUpdateView(UpdateView):
     success_url = reverse_lazy('permafrost:role-list')
     model = PermafrostRole
     
-    # def form_valid(self, form):
-    #     print(form)
-    #     print("Fadjfkjdsfklsd;fjlksdjfals;dkj")
-    #     return super().form_valid(form)
 
 # Delete Permission Groups
 class PermafrostRoleDeleteView(DeleteView):
