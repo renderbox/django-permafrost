@@ -1,9 +1,8 @@
 # Permafrost Forms
 from django.contrib.auth.models import Permission
 from django.forms import ModelForm, MultipleChoiceField, CheckboxSelectMultiple
-from django.forms.fields import BooleanField, CharField, ChoiceField
-from django.forms.forms import Form
-from django.forms.widgets import Textarea
+from django.forms.fields import CharField, ChoiceField
+from django.forms.widgets import HiddenInput, Textarea
 from django.utils.translation import ugettext_lazy as _
 from .models import PermafrostRole, get_optional_by_category, get_required_by_category, get_choices
 
@@ -79,7 +78,12 @@ class PermafrostRoleUpdateForm(PermafrostRoleCreateForm):
      Only allowed to edit optional permissions, name and description
      Category and required permissions stay locked
     """
-    deleted = BooleanField(required=False)
+    class Meta:
+        model = PermafrostRole
+        fields = ('name', 'description', 'category', 'deleted')
+        widgets = {
+            'description': Textarea(),
+        }
     
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
