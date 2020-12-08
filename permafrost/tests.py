@@ -10,7 +10,7 @@ from django.db import transaction
 from django.contrib.auth.models import Group, Permission
 from django.test.client import Client
 from django.urls.base import resolve, reverse
-from .views import PermafrostRoleCreateView, PermafrostRoleUpdateView, PermafrostRoleListView
+from .views import PermafrostRoleCreateView, PermafrostRoleManageView, PermafrostRoleUpdateView, PermafrostRoleListView
 from .forms import PermafrostRoleCreateForm, PermafrostRoleUpdateForm, SelectPermafrostRoleTypeForm
 try:
     from rest_framework.test import APIClient
@@ -299,11 +299,16 @@ class PermafrostViewTests(TestCase):
         self.client = Client()
         self.pf_role = PermafrostRole.objects.create(category="staff", name="Test Role")
 
-    def test_administration_base_url_resolves(self):
+    def test_permafrost_base_url_resolves(self):
         found = resolve("/permafrost/roles/")
         self.assertEqual(found.view_name, "permafrost:role-list")
         self.assertEqual(found.func.view_class, PermafrostRoleListView)
     
+    def test_manage_permafrost_base_url_resolves(self):
+        found = resolve("/permafrost/roles/manage/")
+        self.assertEqual(found.view_name, "permafrost:roles-manage")
+        self.assertEqual(found.func.view_class, PermafrostRoleManageView)
+
     def test_list_view_returns_roles_on_current_site(self):
         uri = reverse('permafrost:role-list')
         response = self.client.get(uri)
@@ -349,7 +354,7 @@ class PermafrostViewTests(TestCase):
             raise
     
     def test_role_edit_url_resolves(self):
-        found = resolve(f"/permafrost/role/{self.pf_role.slug}/")
+        found = resolve(f"/permafrost/role/{self.pf_role.slug}/update/")
         self.assertEqual(found.view_name, "permafrost:role-update")
         self.assertEqual(found.func.view_class, PermafrostRoleUpdateView)
     
@@ -378,7 +383,7 @@ class PermafrostViewTests(TestCase):
             raise
     
     def test_role_update_resolves(self):
-        found = resolve('/permafrost/role/test-role/')
+        found = resolve('/permafrost/role/test-role/update/')
         self.assertEqual(found.view_name, "permafrost:role-update")
         self.assertEqual(found.func.view_class, PermafrostRoleUpdateView)
 
