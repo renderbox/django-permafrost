@@ -308,6 +308,12 @@ class PermafrostViewTests(TestCase):
         found = resolve("/permafrost/roles/manage/")
         self.assertEqual(found.view_name, "permafrost:roles-manage")
         self.assertEqual(found.func.view_class, PermafrostRoleManageView)
+    
+    def test_manage_returns_selects_landing_role(self):
+        uri = reverse('permafrost:roles-manage')
+        response = self.client.get(uri)
+        self.assertIn('object', response.context)
+        self.assertEqual(response.context['object'], PermafrostRole.on_site.all().first())
 
     def test_list_view_returns_roles_on_current_site(self):
         uri = reverse('permafrost:role-list')
