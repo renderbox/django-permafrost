@@ -130,6 +130,9 @@ class PermafrostRoleListView(ListView):
 class PermafrostRoleDetailView(DetailView):
     model = PermafrostRole
 
+class PermafrostRoleManageView(PermafrostRoleDetailView):
+    pass
+
 # Update Permission Group
 class PermafrostRoleUpdateView(UpdateView):
     template_name = 'permafrost/permafrostrole_form.html'
