@@ -1,9 +1,8 @@
 # Permafrost Forms
 from django.contrib.auth.models import Permission
-from django.db.models.base import Model
 from django.forms import ModelForm, MultipleChoiceField, CheckboxSelectMultiple
 from django.forms.fields import CharField, ChoiceField, BooleanField
-from django.forms.widgets import HiddenInput, Textarea
+from django.forms.widgets import Textarea
 from django.utils.translation import ugettext_lazy as _
 from .models import PermafrostRole, get_optional_by_category, get_required_by_category, get_choices
 
