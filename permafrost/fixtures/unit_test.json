@@ -528,6 +528,18 @@
     }
 },
 {
+    "model": "auth.group",
+    "pk": 13,
+    "fields": {
+        "name": "2_administration_administrator",
+        "permissions": [
+            37,
+            38,
+            40
+        ]
+    }
+},
+{
     "model": "auth.user",
     "pk": 1,
     "fields": {
@@ -566,6 +578,19 @@
         "slug": "councilor",
         "category": "staff",
         "site": 1,
+        "locked": false,
+        "deleted": false,
+        "group": 12
+    }
+},
+{
+    "model": "permafrost.permafrostrole",
+    "pk": 3,
+    "fields": {
+        "name": "Administrator",
+        "slug": "administrator",
+        "category": "administration",
+        "site": 2,
         "locked": false,
         "deleted": false,
         "group": 12

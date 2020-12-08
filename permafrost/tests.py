@@ -388,6 +388,16 @@ class PermafrostViewTests(TestCase):
         self.assertTemplateUsed(response, 'permafrost/base.html')
         self.assertTemplateUsed(response, 'permafrost/permafrostrole_form.html')
     
+    def test_role_detail_GET_returns_404_if_not_on_current_site(self):
+        uri = reverse('permafrost:role-update', kwargs={'slug': 'administrator'})
+        response = self.client.get(uri)
+        try:
+            self.assertContains(response, "Not Found", status_code=404)
+        except:
+            print("")
+            print(response.content.decode())
+            raise
+
     def test_role_update_POST_updates_name(self):
         uri = reverse('permafrost:role-update', kwargs={'slug': 'test-role'})
         response = self.client.post(uri, data={'name': 'Test Change'}, follow=True)
