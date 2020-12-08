@@ -304,6 +304,21 @@ class PermafrostViewTests(TestCase):
         self.assertEqual(found.view_name, "permafrost:role-list")
         self.assertEqual(found.func.view_class, PermafrostRoleListView)
     
+    def test_list_view_returns_roles_on_current_site(self):
+        uri = reverse('permafrost:role-list')
+        response = self.client.get(uri)
+        site_id = get_current_site()
+
+        try:
+            roles = response.context['object_list']
+            self.assertTrue(all(role.site.id == site_id for role in roles))
+        except:
+            print("Returned site ids")
+            print([role.site.id for role in response.context['object_list']])
+            print("")
+            pass
+        pass
+    
     def test_administration_create_url_resolves(self):
         found = resolve("/permafrost/role/create/")
         self.assertEqual(found.view_name, "permafrost:role-create")
