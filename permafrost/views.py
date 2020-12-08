@@ -124,6 +124,7 @@ class PermafrostRoleCreateView(CreateView):
 # List Permission Groups
 class PermafrostRoleListView(ListView):
     model = PermafrostRole
+    queryset = PermafrostRole.on_site.all()
 
 # Detail Permission Groups
 class PermafrostRoleDetailView(DetailView):
