@@ -130,8 +130,15 @@ class PermafrostRoleListView(ListView):
 class PermafrostRoleDetailView(DetailView):
     model = PermafrostRole
 
-class PermafrostRoleManageView(PermafrostRoleDetailView):
-    pass
+class PermafrostRoleManageView(PermafrostRoleListView):
+    """
+     Landing Listview with selected model for detail display
+    """
+    def get_context_data(self, **kwargs):
+        context =  super().get_context_data(**kwargs)
+        queryset = context['object_list']
+        context['object'] = queryset.first()
+        return context
 
 # Update Permission Group
 class PermafrostRoleUpdateView(UpdateView):
