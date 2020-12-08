@@ -136,6 +136,7 @@ class PermafrostRoleUpdateView(UpdateView):
     form_class = PermafrostRoleUpdateForm
     success_url = reverse_lazy('permafrost:role-list')
     model = PermafrostRole
+    queryset = PermafrostRole.on_site.all()
     
 
 # Delete Permission Groups
