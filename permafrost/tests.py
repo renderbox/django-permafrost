@@ -468,6 +468,24 @@ class PermafrostViewTests(TestCase):
             print(model_to_dict(PermafrostRole.objects.get(slug=self.pf_role.slug)))
             print("")
             raise
+    
+    def test_site_added_on_create_POST(self):
+        site = get_current_site()
+        data = {
+            'name': 'Test Site Role',
+            'description': 'Test guaranteed site added on create',
+            'category': 'user'
+        }
+        uri = reverse('permafrost:role-create')
+        response = self.client.post(uri , data=data)
+        try:
+            role = PermafrostRole.objects.get(name='Test Site Role')
+            self.assertEqual(role.site.id, site)
+        except:
+            print("")
+            print(response.content.decode())
+            print("")
+            raise
 
 # @tag('admin_tests')
 class PermafrostFormClassTests(TestCase):
