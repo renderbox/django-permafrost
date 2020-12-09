@@ -97,7 +97,6 @@ class PermafrostLogMixin(object):
 # Create Permission Group
 class PermafrostRoleCreateView(CreateView):
     model = PermafrostRole
-    success_url = reverse_lazy('permafrost:role-list')
 
     def post(self, request, *args, **kwargs):
         if self.request.POST.get('select_role', False):
@@ -167,7 +166,6 @@ class PermafrostRoleManageView(PermafrostRoleListView):
 class PermafrostRoleUpdateView(UpdateView):
     template_name = 'permafrost/permafrostrole_form.html'
     form_class = PermafrostRoleUpdateForm
-    success_url = reverse_lazy('permafrost:role-list')
     model = PermafrostRole
     queryset = PermafrostRole.on_site.all()
     
