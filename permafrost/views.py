@@ -146,8 +146,7 @@ class PermafrostRoleManageView(PermafrostRoleListView):
         
         context['object'] = landing_role
         
-        context['permissions'] = landing_role.permissions().filter(id__in=visible_permission_ids)
-
+        context['permissions'] = landing_role.permissions().filter(id__in=visible_permission_ids).order_by('content_type')
         
         return context
 
