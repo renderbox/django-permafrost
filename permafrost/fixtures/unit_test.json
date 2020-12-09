@@ -514,7 +514,9 @@
     "pk": 11,
     "fields": {
         "name": "1_user_student",
-        "permissions": []
+        "permissions": [
+            16
+        ]
     }
 },
 {
@@ -563,6 +565,7 @@
     "fields": {
         "name": "Student",
         "slug": "student",
+        "description": "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.",
         "category": "user",
         "site": 1,
         "locked": false,
@@ -576,6 +579,7 @@
     "fields": {
         "name": "Councilor",
         "slug": "councilor",
+        "description": "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.",
         "category": "staff",
         "site": 1,
         "locked": false,
@@ -589,6 +593,7 @@
     "fields": {
         "name": "Administrator",
         "slug": "administrator",
+        "description": "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.",
         "category": "administration",
         "site": 2,
         "locked": false,
