@@ -331,7 +331,7 @@ class PermafrostViewTests(TestCase):
         self.assertTrue(len(objects))
         
         for object in objects:
-            self.assertContains(response, f'<li class="list-group-item"><a href="#">{object.name}</a></li>')
+            self.assertContains(response, f'<li class="list-group-item"><a href="{object.get_absolute_url()}">{object.name}</a></li>')
     
     def test_permafrostrole_manage_template_displays_selected_role_details(self):
         uri = reverse('permafrost:roles-manage')

@@ -21,9 +21,8 @@
             </div>
         </form>
         <ul class="list-group shadow-sm">
-            {% for object in object_list %}
-            <li class="list-group-item"><a href="#">{{ object }}</a></li>
-            {% empty %}
+            {% for role in object_list %}
+            <li class="list-group-item"><a href="{{ role.get_absolute_url }}">{{ role }}</a></li>
             {% endfor %}
         </ul>
         <a class="btn btn-primary btn-block mt-3 shadow-sm" href="{% url 'permafrost:role-create' %}" role="button">{% trans 'Add Role' %}</a>
