@@ -34,7 +34,7 @@
                 </div>
                 <div class="card-body">
                     <p>{{ object.description }}</p>
-                    {% regroup permissions|dictsort:"content_type" by content_type as content_type_list %}
+                    {% regroup permissions by content_type as content_type_list %}
                     
                     {% for content_type, permission_list in content_type_list %}
                         {% cycle 'odd' 'even' as col %}
