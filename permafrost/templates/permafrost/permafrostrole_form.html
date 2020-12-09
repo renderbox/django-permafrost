@@ -21,7 +21,7 @@
             </table>
         </div>
         <div class="card-footer">
-            <a href="{% url 'permafrost:role-list' %}" class="btn btn-warning">{% trans 'Cancel' %}</a>
+            <a href="{{ object.get_absolute_url }}" class="btn btn-warning">{% trans 'Cancel' %}</a>
             <button type="submit" class="btn btn-primary">
                 {% if object %}
                     {% trans 'Save' %}                

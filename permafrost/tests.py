@@ -10,7 +10,7 @@ from django.db import transaction
 from django.contrib.auth.models import Group, Permission
 from django.test.client import Client
 from django.urls.base import resolve, reverse
-from .views import PermafrostRoleCreateView, PermafrostRoleUpdateView, PermafrostRoleListView
+from .views import PermafrostRoleCreateView, PermafrostRoleManageView, PermafrostRoleUpdateView, PermafrostRoleListView
 from .forms import PermafrostRoleCreateForm, PermafrostRoleUpdateForm, SelectPermafrostRoleTypeForm
 try:
     from rest_framework.test import APIClient
@@ -299,10 +299,90 @@ class PermafrostViewTests(TestCase):
         self.client = Client()
         self.pf_role = PermafrostRole.objects.create(category="staff", name="Test Role")
 
-    def test_administration_base_url_resolves(self):
+    def test_permafrost_base_url_resolves(self):
         found = resolve("/permafrost/roles/")
         self.assertEqual(found.view_name, "permafrost:role-list")
         self.assertEqual(found.func.view_class, PermafrostRoleListView)
+    
+    def test_permafrost_manage_base_url_resolves(self):
+        found = resolve("/permafrost/roles/manage/")
+        self.assertEqual(found.view_name, "permafrost:roles-manage")
+        self.assertEqual(found.func.view_class, PermafrostRoleManageView)
+    
+    def test_permaforst_manage_single_role_object_in_context(self):
+        uri = reverse('permafrost:roles-manage')
+        response = self.client.get(uri)
+        self.assertIn('object', response.context)
+        self.assertEqual(response.context['object'], PermafrostRole.on_site.all().first())
+    
+    def test_manage_permafrost_roles_returns_correct_template(self):
+        uri = reverse('permafrost:roles-manage')
+        response = self.client.get(uri)
+        objects = PermafrostRole.on_site.all()
+        default_role = objects.first()
+        self.assertTemplateUsed(response, 'permafrost/base.html')
+        self.assertTemplateUsed(response, 'permafrost/permafrostrole_manage.html')
+
+    def test_permafrostrole_manage_template_displays_list_of_roles_on_site(self):
+        uri = reverse('permafrost:roles-manage')
+        response = self.client.get(uri)
+        objects = PermafrostRole.on_site.all()
+        
+        self.assertTrue(len(objects))
+        
+        for object in objects:
+            self.assertContains(response, f'<li class="list-group-item"><a href="{object.get_absolute_url()}">{object.name}</a></li>')
+    
+    def test_permafrostrole_manage_template_displays_selected_role_details(self):
+        uri = reverse('permafrost:roles-manage')
+        response = self.client.get(uri)
+        default_role = PermafrostRole.on_site.first()  
+        self.assertContains(response, f'<h1>{default_role.name}</h1>')
+        self.assertContains(response, f'Role Type: {default_role.get_category_display()}')
+        self.assertContains(response, f'<p>{default_role.description}</p>')
+
+    def test_permafrostrole_manage_template_displays_selected_role_permissions(self):
+        ## arrange 
+        default_role = PermafrostRole.on_site.first()
+        optional_permission = Permission.objects.get_by_natural_key(*('view_permafrostrole', 'permafrost', 'permafrostrole')) 
+        default_role.permissions_add(optional_permission)
+        ## act
+        uri = reverse('permafrost:roles-manage')
+        response = self.client.get(uri)
+        ## assert
+        self.assertEqual(len(default_role.permissions().all()), 2)
+
+        for permission in default_role.permissions().all():
+            if permission.id in default_role.all_perm_ids():
+                self.assertContains(response, f'{permission.name}')
+
+    def test_permafrostrole_manage_template_hides_selected_role_permissions_not_in_permafrost_categories(self):
+        ## arrange 
+        default_role = PermafrostRole.on_site.first()
+        ## act
+        uri = reverse('permafrost:roles-manage')
+        response = self.client.get(uri)
+        ## assert
+        self.assertEqual(len(default_role.permissions().all()), 1)
+
+        for permission in default_role.permissions().all():
+            if permission.id not in default_role.all_perm_ids():
+                self.assertNotContains(response, f'{permission.name}')
+
+    def test_list_view_returns_roles_on_current_site(self):
+        uri = reverse('permafrost:role-list')
+        response = self.client.get(uri)
+        site_id = get_current_site()
+
+        try:
+            roles = response.context['object_list']
+            self.assertTrue(all(role.site.id == site_id for role in roles))
+        except:
+            print("Returned site ids")
+            print([role.site.id for role in response.context['object_list']])
+            print("")
+            pass
+        pass
     
     def test_administration_create_url_resolves(self):
         found = resolve("/permafrost/role/create/")
@@ -334,7 +414,7 @@ class PermafrostViewTests(TestCase):
             raise
     
     def test_role_edit_url_resolves(self):
-        found = resolve(f"/permafrost/role/{self.pf_role.slug}/")
+        found = resolve(f"/permafrost/role/{self.pf_role.slug}/update/")
         self.assertEqual(found.view_name, "permafrost:role-update")
         self.assertEqual(found.func.view_class, PermafrostRoleUpdateView)
     
@@ -363,7 +443,7 @@ class PermafrostViewTests(TestCase):
             raise
     
     def test_role_update_resolves(self):
-        found = resolve('/permafrost/role/test-role/')
+        found = resolve('/permafrost/role/test-role/update/')
         self.assertEqual(found.view_name, "permafrost:role-update")
         self.assertEqual(found.func.view_class, PermafrostRoleUpdateView)
 
@@ -373,6 +453,16 @@ class PermafrostViewTests(TestCase):
         self.assertTemplateUsed(response, 'permafrost/base.html')
         self.assertTemplateUsed(response, 'permafrost/permafrostrole_form.html')
     
+    def test_role_detail_GET_returns_404_if_not_on_current_site(self):
+        uri = reverse('permafrost:role-update', kwargs={'slug': 'administrator'})
+        response = self.client.get(uri)
+        try:
+            self.assertContains(response, "Not Found", status_code=404)
+        except:
+            print("")
+            print(response.content.decode())
+            raise
+
     def test_role_update_POST_updates_name(self):
         uri = reverse('permafrost:role-update', kwargs={'slug': 'test-role'})
         response = self.client.post(uri, data={'name': 'Test Change'}, follow=True)
@@ -451,6 +541,24 @@ class PermafrostViewTests(TestCase):
         except:
             print("")
             print(model_to_dict(PermafrostRole.objects.get(slug=self.pf_role.slug)))
+            print("")
+            raise
+    
+    def test_site_added_on_create_POST(self):
+        site = get_current_site()
+        data = {
+            'name': 'Test Site Role',
+            'description': 'Test guaranteed site added on create',
+            'category': 'user'
+        }
+        uri = reverse('permafrost:role-create')
+        response = self.client.post(uri , data=data)
+        try:
+            role = PermafrostRole.objects.get(name='Test Site Role')
+            self.assertEqual(role.site.id, site)
+        except:
+            print("")
+            print(response.content.decode())
             print("")
             raise
 
