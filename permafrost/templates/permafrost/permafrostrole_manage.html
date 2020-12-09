@@ -1,0 +1,74 @@
+{% extends "permafrost/base.html" %}
+
+{% load i18n %}
+{% load static %}
+
+{% block content %}
+
+<div class="d-sm-flex align-items-center justify-content-between mb-4">
+    <a href="{% url 'permafrost:roles-manage' %}"><h1 class="h3 mb-0 text-gray-800">{% trans 'Roles & Permissions' %}</h1></a>
+</div>
+
+<div class="row">
+
+    <div class="col-3 bg-light">
+        <form>
+            <div class="input-group">
+                <input type="text" class="form-control" placeholder="{% trans 'Search...' %}" aria-label="{% trans 'Search...' %}" aria-describedby="basic-addon2">
+                <div class="input-group-append">
+                    <span class="input-group-text" id="basic-addon2"><i class="fas fa-fw fa-search"></i></span>
+                </div>
+            </div>
+        </form>
+        <ul class="list-group shadow-sm">
+            {% for object in object_list %}
+            <li class="list-group-item"><a href="#">{{ object }}</a></li>
+            {% empty %}
+            {% endfor %}
+        </ul>
+        <a class="btn btn-primary btn-block mt-3 shadow-sm" href="{% url 'permafrost:role-create' %}" role="button">{% trans 'Add Role' %}</a>
+    </div>
+
+    <div class="col-9">
+        {% if object %}
+            <div class="card">
+                <div class="card-header">
+                    <h1>{{ object.name }}</h1>
+                    {% trans 'Role Type' %}: {{ object.get_category_display}}
+                </div>
+                <div class="card-body">
+                    <p>{{ object.description }}</p>
+                    {% regroup permissions|dictsort:"content_type" by content_type as content_type_list %}
+                    
+                    {% for content_type, permission_list in content_type_list %}
+                        {% cycle 'odd' 'even' as col %}
+                        
+                        {% if col == 'odd' %}
+                            <div class="row"> {# start .row #}
+                        {% endif %}
+                                <div class="col-sm">
+                                    <h2>{{ content_type.model }}</h2>
+                                    <ul>
+                                        {% for permission in permission_list %}
+                                            <li> {{ permission.name }} </li>
+                                        {% endfor %}
+                                    </ul>
+                                </div>
+                        {% if col == 'even' or forloop.last %}
+                            </div> {# end .row #}
+                        {% endif %}
+                        
+                        {% if forloop.last %}
+                           {% resetcycle col %} 
+                        {% endif %}
+                            
+                    {% endfor %}
+                        
+                </div>
+                <div class="card-footer"></div>
+            </div>
+
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

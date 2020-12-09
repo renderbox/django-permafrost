@@ -134,10 +134,21 @@ class PermafrostRoleManageView(PermafrostRoleListView):
     """
      Landing Listview with selected model for detail display
     """
+    
+    template_name = 'permafrost/permafrostrole_manage.html'
+
     def get_context_data(self, **kwargs):
         context =  super().get_context_data(**kwargs)
         queryset = context['object_list']
-        context['object'] = queryset.first()
+        landing_role = queryset.first()
+        
+        visible_permission_ids = landing_role.all_perm_ids()
+        
+        context['object'] = landing_role
+        
+        context['permissions'] = landing_role.permissions().filter(id__in=visible_permission_ids)
+
+        
         return context
 
 # Update Permission Group
