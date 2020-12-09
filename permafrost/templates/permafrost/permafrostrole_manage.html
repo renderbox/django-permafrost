@@ -30,10 +30,7 @@
 
     <div class="col-9">
         {% if object %}
-            <div class="card">
-                <div class="card-header">
-                    <h1>{{ object.name }}</h1>
-                    {% trans 'Role Type' %}: {{ object.get_category_display}}
+                            <dt><a href="{{ object.get_update_url }}">{% trans 'Edit Role' %}</a></dt>
                 </div>
                 <div class="card-body">
                     <p>{{ object.description }}</p>
