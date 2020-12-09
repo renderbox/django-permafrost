@@ -129,12 +129,25 @@ class PermafrostRoleListView(ListView):
 # Detail Permission Groups
 class PermafrostRoleDetailView(DetailView):
     model = PermafrostRole
+    template_name = 'permafrost/permafrostrole_manage.html'
+    queryset = PermafrostRole.on_site.all()
+    
+    def get_context_data(self, **kwargs):
+        context =  super().get_context_data(**kwargs)
+        
+        context['object_list'] = self.queryset
+        
+        role = context['object']
+        visible_permission_ids = role.all_perm_ids()
+
+        context['permissions'] = role.permissions().filter(id__in=visible_permission_ids).order_by('content_type')
+
+        return context
 
 class PermafrostRoleManageView(PermafrostRoleListView):
     """
      Landing Listview with selected model for detail display
     """
-    
     template_name = 'permafrost/permafrostrole_manage.html'
 
     def get_context_data(self, **kwargs):
