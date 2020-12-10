@@ -2,7 +2,7 @@
 from django.contrib.auth.models import Permission
 from django.forms import ModelForm, MultipleChoiceField, CheckboxSelectMultiple
 from django.forms.fields import CharField, ChoiceField, BooleanField
-from django.forms.widgets import Textarea
+from django.forms.widgets import CheckboxInput, Textarea
 from django.utils.translation import ugettext_lazy as _
 from .models import PermafrostRole, get_optional_by_category, get_required_by_category, get_choices
 
@@ -46,6 +46,14 @@ class PermafrostRoleCreateForm(ModelForm):
 
         self.fields['category'].choices = CHOICES
         category = self.initial.get('category', None)
+        
+        for field in self.fields:
+            widget = self.fields[field].widget
+            if not isinstance(widget, CheckboxInput):
+                if 'class' in widget.attrs:
+                    widget.attrs['class'] =  widget.attrs['class'] + " form-control"
+                else:
+                    widget.attrs.update({'class':'form-control'})
         
         if category:  
               
@@ -91,7 +99,7 @@ class PermafrostRoleUpdateForm(PermafrostRoleCreateForm):
         
         self.fields['deleted'].initial = self.instance.deleted
         
-    
+        print(self.fields['deleted'].widget.input_type)
         category = self.instance.category
 
         optional_perms = get_optional_by_category(category)

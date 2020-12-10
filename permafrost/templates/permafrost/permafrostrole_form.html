@@ -7,21 +7,36 @@
 {% block content %}
 <form method="POST" id="role_form">
     {% csrf_token %}
-    <h1>
+    <h3>
         {% if object %}
             {% trans 'Edit Permissions' %}: {{ form.initial.name }}
         {% else %}
             {% trans 'Create Role' %}
         {% endif %}
-    </h1>
+    </h3>
     <div class="card">
         <div class="card-body">
-            <table>
-                {{ form.as_table }}
-            </table>
+            {% if form.subject.errors %}
+            <ol role="alertdialog">
+                {% for error in form.subject.errors %}
+                <li role="alert"><strong>{{ error|escape }}</strong></li>
+                {% endfor %}
+            </ol>
+            {% endif %}
+            {% for field in form %}
+                <div class="fieldWrapper form-group" aria-required={% if field.field.required %}"true"{% else %}"false"{% endif %}>
+                    {{ field.label_tag }}{% if field.field.required %}<span class="required">*</span>{% endif %}
+                    
+                    {{ field }}
+                    
+                    {% if field.help_text %}
+                    <p class="help">{{ field.help_text|safe }}</p>
+                    {% endif %}
+                </div>
+            {% endfor %}
         </div>
         <div class="card-footer">
-            <a href="{{ object.get_absolute_url }}" class="btn btn-warning">{% trans 'Cancel' %}</a>
+            <a href="{{ object.get_absolute_url }}" class="btn btn-danger">{% trans 'Cancel' %}</a>
             <button type="submit" class="btn btn-primary">
                 {% if object %}
                     {% trans 'Save' %}                
