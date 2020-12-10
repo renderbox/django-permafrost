@@ -7,14 +7,16 @@
 {% block content %}
 <form method="POST" id="role_form">
     {% csrf_token %}
-    <h3>
-        {% if object %}
-            {% trans 'Edit Permissions' %}: {{ form.initial.name }}
-        {% else %}
-            {% trans 'Create Role' %}
-        {% endif %}
-    </h3>
     <div class="card">
+        <div class="card-header">
+            <h3 class="mb-0 text-gray-800">
+                {% if object %}
+                {% trans 'Edit Permissions' %}: {{ form.initial.name }}
+                {% else %}
+                {% trans 'Create Role' %}
+                {% endif %}
+            </h3>
+        </div>
         <div class="card-body">
             {% if form.subject.errors %}
             <ol role="alertdialog">
@@ -36,7 +38,7 @@
             {% endfor %}
         </div>
         <div class="card-footer">
-            <a href="{{ object.get_absolute_url }}" class="btn btn-danger">{% trans 'Cancel' %}</a>
+            <a href="{% if object %}{{ object.get_absolute_url }}{% else %}{% url 'permafrost:roles-manage' %}{% endif %}" class="btn btn-danger">{% trans 'Cancel' %}</a>
             <button type="submit" class="btn btn-primary">
                 {% if object %}
                     {% trans 'Save' %}                
