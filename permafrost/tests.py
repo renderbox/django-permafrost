@@ -298,6 +298,8 @@ class PermafrostViewTests(TestCase):
     def setUp(self):
         self.client = Client()
         self.pf_role = PermafrostRole.objects.create(category="staff", name="Test Role")
+        super_user = get_user_model().objects.get(pk=1)
+        self.client.force_login(super_user)
 
     def test_permafrost_base_url_resolves(self):
         found = resolve("/permafrost/")

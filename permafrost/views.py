@@ -95,8 +95,9 @@ class PermafrostLogMixin(object):
 
 
 # Create Permission Group
-class PermafrostRoleCreateView(CreateView):
+class PermafrostRoleCreateView(PermissionRequiredMixin, CreateView):
     model = PermafrostRole
+    permission_required = ['permafrost.add_permafrostrole']
 
     def post(self, request, *args, **kwargs):
         if self.request.POST.get('select_role', False):
@@ -121,27 +122,10 @@ class PermafrostRoleCreateView(CreateView):
 
 
 # List Permission Groups
-class PermafrostRoleListView(ListView):
+class PermafrostRoleListView(PermissionRequiredMixin, ListView):
     model = PermafrostRole
     queryset = PermafrostRole.on_site.all()
-
-# Detail Permission Groups
-class PermafrostRoleDetailView(DetailView):
-    model = PermafrostRole
-    template_name = 'permafrost/permafrostrole_manage.html'
-    queryset = PermafrostRole.on_site.all()
-    
-    def get_context_data(self, **kwargs):
-        context =  super().get_context_data(**kwargs)
-        
-        context['object_list'] = self.queryset
-        
-        role = context['object']
-        visible_permission_ids = role.all_perm_ids()
-
-        context['permissions'] = role.permissions().filter(id__in=visible_permission_ids).order_by('content_type')
-
-        return context
+    permission_required = ['permafrost.view_permafrostrole']
 
 class PermafrostRoleManageView(PermafrostRoleListView):
     """
@@ -162,13 +146,33 @@ class PermafrostRoleManageView(PermafrostRoleListView):
         
         return context
 
+# Detail Permission Groups
+class PermafrostRoleDetailView(PermissionRequiredMixin, DetailView):
+    model = PermafrostRole
+    template_name = 'permafrost/permafrostrole_manage.html'
+    queryset = PermafrostRole.on_site.all()
+    permission_required = ['permafrost.view_permafrostrole']
+    
+    def get_context_data(self, **kwargs):
+        context =  super().get_context_data(**kwargs)
+        
+        context['object_list'] = self.queryset
+        
+        role = context['object']
+        visible_permission_ids = role.all_perm_ids()
+
+        context['permissions'] = role.permissions().filter(id__in=visible_permission_ids).order_by('content_type')
+
+        return context
+
+
 # Update Permission Group
-class PermafrostRoleUpdateView(UpdateView):
+class PermafrostRoleUpdateView(PermissionRequiredMixin, UpdateView):
     template_name = 'permafrost/permafrostrole_form.html'
     form_class = PermafrostRoleUpdateForm
     model = PermafrostRole
     queryset = PermafrostRole.on_site.all()
-    
+    permission_required = ['permafrost.change_permafrostrole']
 
 # Delete Permission Groups
 class PermafrostRoleDeleteView(DeleteView):
