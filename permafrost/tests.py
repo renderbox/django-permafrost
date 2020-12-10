@@ -300,12 +300,12 @@ class PermafrostViewTests(TestCase):
         self.pf_role = PermafrostRole.objects.create(category="staff", name="Test Role")
 
     def test_permafrost_base_url_resolves(self):
-        found = resolve("/permafrost/roles/")
+        found = resolve("/permafrost/")
         self.assertEqual(found.view_name, "permafrost:role-list")
         self.assertEqual(found.func.view_class, PermafrostRoleListView)
     
     def test_permafrost_manage_base_url_resolves(self):
-        found = resolve("/permafrost/roles/manage/")
+        found = resolve("/permafrost/manage/")
         self.assertEqual(found.view_name, "permafrost:roles-manage")
         self.assertEqual(found.func.view_class, PermafrostRoleManageView)
     
@@ -337,7 +337,7 @@ class PermafrostViewTests(TestCase):
         uri = reverse('permafrost:roles-manage')
         response = self.client.get(uri)
         default_role = PermafrostRole.on_site.first()  
-        self.assertContains(response, f'<h6 class="m-0 mb-2 font-weight-bold text-primary">{default_role.name}</h1>')
+        self.assertContains(response, f'<h4 class="m-0 mb-2 font-weight-bold text-primary">{default_role.name}</h4>')
         self.assertContains(response, f'Role Type: {default_role.get_category_display()}')
         self.assertContains(response, f'<p>{default_role.description}</p>')
 
