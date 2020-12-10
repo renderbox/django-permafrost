@@ -2,21 +2,21 @@
 {% load i18n %}
 {% load static %}
 
-{% block title %}{% trans 'Create Role' %}{% endblock %}
+{% block title %}{% if object %}{% trans 'Edit Role' %}{% else %}{% trans 'Create Role' %}{% endif %}{% endblock %}
 
 {% block content %}
+<div class="d-sm-flex align-items-center justify-content-between mb-4">
+        <h1 class="h3 mb-0 text-gray-800"> 
+            {% if object %}
+            {% trans 'Edit Permissions' %}: {{ form.initial.name }}
+            {% else %}
+            {% trans 'Create Role' %}
+            {% endif %}
+        </h1>
+</div>
 <form method="POST" id="role_form">
     {% csrf_token %}
     <div class="card">
-        <div class="card-header">
-            <h3 class="mb-0 text-gray-800">
-                {% if object %}
-                {% trans 'Edit Permissions' %}: {{ form.initial.name }}
-                {% else %}
-                {% trans 'Create Role' %}
-                {% endif %}
-            </h3>
-        </div>
         <div class="card-body">
             {% if form.subject.errors %}
             <ol role="alertdialog">

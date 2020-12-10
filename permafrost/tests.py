@@ -337,7 +337,7 @@ class PermafrostViewTests(TestCase):
         uri = reverse('permafrost:roles-manage')
         response = self.client.get(uri)
         default_role = PermafrostRole.on_site.first()  
-        self.assertContains(response, f'<h4 class="m-0 mb-2 font-weight-bold text-primary">{default_role.name}</h4>')
+        self.assertContains(response, f'<h6 class="m-0 mb-2 font-weight-bold text-primary">{default_role.name}</h6>')
         self.assertContains(response, f'Role Type: {default_role.get_category_display()}')
         self.assertContains(response, f'<p>{default_role.description}</p>')
 
