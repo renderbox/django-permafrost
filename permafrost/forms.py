@@ -13,15 +13,24 @@ def assemble_optiongroups_for_widget(permissions):
     optgroups = {}
     if permissions:
         for perm in permissions:
-            if perm.content_type.model in optgroups:
-                optgroups[perm.content_type.model].append((perm.pk, perm.name,))
+            if perm.content_type.name in optgroups:
+                optgroups[perm.content_type.name].append((perm.pk, perm.name,))
             else:
-                optgroups[perm.content_type.model] = [(perm.pk, perm.name,)]
+                optgroups[perm.content_type.name] = [(perm.pk, perm.name,)]
 
     for model_name, options in optgroups.items():
         choices.append([model_name, options])
     
     return choices
+
+def bootstrappify(fields):
+    for field in fields:
+        widget = fields[field].widget
+        if not isinstance(widget, CheckboxInput):
+            if 'class' in widget.attrs:
+                widget.attrs['class'] =  widget.attrs['class'] + " form-control"
+            else:
+                widget.attrs.update({'class':'form-control'})
 
 class SelectPermafrostRoleTypeForm(ModelForm):
     name = CharField(required=False)
@@ -31,6 +40,12 @@ class SelectPermafrostRoleTypeForm(ModelForm):
     class Meta:
         model = PermafrostRole
         fields = ('name', 'description', 'category',)
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        bootstrappify(self.fields)
+
+    
 
 
 class PermafrostRoleCreateForm(ModelForm):
@@ -47,13 +62,7 @@ class PermafrostRoleCreateForm(ModelForm):
         self.fields['category'].choices = CHOICES
         category = self.initial.get('category', None)
         
-        for field in self.fields:
-            widget = self.fields[field].widget
-            if not isinstance(widget, CheckboxInput):
-                if 'class' in widget.attrs:
-                    widget.attrs['class'] =  widget.attrs['class'] + " form-control"
-                else:
-                    widget.attrs.update({'class':'form-control'})
+        bootstrappify(self.fields)
         
         if category:  
               
@@ -99,7 +108,6 @@ class PermafrostRoleUpdateForm(PermafrostRoleCreateForm):
         
         self.fields['deleted'].initial = self.instance.deleted
         
-        print(self.fields['deleted'].widget.input_type)
         category = self.instance.category
 
         optional_perms = get_optional_by_category(category)
