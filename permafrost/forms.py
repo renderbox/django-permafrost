@@ -73,8 +73,8 @@ class PermafrostRoleCreateForm(ModelForm):
             
             initial = [perm.pk for perm in required_perms]
             
-            self.fields[f'required_{category}_perms'] = MultipleChoiceField(label=_("Required Permissions"), initial=initial, choices=required_choices, widget=CheckboxSelectMultiple(attrs={'readonly':True, 'disabled': True}), required=False)
             self.fields[f'optional_{category}_perms'] = MultipleChoiceField(label=_("Optional Permissions"), choices=optional_choices, widget=CheckboxSelectMultiple(), required=False)
+            self.fields[f'required_{category}_perms'] = MultipleChoiceField(label=_("Required Permissions"), initial=initial, choices=required_choices, widget=CheckboxSelectMultiple(attrs={'readonly':True, 'disabled': True}), required=False)
 
     def save(self, commit=True):
         instance = super().save(commit)
