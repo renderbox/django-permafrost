@@ -2,7 +2,7 @@
 from django.contrib.auth.models import Permission
 from django.forms import ModelForm, MultipleChoiceField, CheckboxSelectMultiple
 from django.forms.fields import CharField, ChoiceField, BooleanField
-from django.forms.widgets import Textarea
+from django.forms.widgets import CheckboxInput, Textarea
 from django.utils.translation import ugettext_lazy as _
 from .models import PermafrostRole, get_optional_by_category, get_required_by_category, get_choices
 
@@ -13,15 +13,24 @@ def assemble_optiongroups_for_widget(permissions):
     optgroups = {}
     if permissions:
         for perm in permissions:
-            if perm.content_type.model in optgroups:
-                optgroups[perm.content_type.model].append((perm.pk, perm.name,))
+            if perm.content_type.name in optgroups:
+                optgroups[perm.content_type.name].append((perm.pk, perm.name,))
             else:
-                optgroups[perm.content_type.model] = [(perm.pk, perm.name,)]
+                optgroups[perm.content_type.name] = [(perm.pk, perm.name,)]
 
     for model_name, options in optgroups.items():
         choices.append([model_name, options])
     
     return choices
+
+def bootstrappify(fields):
+    for field in fields:
+        widget = fields[field].widget
+        if not isinstance(widget, CheckboxInput):
+            if 'class' in widget.attrs:
+                widget.attrs['class'] =  widget.attrs['class'] + " form-control"
+            else:
+                widget.attrs.update({'class':'form-control'})
 
 class SelectPermafrostRoleTypeForm(ModelForm):
     name = CharField(required=False)
@@ -31,6 +40,12 @@ class SelectPermafrostRoleTypeForm(ModelForm):
     class Meta:
         model = PermafrostRole
         fields = ('name', 'description', 'category',)
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        bootstrappify(self.fields)
+
+    
 
 
 class PermafrostRoleCreateForm(ModelForm):
@@ -47,6 +62,8 @@ class PermafrostRoleCreateForm(ModelForm):
         self.fields['category'].choices = CHOICES
         category = self.initial.get('category', None)
         
+        bootstrappify(self.fields)
+        
         if category:  
               
             required_perms = get_required_by_category(category)
@@ -56,8 +73,8 @@ class PermafrostRoleCreateForm(ModelForm):
             
             initial = [perm.pk for perm in required_perms]
             
-            self.fields[f'required_{category}_perms'] = MultipleChoiceField(label=_("Required Permissions"), initial=initial, choices=required_choices, widget=CheckboxSelectMultiple(attrs={'readonly':True, 'disabled': True}), required=False)
             self.fields[f'optional_{category}_perms'] = MultipleChoiceField(label=_("Optional Permissions"), choices=optional_choices, widget=CheckboxSelectMultiple(), required=False)
+            self.fields[f'required_{category}_perms'] = MultipleChoiceField(label=_("Required Permissions"), initial=initial, choices=required_choices, widget=CheckboxSelectMultiple(attrs={'readonly':True, 'disabled': True}), required=False)
 
     def save(self, commit=True):
         instance = super().save(commit)
@@ -91,7 +108,6 @@ class PermafrostRoleUpdateForm(PermafrostRoleCreateForm):
         
         self.fields['deleted'].initial = self.instance.deleted
         
-    
         category = self.instance.category
 
         optional_perms = get_optional_by_category(category)

@@ -32,16 +32,16 @@
         {% if object %}
             <div class="card shadow mb-6">
                 <div class="card-header py-3">
-                    <h6 class="m-0 mb-2 font-weight-bold text-primary">{{ object.name }}</h1>
-                        <dl>
-                            <dt>{% trans 'Role Type' %}: {{ object.get_category_display}}</dt>
-                            <dt><a href="{{ object.get_update_url }}">{% trans 'Edit Role' %}</a></dt>
-                        </dl>
-                    
-                    
+                    <h6 class="m-0 mb-2 font-weight-bold text-primary">{{ object.name }}</h6>
+                    <p>{% trans 'Role Type' %}: {{ object.get_category_display}}</p>
+                    <a class="btn btn-primary btn-sm" href="{{ object.get_update_url }}">{% trans 'Edit Role' %}</a>
                 </div>
                 <div class="card-body">
+                    
+                    {% if object.description %}
                     <p>{{ object.description }}</p>
+                    {% endif %}
+                        
                     {% regroup permissions by content_type as content_type_list %}
                     
                     {% for content_type, permission_list in content_type_list %}
@@ -50,7 +50,7 @@
                             <div class="row"> {# start .row #}
                         {% endif %}
                                 <div class="col-sm">
-                                    <h6 class="text-capitalize">{{ content_type.model }}</h6>
+                                    <h6 class="text-capitalize">{{ content_type.name }}</h6>
                                     <ul>
                                         {% for permission in permission_list %}
                                             <li>{{ permission.name }}</li>
