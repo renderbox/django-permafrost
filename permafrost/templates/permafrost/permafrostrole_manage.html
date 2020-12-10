@@ -1,0 +1,76 @@
+{% extends "permafrost/base.html" %}
+
+{% load i18n %}
+{% load static %}
+
+{% block content %}
+
+<div class="d-sm-flex align-items-center justify-content-between mb-4">
+    <a href="{% url 'permafrost:roles-manage' %}"><h1 class="h3 mb-0 text-gray-800">{% trans 'Roles & Permissions' %}</h1></a>
+</div>
+
+<div class="row">
+
+    <div class="col-3 bg-light">
+        <form>
+            <div class="input-group">
+                <input type="text" class="form-control" placeholder="{% trans 'Search...' %}" aria-label="{% trans 'Search...' %}" aria-describedby="basic-addon2">
+                <div class="input-group-append">
+                    <span class="input-group-text" id="basic-addon2"><i class="fas fa-fw fa-search"></i></span>
+                </div>
+            </div>
+        </form>
+        <ul class="list-group shadow-sm">
+            {% for role in object_list %}
+            <li class="list-group-item"><a href="{{ role.get_absolute_url }}">{{ role }}</a></li>
+            {% endfor %}
+        </ul>
+        <a class="btn btn-primary btn-block mt-3 shadow-sm" href="{% url 'permafrost:role-create' %}" role="button">{% trans 'Add Role' %}</a>
+    </div>
+
+    <div class="col-9">
+        {% if object %}
+            <div class="card shadow mb-6">
+                <div class="card-header py-3">
+                    <h6 class="m-0 mb-2 font-weight-bold text-primary">{{ object.name }}</h6>
+                    <p>{% trans 'Role Type' %}: {{ object.get_category_display}}</p>
+                    <a class="btn btn-primary btn-sm" href="{{ object.get_update_url }}">{% trans 'Edit Role' %}</a>
+                </div>
+                <div class="card-body">
+                    
+                    {% if object.description %}
+                    <p>{{ object.description }}</p>
+                    {% endif %}
+                        
+                    {% regroup permissions by content_type as content_type_list %}
+                    
+                    {% for content_type, permission_list in content_type_list %}
+                        {% cycle 'odd' 'even' as col silent %}
+                        {% if col == 'odd' %}
+                            <div class="row"> {# start .row #}
+                        {% endif %}
+                                <div class="col-sm">
+                                    <h6 class="text-capitalize">{{ content_type.name }}</h6>
+                                    <ul>
+                                        {% for permission in permission_list %}
+                                            <li>{{ permission.name }}</li>
+                                        {% endfor %}
+                                    </ul>
+                                </div>
+                        {% if col == 'even' or forloop.last %}
+                            </div> {# end .row #}
+                        {% endif %}
+                        
+                        {% if forloop.last %}
+                           {% resetcycle col %} 
+                        {% endif %}
+                            
+                    {% endfor %}
+                        
+                </div>
+            </div>
+
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

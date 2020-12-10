@@ -1,24 +1,70 @@
 {% extends "permafrost/base.html" %}
-{% load crispy_forms_tags %}
 {% load i18n %}
 {% load static %}
 
-{% block title %}Permafrost - Roles{% endblock %}
+{% block title %}{% if object %}{% trans 'Edit Role' %}{% else %}{% trans 'Create Role' %}{% endif %}{% endblock %}
 
 {% block content %}
-<h1>Update: {{object.name}}</h1>
-
-<form method="post">
+<div class="d-sm-flex align-items-center justify-content-between mb-4">
+        <h1 class="h3 mb-0 text-gray-800"> 
+            {% if object %}
+            {% trans 'Edit Permissions' %}: {{ form.initial.name }}
+            {% else %}
+            {% trans 'Create Role' %}
+            {% endif %}
+        </h1>
+</div>
+<form method="POST" id="role_form">
     {% csrf_token %}
-    {{form|crispy}}
-    <h3>Perms:</h3>
-    <ul>
-    {% for perm in object.optional_permissions %}
-    <li>{{perm.name}}</li>
-    {% endfor %}
-    </ul>
-
-    <a href="{{object.get_absolute_url}}" class="btn btn-warning">Cancel</a>
-    <button type="submit" class="btn btn-primary"> {% trans 'Submit' %}</button>
+    <div class="card">
+        <div class="card-body">
+            {% if form.subject.errors %}
+            <ol role="alertdialog">
+                {% for error in form.subject.errors %}
+                <li role="alert"><strong>{{ error|escape }}</strong></li>
+                {% endfor %}
+            </ol>
+            {% endif %}
+            {% for field in form %}
+                <div class="fieldWrapper form-group" aria-required={% if field.field.required %}"true"{% else %}"false"{% endif %}>
+                    {{ field.label_tag }}{% if field.field.required %}<span class="required">*</span>{% endif %}
+                    
+                    {{ field }}
+                    
+                    {% if field.help_text %}
+                    <p class="help">{{ field.help_text|safe }}</p>
+                    {% endif %}
+                </div>
+            {% endfor %}
+        </div>
+        <div class="card-footer">
+            <a href="{% if object %}{{ object.get_absolute_url }}{% else %}{% url 'permafrost:roles-manage' %}{% endif %}" class="btn btn-primary">{% trans 'Cancel' %}</a>
+            <button type="submit" class="btn btn-success">
+                {% if object %}
+                    {% trans 'Save' %}                
+                {% else %}
+                    {% trans 'Create' %}    
+                {% endif %}
+            </button>
+        </div>
+    </div>
 </form>
 {% endblock %}
+
+
+{% block extra_js %}
+    {% if not object %} {# "Hide JS change handler on edit " #}
+    <script>
+        $(document).ready(function(){
+            $('#id_category').on('change', function(){
+                if ($(this).val()){
+                    $form = $(this).closest('form')
+                    $form.append('<input type="hidden" name="select_role" value="on"/>')
+                    $form.submit()
+                }
+            })
+        })
+    </script>
+    {% endif %}
+{% endblock %}
+    

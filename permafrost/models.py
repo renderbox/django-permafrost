@@ -76,6 +76,16 @@ except AttributeError:
 def get_current_site(*args, **kwargs):
     return settings.SITE_ID
 
+def get_required_by_category(category):
+    if 'required' in CATEGORIES[category]:
+        return [Permission.objects.get_by_natural_key(*item['permission']) for item in CATEGORIES[category]['required']]
+    return []
+
+def get_optional_by_category(category):
+    if 'optional' in CATEGORIES[category]:
+        return [Permission.objects.get_by_natural_key(*item['permission']) for item in CATEGORIES[category]['optional']]
+    return []
+
 ###############
 # MANAGERS
 ###############
@@ -111,7 +121,8 @@ class PermafrostRole(models.Model):
 
     name = models.CharField(_("Name"), max_length=50)
     slug = models.SlugField(_("Slug"))
-    category = models.CharField(_("Category"), max_length=32, choices=get_choices(), blank=False, null=False)                     # These should stay fixed to not trigger a potenital migration issue with changing choices
+    description = models.CharField(_('Description'), null=True, blank=True, max_length=200)
+    category = models.CharField(_("Role Type"), max_length=32, choices=get_choices(), blank=False, null=False)                     # These should stay fixed to not trigger a potenital migration issue with changing choices
     site = models.ForeignKey(Site, on_delete=models.CASCADE, default=get_current_site)                      # This uses a callable so it will not trigger a migration with the projects it's included in
     locked = models.BooleanField(_("Locked"), default=False)                                                        # If this is locked, it can not be edited by the Client, used for System Default Roles
     deleted = models.BooleanField(_("Deleted"), default=False, help_text="Soft Delete the Role")
@@ -149,17 +160,13 @@ class PermafrostRole(models.Model):
         '''
         TODO: Read from the category and get the list of permissions 
         '''
-        if 'required' in CATEGORIES[self.category]:
-            return [Permission.objects.get_by_natural_key(*item['permission']) for item in CATEGORIES[self.category]['required']]
-        return []
+        return get_required_by_category(self.category)
 
     def optional_permissions(self):
         '''
         TODO!!!
         '''
-        if 'optional' in CATEGORIES[self.category]:
-            return [Permission.objects.get_by_natural_key(*item['permission']) for item in CATEGORIES[self.category]['optional']]
-        return []
+        return get_optional_by_category(self.category)
 
     def all_perm_ids(self):
         req = [ perm.pk for perm in self.required_permissions() ]

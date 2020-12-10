@@ -64,9 +64,11 @@ setup(
             'm2r',
         ],
         'docs': [                           # Packages needed to generate docs
+            'recommonmark',
+            'm2r',
+            'django-extensions',
             'coverage',
             'Sphinx',
-            'recommonmark',
             'rstcheck',
             'sphinx-rtd-theme',  # Assumes a Read The Docs theme for opensource projects
         ],
