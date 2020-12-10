@@ -38,8 +38,8 @@
             {% endfor %}
         </div>
         <div class="card-footer">
-            <a href="{% if object %}{{ object.get_absolute_url }}{% else %}{% url 'permafrost:roles-manage' %}{% endif %}" class="btn btn-danger">{% trans 'Cancel' %}</a>
-            <button type="submit" class="btn btn-primary">
+            <a href="{% if object %}{{ object.get_absolute_url }}{% else %}{% url 'permafrost:roles-manage' %}{% endif %}" class="btn btn-primary">{% trans 'Cancel' %}</a>
+            <button type="submit" class="btn btn-success">
                 {% if object %}
                     {% trans 'Save' %}                
                 {% else %}
