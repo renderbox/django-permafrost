@@ -1,5 +1,7 @@
 # Permafrost Forms
+from django.conf import settings
 from django.contrib.auth.models import Permission
+from django.core.exceptions import ValidationError
 from django.forms import ModelForm, MultipleChoiceField, CheckboxSelectMultiple
 from django.forms.fields import CharField, ChoiceField, BooleanField
 from django.forms.widgets import CheckboxInput, Textarea
@@ -95,6 +97,36 @@ class PermafrostRoleCreateForm(ModelForm):
             else:
                 instance.permissions_clear()
         return instance
+
+    def clean_name(self):
+        name = self.cleaned_data['name']
+        name_exists = False
+       
+        if self.instance:  ## on update check if name change exists
+
+            if 'name' in self.changed_data:
+                name_exists = PermafrostRole.objects.filter(
+
+                    name=name, 
+                    site__id=settings.SITE_ID,
+
+                ).exclude(pk=self.instance.pk).first()
+            
+        else:
+
+            try:
+                name_exists = PermafrostRole.objects.get(
+                    name=name, 
+                    site__id=settings.SITE_ID
+                )
+            except PermafrostRole.DoesNotExist:
+                pass
+        
+        if name_exists:
+            raise ValidationError('Role with this name already exists')
+
+        # Always return field
+        return name
 
 class PermafrostRoleUpdateForm(PermafrostRoleCreateForm):
     """
