@@ -29,13 +29,7 @@
             </h6>
         </div>
         <div class="card-body">
-            {% if form.subject.errors %}
-            <ol role="alertdialog">
-                {% for error in form.subject.errors %}
-                <li role="alert"><strong>{{ error|escape }}</strong></li>
-                {% endfor %}
-            </ol>
-            {% endif %}
+            {{ form.non_field_errors }}
             {% for field in form %}
                 <div class="fieldWrapper form-group" aria-required={% if field.field.required %}"true"{% else %}"false"{% endif %}>
                     {{ field.label_tag }}{% if field.field.required %}<span class="required">*</span>{% endif %}
@@ -45,6 +39,7 @@
                     {% if field.help_text %}
                     <p class="help">{{ field.help_text|safe }}</p>
                     {% endif %}
+                    {{ field.errors }}
                 </div>
             {% endfor %}
         </div>
