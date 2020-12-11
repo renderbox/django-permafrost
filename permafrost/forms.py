@@ -8,6 +8,11 @@ from .models import PermafrostRole, get_optional_by_category, get_required_by_ca
 
 CHOICES = [('', _("Choose Role Type"))] + get_choices()
 
+LABELS = {
+    'name': _('Role Name'),
+    'category': _('Role Type')
+}
+
 def assemble_optiongroups_for_widget(permissions):
     choices = []
     optgroups = {}
@@ -40,6 +45,7 @@ class SelectPermafrostRoleTypeForm(ModelForm):
     class Meta:
         model = PermafrostRole
         fields = ('name', 'description', 'category',)
+        labels = LABELS
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -55,6 +61,7 @@ class PermafrostRoleCreateForm(ModelForm):
         widgets = {
             'description': Textarea(),
         }
+        labels = LABELS
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -95,7 +102,6 @@ class PermafrostRoleUpdateForm(PermafrostRoleCreateForm):
      Only allowed to edit optional permissions, name and description
      Category and required permissions stay locked
     """
-    category = ChoiceField(choices=CHOICES, required=False)
     deleted = BooleanField(required=False)
     
     def __init__(self, *args, **kwargs):
