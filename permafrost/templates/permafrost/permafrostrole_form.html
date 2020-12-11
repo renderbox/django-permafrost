@@ -5,26 +5,31 @@
 {% block title %}{% if object %}{% trans 'Edit Role' %}{% else %}{% trans 'Create Role' %}{% endif %}{% endblock %}
 
 {% block content %}
-<div class="d-sm-flex align-items-center justify-content-between mb-4">
-        <h1 class="h3 mb-0 text-gray-800"> 
-            {% if object %}
-            {% trans 'Edit Permissions' %}: {{ form.initial.name }}
-            {% else %}
-            {% trans 'Create Role' %}
-            {% endif %}
-        </h1>
-</div>
 <form method="POST" id="role_form">
+<div class="d-sm-flex align-items-center justify-content-between mb-4">
+<h2> {% trans 'Roles & Permissions' %}</h2>
+<a href="{% if object %}{{ object.get_absolute_url }}{% else %}{% url 'permafrost:roles-manage' %}{% endif %}" class="btn btn-success btn-outline ml-auto">{% trans 'Cancel' %}</a>
+<button type="submit" class="btn btn-success ml-1">
+    {% if object %}
+        {% trans 'Save' %}                
+    {% else %}
+        {% trans 'Create' %}    
+    {% endif %}
+</button>
+</div>
     {% csrf_token %}
     <div class="card">
+        <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+            <h6 class="m-0 text-primary font-weight-bold">
+                {% if object %}
+                {% trans 'Edit Permissions' %}: {{ form.initial.name }}
+                {% else %}
+                {% trans 'Create Role' %}
+                {% endif %}
+            </h6>
+        </div>
         <div class="card-body">
-            {% if form.subject.errors %}
-            <ol role="alertdialog">
-                {% for error in form.subject.errors %}
-                <li role="alert"><strong>{{ error|escape }}</strong></li>
-                {% endfor %}
-            </ol>
-            {% endif %}
+            {{ form.non_field_errors }}
             {% for field in form %}
                 <div class="fieldWrapper form-group" aria-required={% if field.field.required %}"true"{% else %}"false"{% endif %}>
                     {{ field.label_tag }}{% if field.field.required %}<span class="required">*</span>{% endif %}
@@ -34,18 +39,11 @@
                     {% if field.help_text %}
                     <p class="help">{{ field.help_text|safe }}</p>
                     {% endif %}
+                    {{ field.errors }}
                 </div>
             {% endfor %}
         </div>
         <div class="card-footer">
-            <a href="{% if object %}{{ object.get_absolute_url }}{% else %}{% url 'permafrost:roles-manage' %}{% endif %}" class="btn btn-primary">{% trans 'Cancel' %}</a>
-            <button type="submit" class="btn btn-success">
-                {% if object %}
-                    {% trans 'Save' %}                
-                {% else %}
-                    {% trans 'Create' %}    
-                {% endif %}
-            </button>
         </div>
     </div>
 </form>
