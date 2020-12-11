@@ -14,6 +14,9 @@ from django.urls import reverse
 
 from jsonfield import JSONField     # Using this instead of the PSQL one for portability
 
+import logging
+logger = logging.getLogger(__name__)
+
 
 ###############
 # CHOICES
@@ -76,16 +79,28 @@ except AttributeError:
 def get_current_site(*args, **kwargs):
     return settings.SITE_ID
 
+def get_permission_objects(natural_keys_list):
+    permissions = []
+    for item in natural_keys_list:
+        try:
+            permission = Permission.objects.get_by_natural_key(*item['permission']) 
+            permissions.append(permission)
+        except:
+            logger.warn(f'Permission not found in PERMAFROST_CATEGORIES: {item["permission"]}')
+            pass
+
+    return permissions
+
 def get_required_by_category(category):
     if 'required' in CATEGORIES[category]:
-        return [Permission.objects.get_by_natural_key(*item['permission']) for item in CATEGORIES[category]['required']]
+        return get_permission_objects(CATEGORIES[category]['required'])
     return []
 
 def get_optional_by_category(category):
     if 'optional' in CATEGORIES[category]:
-        return [Permission.objects.get_by_natural_key(*item['permission']) for item in CATEGORIES[category]['optional']]
+        return get_permission_objects(CATEGORIES[category]['optional'])
     return []
-
+    
 ###############
 # MANAGERS
 ###############
