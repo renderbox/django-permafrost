@@ -69,19 +69,21 @@ class PermafrostRoleCreateForm(ModelForm):
         super().__init__(*args, **kwargs)
 
         self.fields['category'].choices = CHOICES
-        category = self.initial.get('category', None)
+        category = self.initial.get(
+            'category', 
+            self.data.get('category', None)
+        )
         
         bootstrappify(self.fields)
         
         if category:  
-              
+
             required_perms = get_required_by_category(category)
             optional_perms = get_optional_by_category(category)
             required_choices = assemble_optiongroups_for_widget(required_perms)
             optional_choices = assemble_optiongroups_for_widget(optional_perms)
             
             initial = [perm.pk for perm in required_perms]
-            
             self.fields[f'optional_{category}_perms'] = MultipleChoiceField(label=_("Optional Permissions"), choices=optional_choices, widget=CheckboxSelectMultiple(), required=False)
             self.fields[f'required_{category}_perms'] = MultipleChoiceField(label=_("Required Permissions"), initial=initial, choices=required_choices, widget=CheckboxSelectMultiple(attrs={'readonly':True, 'disabled': True}), required=False)
 
