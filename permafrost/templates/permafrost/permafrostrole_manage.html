@@ -5,72 +5,127 @@
 
 {% block content %}
 
-<div class="d-sm-flex align-items-center justify-content-between mb-4">
-    <a href="{% url 'permafrost:roles-manage' %}"><h1 class="h3 mb-0 text-gray-800">{% trans 'Roles & Permissions' %}</h1></a>
-</div>
+<h1 class="my-3 text-gray-800">{% trans 'Roles & Permissions' %}</h1></a>
 
-<div class="row">
-
-    <div class="col-3 bg-light">
-        <form>
-            <div class="input-group">
-                <input type="text" class="form-control" placeholder="{% trans 'Search...' %}" aria-label="{% trans 'Search...' %}" aria-describedby="basic-addon2">
-                <div class="input-group-append">
-                    <span class="input-group-text" id="basic-addon2"><i class="fas fa-fw fa-search"></i></span>
-                </div>
-            </div>
-        </form>
-        <ul class="list-group shadow-sm">
-            {% for role in object_list %}
-            <li class="list-group-item"><a href="{{ role.get_absolute_url }}">{{ role }}</a></li>
-            {% endfor %}
-        </ul>
-        <a class="btn btn-primary btn-block mt-3 shadow-sm" href="{% url 'permafrost:role-create' %}" role="button">{% trans 'Add Role' %}</a>
-    </div>
-
-    <div class="col-9">
-        {% if object %}
-            <div class="card shadow mb-6">
-                <div class="card-header py-3">
-                    <h6 class="m-0 mb-2 font-weight-bold text-primary">{{ object.name }}</h6>
-                    <p>{% trans 'Role Type' %}: {{ object.get_category_display}}</p>
-                    <a class="btn btn-primary btn-sm" href="{{ object.get_update_url }}">{% trans 'Edit Role' %}</a>
-                </div>
-                <div class="card-body">
+<div class="row no-gutters shadow">
+        <div class="col-3 d-flex flex-column flex-shrink-0 h-100 px-1 border-right-gray-300">
+                
+                {% comment %}
+                   TODO: add administration search filters
+                {% endcomment %}
                     
-                    {% if object.description %}
-                    <p>{{ object.description }}</p>
-                    {% endif %}
-                        
-                    {% regroup permissions by content_type as content_type_list %}
-                    
-                    {% for content_type, permission_list in content_type_list %}
-                        {% cycle 'odd' 'even' as col silent %}
-                        {% if col == 'odd' %}
-                            <div class="row"> {# start .row #}
-                        {% endif %}
-                                <div class="col-sm">
-                                    <h6 class="text-capitalize">{{ content_type.name }}</h6>
-                                    <ul>
-                                        {% for permission in permission_list %}
-                                            <li>{{ permission.name }}</li>
-                                        {% endfor %}
-                                    </ul>
-                                </div>
-                        {% if col == 'even' or forloop.last %}
-                            </div> {# end .row #}
-                        {% endif %}
-                        
-                        {% if forloop.last %}
-                           {% resetcycle col %} 
-                        {% endif %}
-                            
+                <form class="flex-shrink-0 px-2">
+                    <h4 class="my-3">{% trans 'Roles' %}</h4>
+                    <div class="text-success d-flex">
+                        <i class="fa fa-search disabled text-success" aria-hidden="true">{% trans 'Search' %}</i>
+                        <i class="fa fa-filter" aria-hidden="true">{% trans 'Filter' %}</i>
+                        <a class="ml-auto text-success" href="{% url 'permafrost:role-create' %}" role="button"><i class="fa fa-plus"></i>{% trans 'Add Role' %}</a></li>
+                    </div>
+                    <div class="form-group mb-0">
+                        <div class="input-group  flex-nowrap">
+                            <input type="text" name="user_filter" class="textinput textInput form-control" id="id_user_filter">
+                            <div class="input-group-append">
+                                <button class="btn bg-transparent close" type="button" role="close" aria-role="close" id="search_close" style="margin-left: -1.5rem; z-index: 10;"> <i class="fa fa-times"></i> </button> </div> <div class="input-group-append"> <button class="btn btn-success" type="submit" style="z-index: 15;">
+                                    <i class="fas fa-search"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+                {# TODO: Add infinite scroll #}
+                <ul class="list-group list-group-flush border-radius-0 flex-grow-1 overflow-auto"> 
+                    {% for role in object_list %}
+                    <li class="list-group-item border-radius-0{% if object == role %} bg-grey-200{% endif %}">
+                        <a class="d-block text-gray-800" href="{{ role.get_absolute_url }}">
+                            <div class="font-weight-bold">
+                                {{ role }}
+                            </div>
+                            <label class="small-meta mb-0 text-gray-600">{{ role.get_category_display }}</label>
+                        </a>
+                    </li>
                     {% endfor %}
-                        
-                </div>
+                </ul>
+            
+        </div>
+        
+        <div class="col-9 px-4 py-3 flex-column h-100 overflow-auto text-gray-800">
+            {% if object %}
+            <div class="d-flex mb-3">
+                <h2>{{ object.name }}</h2>
+                <a class="ml-auto" href="{{ object.get_update_url }}" alt="{% trans 'Edit Role' %}">
+                    <i class="fas fa-pen">{% trans 'Edit Role' %}</i>
+                </a>
             </div>
-
-        {% endif %}
+            {% if object.description %}
+            <p>{{ object.description }}</p>
+            {% endif %}
+            <p>{% trans 'Role Type' %}: <span class="font-weight-bold">{{ object.get_category_display}}</span></p>
+            
+            {% regroup permissions by content_type as content_type_list %}
+            
+            {% for content_type, permission_list in content_type_list %}
+            {% cycle 'odd' 'even' as col silent %}
+            {% if col == 'odd' %}
+            <div class="row"> {# start .row #}
+                {% endif %}
+                <div class="col-sm">
+                    <p class="text-capitalize small font-weight-bold mb-1 text-gray-600">{{ content_type.name }}</p>
+                    <p>
+                        {% for permission in permission_list %}
+                        {{ permission.name }}
+                        {% if not forloop.last %}
+                        <br>
+                        {% endif %}
+                        {% endfor %}
+                    </p>
+                    
+                </div>
+                {% if col == 'even' or forloop.last %}
+            </div> {# end .row #}
+            {% endif %}
+            
+            {% if forloop.last %}
+            {% resetcycle col %} 
+            {% endif %}
+            {% endfor %}
+            
+            {% endif %}
     </div>
 </div>
+</div>
+
+<style type="text/css">
+    .row.no-gutters {
+        height: 75vh;
+    }
+</style>
+{% endblock %}
+{% block extra_js %}
+
+{% comment %}
+# Possible placeholder for infinite scroll
+<script>
+    const contextmenu = document.getElementById('contextmenu');
+    const contextmenusb = document.querySelector('#contextmenu .scrollbox');
+    let contextmenuIsScrolling = false;
+
+    function setFade(event) {
+    if (!contextmenuIsScrolling) {
+        window.requestAnimationFrame(function() {
+        if (event.target.scrollTop < 160) {
+            contextmenu.classList.add('off-bottom');
+        }
+        else {
+            contextmenu.classList.remove('off-bottom');
+        }
+        contextmenuIsScrolling = false;
+        });
+        contextmenuIsScrolling = true;
+    }
+    }
+
+    contextmenusb.addEventListener('scroll', setFade);
+</script> 
+{% endcomment %}
+
 {% endblock %}
