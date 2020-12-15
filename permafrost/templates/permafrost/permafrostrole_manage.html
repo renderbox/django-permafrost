@@ -41,9 +41,10 @@
         {% endcomment %}
 
         <p class="text-success d-flex px-1">
-        <h4>{% trans 'Roles' %}</h4>
-        <a class="ml-auto text-success font-weight-bold" href="{% url 'permafrost:role-create' %}" role="button">
-            <i class="fas fa-plus mr-2" aria-label="{% trans 'Add Role' %}"></i> {% trans 'Add Role' %}</a>
+            <h4>{% trans 'Roles' %}</h4>
+            <a class="ml-auto text-success font-weight-bold" href="{% url 'permafrost:role-create' %}" role="button">
+                <i class="fas fa-plus mr-2" aria-label="{% trans 'Add Role' %}"></i> {% trans 'Add Role' %}
+            </a>
         </p>
         <ul class="list-group list-group-flush border-radius-0 flex-grow-1 overflow-auto">
             {# TODO: Add infinite scroll to this list #}
