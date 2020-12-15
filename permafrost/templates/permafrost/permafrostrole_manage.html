@@ -8,96 +8,102 @@
 <h1 class="my-3 text-gray-800">{% trans 'Roles & Permissions' %}</h1></a>
 
 <div class="row no-gutters shadow bg-white">
-        <div class="col-3 d-flex flex-column flex-shrink-0 h-100 px-2 border-right-gray-300">
-                
-                {% comment %}
-                   TODO: add administration search filters
-                        1. replace p tag (line 38 belwo) with form below
-                        2. hook up to django filter form  
-                   <form class="flex-shrink-0 px-1">
-                    <h4 class="my-3">{% trans 'Roles' %}</h4>
-                    <p class="text-success d-flex">
-                        <i class="fas fa-search disabled text-success" aria-label="{% trans 'Search' %}"></i>
-                        <i class="fas fa-filter" aria-label="{% trans 'Filter' %}"></i>
-                        <a class="ml-auto text-success font-weight-bold" href="{% url 'permafrost:role-create' %}" role="button"><i class="fas fa-plus mr-2" aria-label="{% trans 'Add Role' %}"></i> {% trans 'Add Role' %}</a>   
-                    </p>
-                    <div class="form-group mb-0">
-                        <div class="input-group  flex-nowrap">
-                            <input type="text" name="user_filter" class="textinput textInput form-control" id="id_user_filter">
-                            <div class="input-group-append">
-                                <button class="btn bg-transparent close" type="button" role="close" aria-role="close" id="search_close" style="margin-left: -1.5rem; z-index: 10;"> <i class="fas fa-times"></i> </button> </div> <div class="input-group-append"> <button class="btn btn-success" type="submit" style="z-index: 15;">
-                                    <i class="fas fa-search"></i>
-                                </button>
-                            </div>
-                        </div>
+    <div class="col-3 d-flex flex-column flex-shrink-0 h-100 px-2 border-right-gray-300">
+
+        {% comment %}
+        TODO: add administration search filters
+        1. replace p tag (line 38 belwo) with form below
+        2. hook up to django filter form
+        <form class="flex-shrink-0 px-1">
+            <h4 class="my-3">{% trans 'Roles' %}</h4>
+            <p class="text-success d-flex">
+                <i class="fas fa-search disabled text-success" aria-label="{% trans 'Search' %}"></i>
+                <i class="fas fa-filter" aria-label="{% trans 'Filter' %}"></i>
+                <a class="ml-auto text-success font-weight-bold" href="{% url 'permafrost:role-create' %}"
+                    role="button"><i class="fas fa-plus mr-2" aria-label="{% trans 'Add Role' %}"></i> {% trans 'Add
+                    Role' %}</a>
+            </p>
+            <div class="form-group mb-0">
+                <div class="input-group  flex-nowrap">
+                    <input type="text" name="user_filter" class="textinput textInput form-control" id="id_user_filter">
+                    <div class="input-group-append">
+                        <button class="btn bg-transparent close" type="button" role="close" aria-role="close"
+                            id="search_close" style="margin-left: -1.5rem; z-index: 10;"> <i class="fas fa-times"></i>
+                        </button>
                     </div>
-                </form>
-                {% endcomment %}
-                
-                <p class="text-success d-flex px-1">
-                    <h4>{% trans 'Roles' %}</h4>
-                    <a class="ml-auto text-success font-weight-bold" href="{% url 'permafrost:role-create' %}" role="button"><i class="fas fa-plus mr-2" aria-label="{% trans 'Add Role' %}"></i> {% trans 'Add Role' %}</a>   
-                </p>
-                <ul class="list-group list-group-flush border-radius-0 flex-grow-1 overflow-auto"> 
-                {# TODO: Add infinite scroll to this list #}
-                    {% for role in object_list %}
-                    <li class="px-2 list-group-item border-radius-0{% if object == role %} bg-gray-200{% endif %}">
-                        <a class="d-block text-gray-800" href="{{ role.get_absolute_url }}">
-                            <div class="font-weight-bold">
-                                {{ role }}
-                            </div>
-                            <label class="small-meta mb-0 text-gray-600">{{ role.get_category_display }}</label>
-                        </a>
-                    </li>
-                    {% endfor %}
-                </ul>
-            
-        </div>
-        
-        <div class="col-9 px-4 py-3 flex-column h-100 overflow-auto text-gray-800">
-            {% if object %}
-            <div class="d-flex mb-3">
-                <h2>{{ object.name }}</h2>
-                <a class="ml-auto text-success" href="{{ object.get_update_url }}" alt="{% trans 'Edit Role' %}">
-                    <i class="fas fa-pen" aria-label="{% trans 'Edit Role' %}"></i>
-                </a>
-            </div>
-            {% if object.description %}
-            <p>{{ object.description }}</p>
-            {% endif %}
-            <p>{% trans 'Role Type' %}: <span class="font-weight-bold">{{ object.get_category_display }}</span></p>
-            
-            {% regroup permissions by content_type as content_type_list %}
-            
-            {% for content_type, permission_list in content_type_list %}
-            {% cycle 'odd' 'even' as col silent %}
-            {% if col == 'odd' %}
-            <div class="row"> {# start .row #}
-                {% endif %}
-                <div class="col-sm">
-                    <p class="text-capitalize small font-weight-bold mb-1 text-gray-600">{{ content_type.name }}</p>
-                    <p>
-                        {% for permission in permission_list %}
-                        {{ permission.name }}
-                        {% if not forloop.last %}
-                        <br>
-                        {% endif %}
-                        {% endfor %}
-                    </p>
-                    
+                    <div class="input-group-append"> <button class="btn btn-success" type="submit" style="z-index: 15;">
+                            <i class="fas fa-search"></i>
+                        </button>
+                    </div>
                 </div>
-                {% if col == 'even' or forloop.last %}
-            </div> {# end .row #}
-            {% endif %}
-            
-            {% if forloop.last %}
-            {% resetcycle col %} 
-            {% endif %}
+            </div>
+        </form>
+        {% endcomment %}
+
+        <p class="text-success d-flex px-1">
+        <h4>{% trans 'Roles' %}</h4>
+        <a class="ml-auto text-success font-weight-bold" href="{% url 'permafrost:role-create' %}" role="button"><i
+                class="fas fa-plus mr-2" aria-label="{% trans 'Add Role' %}"></i> {% trans 'Add Role' %}</a>
+        </p>
+        <ul class="list-group list-group-flush border-radius-0 flex-grow-1 overflow-auto">
+            {# TODO: Add infinite scroll to this list #}
+            {% for role in object_list %}
+            <li class="px-2 list-group-item border-radius-0{% if object == role %} bg-gray-200{% endif %}">
+                <a class="d-block text-gray-800" href="{{ role.get_absolute_url }}">
+                    <div class="font-weight-bold">
+                        {{ role }}
+                    </div>
+                    <label class="small-meta mb-0 text-gray-600">{{ role.get_category_display }}</label>
+                </a>
+            </li>
             {% endfor %}
-            
-            {% endif %}
+        </ul>
+
     </div>
-</div>
+
+    <div class="col-9 px-4 py-3 flex-column h-100 overflow-auto text-gray-800">
+        {% if object %}
+        <div class="d-flex mb-3">
+            <h2>{{ object.name }}</h2>
+            <a class="ml-auto text-success" href="{{ object.get_update_url }}" alt="{% trans 'Edit Role' %}">
+                <i class="fas fa-pen" aria-label="{% trans 'Edit Role' %}"></i>
+            </a>
+        </div>
+        {% if object.description %}
+        <p>{{ object.description }}</p>
+        {% endif %}
+        <p>{% trans 'Role Type' %}: <span class="font-weight-bold">{{ object.get_category_display }}</span></p>
+
+        {% regroup permissions by content_type as content_type_list %}
+
+        {% for content_type, permission_list in content_type_list %}
+        {% cycle 'odd' 'even' as col silent %}
+        {% if col == 'odd' %}
+        <div class="row"> {# start .row #}
+            {% endif %}
+            <div class="col-sm">
+                <p class="text-capitalize small font-weight-bold mb-1 text-gray-600">{{ content_type.name }}</p>
+                <p>
+                    {% for permission in permission_list %}
+                    {{ permission.name }}
+                    {% if not forloop.last %}
+                    <br>
+                    {% endif %}
+                    {% endfor %}
+                </p>
+
+            </div>
+            {% if col == 'even' or forloop.last %}
+        </div> {# end .row #}
+        {% endif %}
+
+        {% if forloop.last %}
+        {% resetcycle col %}
+        {% endif %}
+        {% endfor %}
+
+        {% endif %}
+    </div>
 </div>
 
 <style type="text/css">
