@@ -7,35 +7,41 @@
 
 <h1 class="my-3 text-gray-800">{% trans 'Roles & Permissions' %}</h1></a>
 
-<div class="row no-gutters shadow">
-        <div class="col-3 d-flex flex-column flex-shrink-0 h-100 px-1 border-right-gray-300">
+<div class="row no-gutters shadow bg-white">
+        <div class="col-3 d-flex flex-column flex-shrink-0 h-100 px-2 border-right-gray-300">
                 
                 {% comment %}
                    TODO: add administration search filters
-                {% endcomment %}
-                    
-                <form class="flex-shrink-0 px-2">
+                        1. replace p tag (line 38 belwo) with form below
+                        2. hook up to django filter form  
+                   <form class="flex-shrink-0 px-1">
                     <h4 class="my-3">{% trans 'Roles' %}</h4>
-                    <div class="text-success d-flex">
-                        <i class="fa fa-search disabled text-success" aria-hidden="true">{% trans 'Search' %}</i>
-                        <i class="fa fa-filter" aria-hidden="true">{% trans 'Filter' %}</i>
-                        <a class="ml-auto text-success" href="{% url 'permafrost:role-create' %}" role="button"><i class="fa fa-plus"></i>{% trans 'Add Role' %}</a></li>
-                    </div>
+                    <p class="text-success d-flex">
+                        <i class="fas fa-search disabled text-success" aria-label="{% trans 'Search' %}"></i>
+                        <i class="fas fa-filter" aria-label="{% trans 'Filter' %}"></i>
+                        <a class="ml-auto text-success font-weight-bold" href="{% url 'permafrost:role-create' %}" role="button"><i class="fas fa-plus mr-2" aria-label="{% trans 'Add Role' %}"></i> {% trans 'Add Role' %}</a>   
+                    </p>
                     <div class="form-group mb-0">
                         <div class="input-group  flex-nowrap">
                             <input type="text" name="user_filter" class="textinput textInput form-control" id="id_user_filter">
                             <div class="input-group-append">
-                                <button class="btn bg-transparent close" type="button" role="close" aria-role="close" id="search_close" style="margin-left: -1.5rem; z-index: 10;"> <i class="fa fa-times"></i> </button> </div> <div class="input-group-append"> <button class="btn btn-success" type="submit" style="z-index: 15;">
+                                <button class="btn bg-transparent close" type="button" role="close" aria-role="close" id="search_close" style="margin-left: -1.5rem; z-index: 10;"> <i class="fas fa-times"></i> </button> </div> <div class="input-group-append"> <button class="btn btn-success" type="submit" style="z-index: 15;">
                                     <i class="fas fa-search"></i>
                                 </button>
                             </div>
                         </div>
                     </div>
                 </form>
+                {% endcomment %}
+                
                 {# TODO: Add infinite scroll #}
+                <p class="text-success d-flex px-1">
+                    <h4>{% trans 'Roles' %}</h4>
+                    <a class="ml-auto text-success font-weight-bold" href="{% url 'permafrost:role-create' %}" role="button"><i class="fas fa-plus mr-2" aria-label="{% trans 'Add Role' %}"></i> {% trans 'Add Role' %}</a>   
+                </p>
                 <ul class="list-group list-group-flush border-radius-0 flex-grow-1 overflow-auto"> 
                     {% for role in object_list %}
-                    <li class="list-group-item border-radius-0{% if object == role %} bg-grey-200{% endif %}">
+                    <li class="px-2 list-group-item border-radius-0{% if object == role %} bg-gray-200{% endif %}">
                         <a class="d-block text-gray-800" href="{{ role.get_absolute_url }}">
                             <div class="font-weight-bold">
                                 {{ role }}
@@ -52,14 +58,14 @@
             {% if object %}
             <div class="d-flex mb-3">
                 <h2>{{ object.name }}</h2>
-                <a class="ml-auto" href="{{ object.get_update_url }}" alt="{% trans 'Edit Role' %}">
-                    <i class="fas fa-pen">{% trans 'Edit Role' %}</i>
+                <a class="ml-auto text-success" href="{{ object.get_update_url }}" alt="{% trans 'Edit Role' %}">
+                    <i class="fas fa-pen" aria-label="{% trans 'Edit Role' %}"></i>
                 </a>
             </div>
             {% if object.description %}
             <p>{{ object.description }}</p>
             {% endif %}
-            <p>{% trans 'Role Type' %}: <span class="font-weight-bold">{{ object.get_category_display}}</span></p>
+            <p>{% trans 'Role Type' %}: <span class="font-weight-bold">{{ object.get_category_display }}</span></p>
             
             {% regroup permissions by content_type as content_type_list %}
             
@@ -104,7 +110,7 @@
 
 {% comment %}
 # Possible placeholder for infinite scroll
-<script>
+<!-- <script>
     const contextmenu = document.getElementById('contextmenu');
     const contextmenusb = document.querySelector('#contextmenu .scrollbox');
     let contextmenuIsScrolling = false;
@@ -125,7 +131,7 @@
     }
 
     contextmenusb.addEventListener('scroll', setFade);
-</script> 
+</script>  -->
 {% endcomment %}
 
 {% endblock %}
