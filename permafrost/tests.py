@@ -333,14 +333,14 @@ class PermafrostViewTests(TestCase):
         self.assertTrue(len(objects))
         
         for object in objects:
-            self.assertContains(response, f'<li class="list-group-item"><a href="{object.get_absolute_url()}">{object.name}</a></li>')
+            self.assertContains(response, f'{object}')
     
     def test_permafrostrole_manage_template_displays_selected_role_details(self):
         uri = reverse('permafrost:roles-manage')
         response = self.client.get(uri)
         default_role = PermafrostRole.on_site.first()  
-        self.assertContains(response, f'<h6 class="m-0 mb-2 font-weight-bold text-primary">{default_role.name}</h6>')
-        self.assertContains(response, f'Role Type: {default_role.get_category_display()}')
+        self.assertContains(response, f'<h2>{default_role.name}</h2>')
+        self.assertContains(response, f'<p>Role Type: <span class="font-weight-bold">{default_role.get_category_display()}</span></p>')
         self.assertContains(response, f'<p>{default_role.description}</p>')
 
     def test_permafrostrole_manage_template_displays_selected_role_permissions(self):
