@@ -6,9 +6,8 @@
 
 {% block content %}
 <form method="POST" id="role_form">
-    {% csrf_token %}
-<div class="d-sm-flex align-items-center justify-content-between my-3">
-<h1 class="text-gray-800 m-0"> {% trans 'Roles & Permissions' %}</h1>
+<div class="d-sm-flex align-items-center justify-content-between mb-4">
+<h2> {% trans 'Roles & Permissions' %}</h2>
 <a href="{% if object %}{{ object.get_absolute_url }}{% else %}{% url 'permafrost:roles-manage' %}{% endif %}" class="btn btn-success btn-outline ml-auto">{% trans 'Cancel' %}</a>
 <button type="submit" class="btn btn-success ml-1">
     {% if object %}
@@ -18,95 +17,34 @@
     {% endif %}
 </button>
 </div>
+    {% csrf_token %}
     <div class="card">
         <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
-            <h3 class="m-0 text-primary font-weight-bold">
+            <h6 class="m-0 text-primary font-weight-bold">
                 {% if object %}
                 {% trans 'Edit Permissions' %}: {{ form.initial.name }}
                 {% else %}
                 {% trans 'Create Role' %}
                 {% endif %}
-            </h3>
+            </h6>
         </div>
         <div class="card-body">
             {{ form.non_field_errors }}
-            <div class="form-row">
-                <div class="form-group col-12 col-md-4">
-                    <label for="{{ form.name.id_for_label }}">
-                        {{ form.name.label }}
-                    </label>
-                    {% if form.name.required %}<span class="required">*</span>{% endif %}
-                    <input 
-                        name="{{ form.name.name }}" 
-                        type="text" 
-                        id="{{form.name.id_for_label}}" 
-                        class="form-control{% if form.name.errors %} is-invalid{% endif %}" 
-                        placeholder="{{ form.name.help_text }}" value="{{form.instance.name}}" >
-                    
-                    {% if form.name.errors %}
-                        <div class="invalid-feedback">
-                            {% for error in form.name.errors %}
-                                {{ error }}
-                            {% endfor %}
-                        </div>
-                    {% endif %}
-                        
-                </div>
-            </div>
-            <div class="form-row">
-                <div class="form-group col">
-                    <label for="{{ form.description.id_for_label }}">
-                        {{ form.description.label }}
-                    </label>
-                    {% if form.description.required %}<span class="required">*</span>{% endif %}
-                    <input 
-                        name="{{ form.description.name }}" 
-                        type="text" id="{{ form.description.id_for_label }}" 
-                        class="form-control{% if form.name.errors %} is-invalid{% endif %}" 
-                        placeholder="{{ form.description.help_text }}"
-                        {% if form.instance.description %}
-                        value="{{form.instance.description}}"
-                        {% else %}
-                         value=""   
-                        {% endif %}>
-
-                    {% if form.description.errors %}
-                        <div class="invalid-feedback">
-                            {% for error in form.description.errors %}
-                                {{ error }}
-                            {% endfor %}
-                        </div>
-                    {% endif %}
-                </div>
-            </div>
-            <div class="form-row">
-                <div class="form-group col-12 col-md-4">
-                    <label for="{{ form.description.id_for_label }}">
-                        {{ form.description.label }}
-                    </label>
-                    {% if form.description.required %}<span class="required">*</span>{% endif %}
-                    
-                    {{ form.category }}
-
-                    {% if form.description.errors %}
-                        <div class="invalid-feedback">
-                            {% for error in form.description.errors %}
-                                {{ error }}
-                            {% endfor %}
-                        </div>
-                    {% endif %}
-                </div>
-            </div>
-            <!-- {% for field in form %}
+            {% for field in form %}
                 <div class="fieldWrapper form-group" aria-required={% if field.field.required %}"true"{% else %}"false"{% endif %}>
                     {{ field.label_tag }}{% if field.field.required %}<span class="required">*</span>{% endif %}
+                    
                     {{ field }}
+                    
+                    {% if field.help_text %}
+                    <p class="help">{{ field.help_text|safe }}</p>
+                    {% endif %}
                     {{ field.errors }}
                 </div>
-            {% endfor %} -->
-        
+            {% endfor %}
         </div>
-
+        <div class="card-footer">
+        </div>
     </div>
 </form>
 {% endblock %}

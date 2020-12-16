@@ -41,7 +41,7 @@ def bootstrappify(fields):
 
 class SelectPermafrostRoleTypeForm(ModelForm):
     name = CharField(required=False)
-    description = CharField(required=False)
+    description = CharField(required=False, widget=Textarea())
     category = ChoiceField(choices=CHOICES)
     
     class Meta:
@@ -51,8 +51,6 @@ class SelectPermafrostRoleTypeForm(ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields['name'].help_text =  PermafrostRole.name.field.help_text
-        self.fields['description'].help_text =  PermafrostRole.description.field.help_text
         bootstrappify(self.fields)
 
     
@@ -62,6 +60,9 @@ class PermafrostRoleCreateForm(ModelForm):
     class Meta:
         model = PermafrostRole
         fields = ('name', 'description', 'category',)
+        widgets = {
+            'description': Textarea(),
+        }
         labels = LABELS
 
     def __init__(self, *args, **kwargs):
