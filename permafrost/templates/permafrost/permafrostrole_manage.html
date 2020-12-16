@@ -77,12 +77,9 @@
 
         {% regroup permissions by content_type as content_type_list %}
 
-        {% for content_type, permission_list in content_type_list %}
-        {% cycle 'odd' 'even' as col silent %}
-        {% if col == 'odd' %}
-        <div class="row"> {# start .row #}
-            {% endif %}
-            <div class="col-sm">
+        <div class="masonry d-flex flex-column flex-wrap h-100"> 
+            {% for content_type, permission_list in content_type_list %}
+            <div class="masonry-brick w-50 mb-3 mr-3 d-inline-block">
                 <p class="text-capitalize small font-weight-bold mb-1 text-gray-600">{{ content_type.name }}</p>
                 <p>
                     {% for permission in permission_list %}
@@ -92,20 +89,18 @@
                     {% endif %}
                     {% endfor %}
                 </p>
-
             </div>
-            {% if col == 'even' or forloop.last %}
-        </div> {# end .row #}
-        {% endif %}
+            {% endfor %}
 
-        {% if forloop.last %}
-        {% resetcycle col %}
-        {% endif %}
-        {% endfor %}
-
+        </div> 
         {% endif %}
     </div>
 </div>
+<style>
+    .vh-75 {
+        height: 82vh;
+    }
+</style>
 {% endblock %}
 {% block extra_js %}
 
