@@ -437,7 +437,11 @@ class PermafrostViewTests(TestCase):
             self.assertContains(response, 'name="name"')
             self.assertContains(response, 'name="description"')
             self.assertContains(response, 'name="category"')
-            self.assertContains(response, 'name="deleted"')
+            self.assertContains(response, 'name="permissions"')
+            
+            ## add deleted field down the line
+            # self.assertContains(response, 'name="deleted"')
+            
             self.assertIsInstance(response.context['form'], PermafrostRoleUpdateForm)
         except:
             print("")
@@ -454,6 +458,33 @@ class PermafrostViewTests(TestCase):
         response = self.client.get(uri)
         self.assertTemplateUsed(response, 'permafrost/base.html')
         self.assertTemplateUsed(response, 'permafrost/permafrostrole_form.html')
+
+    def test_update_form_has_selected_optional_permission(self):
+        ## add optional permissions
+        self.pf_role.permissions_set(Permission.objects.filter(codename__in=['add_permafrostrole', 'change_permafrostrole']))
+        
+        uri = reverse('permafrost:role-update', kwargs={'slug': 'test-role'})
+        response = self.client.get(uri)
+        try:
+            self.assertContains(response, """<input 
+                                class="ml-auto" 
+                                type="checkbox" 
+                                name="permissions" 
+                                value="37"
+                                 checked
+                            >""")
+            self.assertContains(response, """<input 
+                                class="ml-auto" 
+                                type="checkbox" 
+                                name="permissions" 
+                                value="38"
+                                 checked
+                            >""")
+        except:
+            print("")
+            print(response.content.decode())
+            print("")
+            raise
     
     def test_role_detail_GET_returns_404_if_not_on_current_site(self):
         uri = reverse('permafrost:role-update', kwargs={'slug': 'administrator'})
