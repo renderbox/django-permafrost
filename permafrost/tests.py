@@ -611,16 +611,14 @@ class PermafrostFormClassTests(TestCase):
         
         self.assertIn('permissions', form.fields)
 
-        self.assertEqual(form.fields['permissions'].queryset, Permission.objects.filter(id__in=[37,38]))
+        self.assertEqual(list(form.fields['permissions'].queryset), list(Permission.objects.filter(id__in=[37,38])))
         
         form_2 = PermafrostRoleCreateForm(initial={'category':'administration'})
         
-        self.assertEqual(form_2.fields['permissions'].queryset, Permission.objects.filter(id__in=[39]))
-        
+        self.assertEqual(list(form_2.fields['permissions'].queryset), list(Permission.objects.filter(id__in=[39])))
         form_3 = PermafrostRoleCreateForm(initial={'category':'user'})
         
-        self.assertEqual(form_3.fields['permissions'].queryset, Permission.objects.filter(id__in=[40]))
-
+        self.assertEqual(list(form_3.fields['permissions'].queryset), list(Permission.objects.filter(id__in=[40])))
 
     def test_update_form_category_is_read_only_and_disabled(self):
         form = PermafrostRoleUpdateForm(instance=self.pf_role)
