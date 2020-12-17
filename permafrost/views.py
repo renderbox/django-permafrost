@@ -12,7 +12,7 @@ from unittest import skipIf
 
 from django.views.generic.edit import CreateView, FormView
 
-from .models import PermafrostRole
+from .models import PermafrostRole, get_optional_by_category, get_required_by_category
 from .forms import PermafrostRoleCreateForm, PermafrostRoleUpdateForm, SelectPermafrostRoleTypeForm
 #--------------
 # UTILITIES
@@ -26,6 +26,20 @@ def get_client_ip(request):
         ip = request.META.get('REMOTE_ADDR')
     return ip
 
+def group_permission_categories(required, optional, selected_optional):
+        permission_categories = {}
+        for permission in set(required + optional):
+            permission_type_key = 'required' if permission in required else 'optional'
+            if permission.content_type.model not in permission_categories:
+                permission_categories[permission.content_type.model] = {
+                    'name': permission.content_type.name,
+                    'optional': [],
+                    'required': []
+                }
+            if permission in selected_optional:
+                permission.selected = True
+            permission_categories[permission.content_type.model][permission_type_key].append(permission)
+        return permission_categories
 
 #--------------
 # MIXIN VIEWS
@@ -102,14 +116,20 @@ class PermafrostRoleCreateView(PermissionRequiredMixin, CreateView):
     def post(self, request, *args, **kwargs):
         if self.request.POST.get('select_role', False):
             submitted =  SelectPermafrostRoleTypeForm(request.POST)
+            permission_categories = {}
             if submitted.is_valid():
                 form = PermafrostRoleCreateForm(initial=submitted.cleaned_data)
+                category = submitted.cleaned_data['category']
+                required = get_required_by_category(category=category)
+                optional = get_optional_by_category(category=category)
+                selected_optional = []
+                permission_categories = group_permission_categories(required, optional, selected_optional)
             else:
                 form = submitted
             return render(
                 request, 
                 'permafrost/permafrostrole_form.html', 
-                context={ 'form': form },
+                context={ 'form': form, 'permission_categories': permission_categories },
             )
 
         return super().post(request, *args, **kwargs)
@@ -119,7 +139,7 @@ class PermafrostRoleCreateView(PermissionRequiredMixin, CreateView):
             return SelectPermafrostRoleTypeForm
         return PermafrostRoleCreateForm
 
-
+    
 
 # List Permission Groups
 class PermafrostRoleListView(PermissionRequiredMixin, ListView):
@@ -173,6 +193,16 @@ class PermafrostRoleUpdateView(PermissionRequiredMixin, UpdateView):
     model = PermafrostRole
     queryset = PermafrostRole.on_site.all()
     permission_required = ['permafrost.change_permafrostrole']
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        role = context['object']
+        required = role.required_permissions()
+        optional = role.optional_permissions()
+        selected_optional = role.permissions().filter(id__in=[permission.id for permission in optional])
+        context['permission_categories'] = group_permission_categories(required, optional, selected_optional)
+        return context
+    
 
 # Delete Permission Groups
 class PermafrostRoleDeleteView(DeleteView):
