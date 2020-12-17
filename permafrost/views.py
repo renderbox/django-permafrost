@@ -120,7 +120,6 @@ class PermafrostRoleCreateView(PermissionRequiredMixin, CreateView):
         return PermafrostRoleCreateForm
 
 
-
 # List Permission Groups
 class PermafrostRoleListView(PermissionRequiredMixin, ListView):
     model = PermafrostRole
@@ -173,6 +172,34 @@ class PermafrostRoleUpdateView(PermissionRequiredMixin, UpdateView):
     model = PermafrostRole
     queryset = PermafrostRole.on_site.all()
     permission_required = ['permafrost.change_permafrostrole']
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        role = context['object']
+        required = role.required_permissions()
+        optional = role.optional_permissions()
+        selected_optional = role.permissions().filter(id__in=[permission.id for permission in optional])
+        permission_categories = {}
+        
+        for permission in set(required + optional):
+            
+            permission_type_key = 'required' if permission in required else 'optional'
+
+            if permission.content_type.model not in permission_categories:
+                permission_categories[permission.content_type.model] = {
+                    'name': permission.content_type.name,
+                    'optional': [],
+                    'required': []
+                }
+            
+            if permission in selected_optional:
+                permission.selected = True
+
+            permission_categories[permission.content_type.model][permission_type_key].append(permission)
+
+        context['permission_categories'] = permission_categories
+        return context
+    
 
 # Delete Permission Groups
 class PermafrostRoleDeleteView(DeleteView):
