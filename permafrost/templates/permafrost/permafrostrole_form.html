@@ -32,7 +32,7 @@
             {{ form.non_field_errors }}
             <div class="form-row">
                 <div class="form-group col-12 col-md-4">
-                    <label for="{{ form.name.id_for_label }}">
+                    <label class="text-gray-300" for="{{ form.name.id_for_label }}">
                         {{ form.name.label }}
                     </label>
                     {% if form.name.required %}<span class="required">*</span>{% endif %}
@@ -41,7 +41,7 @@
                         type="text" 
                         id="{{form.name.id_for_label}}" 
                         class="form-control{% if form.name.errors %} is-invalid{% endif %}" 
-                        placeholder="{{ form.name.help_text }}" value="{{form.instance.name}}" >
+                        placeholder="{{ form.name.help_text }}" value="{% firstof form.initial.name form.data.name form.instance.name '' %}" >
                     
                     {% if form.name.errors %}
                         <div class="invalid-feedback">
@@ -55,7 +55,7 @@
             </div>
             <div class="form-row">
                 <div class="form-group col">
-                    <label for="{{ form.description.id_for_label }}">
+                    <label class="text-gray-300" for="{{ form.description.id_for_label }}">
                         {{ form.description.label }}
                     </label>
                     {% if form.description.required %}<span class="required">*</span>{% endif %}
@@ -64,11 +64,7 @@
                         type="text" id="{{ form.description.id_for_label }}" 
                         class="form-control{% if form.name.errors %} is-invalid{% endif %}" 
                         placeholder="{{ form.description.help_text }}"
-                        {% if form.instance.description %}
-                        value="{{form.instance.description}}"
-                        {% else %}
-                         value=""   
-                        {% endif %}>
+                        value="{% firstof form.initial.description form.data.description form.instance.description '' %}" >
 
                     {% if form.description.errors %}
                         <div class="invalid-feedback">
@@ -81,36 +77,68 @@
             </div>
             <div class="form-row">
                 <div class="form-group col-12 col-md-4">
-                    <label for="{{ form.description.id_for_label }}">
-                        {{ form.description.label }}
+                    <label class="text-gray-300" for="{{ form.category.id_for_label }}">
+                        {{ form.category.label }}
                     </label>
-                    {% if form.description.required %}<span class="required">*</span>{% endif %}
+                    {% if form.category.required %}<span class="required">*</span>{% endif %}
                     
                     {{ form.category }}
 
-                    {% if form.description.errors %}
+                    {% if form.category.errors %}
                         <div class="invalid-feedback">
-                            {% for error in form.description.errors %}
+                            {% for error in form.category.errors %}
                                 {{ error }}
                             {% endfor %}
                         </div>
                     {% endif %}
                 </div>
             </div>
-            <!-- {% for field in form %}
-                <div class="fieldWrapper form-group" aria-required={% if field.field.required %}"true"{% else %}"false"{% endif %}>
-                    {{ field.label_tag }}{% if field.field.required %}<span class="required">*</span>{% endif %}
-                    {{ field }}
-                    {{ field.errors }}
+            <div class="form-row border-bottom-gray-300">
+                <p class="col-6 font-weight-bold">{% trans 'Required Permissions' %}</p>
+                <p class="col-6 font-weight-bold">{% trans 'Optional Permissions' %}</p>
+            </div>
+            <div class="form-row">
+                {% if form.permissions.errors %}
+                    <div class="invalid-feedback">
+                        {% for error in form.permissions.errors %}
+                            {{ error }}
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            </div>
+            {% for content_type, category in permission_categories.items %}
+                <div class="form-row">
+                    <p class="small font-weight-bold col-12 text-gray-600 mt-3">{{ category.name }}</p>
+                    <div class="col-6">
+                        {% for permission in category.required %}
+                        <div class="d-flex align-items-center">
+                            <span>{{ permission.name }}</span>
+                            <i class="fas fa-info-circle text-gray-600" aria-label="{% trans 'Info' %}"></i>
+                            <i class="ml-auto fas fa-lock text-gray-600" aria-label="{% trans 'Default Permission' %}"></i>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    <div class="col-6">
+                        {% for permission in category.optional %}
+                        <div class="d-flex align-items-center">
+                            <span>{{ permission.name }}</span>
+                            <i class="fas fa-info-circle text-gray-600" aria-label="{% trans 'Info' %}"></i>
+                            <input 
+                                class="ml-auto" 
+                                type="checkbox" 
+                                name="{{ form.permissions.name }}" 
+                                value="{{ permission.id }}"
+                                {% if permission.selected %} checked{% endif %}
+                            >
+                        </div>
+                        {% endfor %}
+                    </div>
                 </div>
-            {% endfor %} -->
-        
+            {% endfor %}
         </div>
-
     </div>
 </form>
 {% endblock %}
-
 
 {% block extra_js %}
     {% if not object %} {# "Hide JS change handler on edit " #}
