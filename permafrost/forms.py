@@ -2,9 +2,10 @@
 from django.conf import settings
 from django.contrib.auth.models import Permission
 from django.core.exceptions import ValidationError
-from django.forms import ModelForm, MultipleChoiceField, CheckboxSelectMultiple
+from django.forms import ModelForm
 from django.forms.fields import CharField, ChoiceField, BooleanField
-from django.forms.widgets import CheckboxInput, Textarea
+from django.forms.models import ModelMultipleChoiceField
+from django.forms.widgets import CheckboxInput
 from django.utils.translation import ugettext_lazy as _
 from .models import PermafrostRole, get_optional_by_category, get_required_by_category, get_choices
 
@@ -59,40 +60,42 @@ class SelectPermafrostRoleTypeForm(ModelForm):
 
 
 class PermafrostRoleCreateForm(ModelForm):
+    permissions = ModelMultipleChoiceField(queryset=Permission.objects.all(), required=False)
     class Meta:
         model = PermafrostRole
-        fields = ('name', 'description', 'category',)
+        fields = ('name', 'description', 'category', 'permissions')
         labels = LABELS
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
         self.fields['category'].choices = CHOICES
+        
         category = self.initial.get(
             'category', 
             self.data.get('category', None)
         )
         
+        if self.instance:
+            category = self.instance.category if self.instance.category else category
+        
+        if category:
+            
+            all_optional_permissions = get_optional_by_category(category=category)
+            ids = [perm.pk for perm in all_optional_permissions]
+        
+            self.fields['permissions'].queryset = Permission.objects.filter(id__in=ids)
+
         bootstrappify(self.fields)
         
-        if category:  
-
-            required_perms = get_required_by_category(category)
-            optional_perms = get_optional_by_category(category)
-            required_choices = assemble_optiongroups_for_widget(required_perms)
-            optional_choices = assemble_optiongroups_for_widget(optional_perms)
-            
-            initial = [perm.pk for perm in required_perms]
-            self.fields[f'optional_{category}_perms'] = MultipleChoiceField(label=_("Optional Permissions"), choices=optional_choices, widget=CheckboxSelectMultiple(), required=False)
-            self.fields[f'required_{category}_perms'] = MultipleChoiceField(label=_("Required Permissions"), initial=initial, choices=required_choices, widget=CheckboxSelectMultiple(attrs={'readonly':True, 'disabled': True}), required=False)
-
     def save(self, commit=True):
-        instance = super().save(commit)
+        instance = super().save(commit)        
         category = instance.category
-        if self.cleaned_data and f'optional_{category}_perms' in self.cleaned_data:
+
+        if 'permissions' in self.cleaned_data:
             perm_ids = []
             if category:
-                perm_ids = self.cleaned_data[f'optional_{category}_perms' ]
+                perm_ids = self.cleaned_data['permissions']
             if perm_ids:
                 instance.permissions_set(Permission.objects.filter(id__in=perm_ids))
             else:
@@ -144,26 +147,7 @@ class PermafrostRoleUpdateForm(PermafrostRoleCreateForm):
         self.fields['category'].disabled = True
         self.fields['category'].required = False
         self.fields['category'].initial = self.instance.category
-        
         self.fields['deleted'].initial = self.instance.deleted
-        
-        category = self.instance.category
-
-        optional_perms = get_optional_by_category(category)
-        optional_choices = assemble_optiongroups_for_widget(optional_perms)
-        
-        available_optional_ids = [permission.id for permission in optional_perms]
-        preselected_optional = [permission.id for permission in self.instance.permissions().all() if permission.id in available_optional_ids]
-
-        self.fields.update({
-            f'optional_{category}_perms': MultipleChoiceField(
-                label=_("Optional Permissions"), 
-                initial=preselected_optional, 
-                choices=optional_choices, 
-                widget=CheckboxSelectMultiple(),
-                required=False
-            )
-        })
 
     def save(self, commit=True):
         if self.cleaned_data['deleted']:
