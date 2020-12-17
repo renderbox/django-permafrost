@@ -6,9 +6,8 @@
 
 {% block content %}
 <form method="POST" id="role_form">
-    {% csrf_token %}
-<div class="d-sm-flex align-items-center justify-content-between my-3">
-<h1 class="text-gray-800 m-0"> {% trans 'Roles & Permissions' %}</h1>
+<div class="d-sm-flex align-items-center justify-content-between mb-4">
+<h2> {% trans 'Roles & Permissions' %}</h2>
 <a href="{% if object %}{{ object.get_absolute_url }}{% else %}{% url 'permafrost:roles-manage' %}{% endif %}" class="btn btn-success btn-outline ml-auto">{% trans 'Cancel' %}</a>
 <button type="submit" class="btn btn-success ml-1">
     {% if object %}
@@ -18,15 +17,16 @@
     {% endif %}
 </button>
 </div>
+    {% csrf_token %}
     <div class="card">
         <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
-            <h3 class="m-0 text-primary font-weight-bold">
+            <h6 class="m-0 text-primary font-weight-bold">
                 {% if object %}
                 {% trans 'Edit Permissions' %}: {{ form.initial.name }}
                 {% else %}
                 {% trans 'Create Role' %}
                 {% endif %}
-            </h3>
+            </h6>
         </div>
         <div class="card-body">
             {{ form.non_field_errors }}
