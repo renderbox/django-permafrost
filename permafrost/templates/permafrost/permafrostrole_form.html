@@ -62,7 +62,7 @@
                     <input 
                         name="{{ form.description.name }}" 
                         type="text" id="{{ form.description.id_for_label }}" 
-                        class="form-control{% if form.name.errors %} is-invalid{% endif %}" 
+                        class="form-control{% if form.description.errors %} is-invalid{% endif %}" 
                         placeholder="{{ form.description.help_text }}"
                         value="{% firstof form.initial.description form.data.description form.instance.description '' %}" >
 
