@@ -42,7 +42,7 @@ def bootstrappify(fields):
 
 class SelectPermafrostRoleTypeForm(ModelForm):
     name = CharField(required=False)
-    description = CharField(required=False, widget=Textarea())
+    description = CharField(required=False)
     category = ChoiceField(choices=CHOICES)
     
     class Meta:
