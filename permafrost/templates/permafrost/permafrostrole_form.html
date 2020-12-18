@@ -82,8 +82,17 @@
                     </label>
                     {% if form.category.required %}<span class="required">*</span>{% endif %}
                     
+                    {% if object %}
+                    <div class="disabled-select-wrapper">
+                    {% endif %}
+                        
                     {{ form.category }}
-
+                    
+                    {% if object %}
+                        <i class="fas fa-lock"></i>
+                    </div> {# end disabled-select-wrapper #}
+                    {% endif %}
+                        
                     {% if form.category.errors %}
                         <div class="invalid-feedback">
                             {% for error in form.category.errors %}
