@@ -80,7 +80,6 @@ class PermafrostRoleCreateForm(ModelForm):
             category = self.instance.category if self.instance.category else category
         
         if category:
-
             all_optional_permissions = get_optional_by_category(category=category)
             ids = [perm.pk for perm in all_optional_permissions]
         
