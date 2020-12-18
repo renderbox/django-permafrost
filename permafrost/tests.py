@@ -437,7 +437,11 @@ class PermafrostViewTests(TestCase):
             self.assertContains(response, 'name="name"')
             self.assertContains(response, 'name="description"')
             self.assertContains(response, 'name="category"')
-            self.assertContains(response, 'name="deleted"')
+            self.assertContains(response, 'name="permissions"')
+            
+            ## add deleted field down the line
+            # self.assertContains(response, 'name="deleted"')
+            
             self.assertIsInstance(response.context['form'], PermafrostRoleUpdateForm)
         except:
             print("")
@@ -454,6 +458,33 @@ class PermafrostViewTests(TestCase):
         response = self.client.get(uri)
         self.assertTemplateUsed(response, 'permafrost/base.html')
         self.assertTemplateUsed(response, 'permafrost/permafrostrole_form.html')
+
+    def test_update_form_has_selected_optional_permission(self):
+        ## add optional permissions
+        self.pf_role.permissions_set(Permission.objects.filter(codename__in=['add_permafrostrole', 'change_permafrostrole']))
+        
+        uri = reverse('permafrost:role-update', kwargs={'slug': 'test-role'})
+        response = self.client.get(uri)
+        try:
+            self.assertContains(response, """<input 
+                                class="ml-auto" 
+                                type="checkbox" 
+                                name="permissions" 
+                                value="37"
+                                 checked
+                            >""")
+            self.assertContains(response, """<input 
+                                class="ml-auto" 
+                                type="checkbox" 
+                                name="permissions" 
+                                value="38"
+                                 checked
+                            >""")
+        except:
+            print("")
+            print(response.content.decode())
+            print("")
+            raise
     
     def test_role_detail_GET_returns_404_if_not_on_current_site(self):
         uri = reverse('permafrost:role-update', kwargs={'slug': 'administrator'})
@@ -482,7 +513,7 @@ class PermafrostViewTests(TestCase):
         
         uri = reverse('permafrost:role-update', kwargs={'slug': 'test-role'})
         data = model_to_dict(self.pf_role)
-        data.update({'optional_staff_perms': ['37','38']})
+        data.update({'permissions': ['37','38']})
         ## listcomp below used to remove 'description': None
         post_data = {k: v for k, v in data.items() if v is not None}
         self.client.post(uri, data=post_data, follow=True)
@@ -493,7 +524,7 @@ class PermafrostViewTests(TestCase):
         
         ## remove one permission
         
-        data.update({'optional_staff_perms': ['37']})
+        data.update({'permissions': ['37']})
         ## listcomp below used to remove 'description': None
         post_data = {k: v for k, v in data.items() if v is not None}
         self.client.post(uri, data=post_data, follow=True)
@@ -571,9 +602,6 @@ class PermafrostFormClassTests(TestCase):
     def setUp(self):
         self.create_form = PermafrostRoleCreateForm()
         self.pf_role = PermafrostRole.objects.get(slug="councilor")
-
-    def test_create_form_description_uses_textarea(self):
-        self.assertIsInstance(self.create_form.fields['description'].widget, Textarea)
     
     def test_create_form_first_category_choice_is_blank(self):
         self.assertEqual(self.create_form.fields['category'].choices[0], ('', "Choose Role Type"))
@@ -581,18 +609,16 @@ class PermafrostFormClassTests(TestCase):
     def test_create_form_optional_required_permission_field_dynamic_based_initial_selected_category(self):
         form = PermafrostRoleCreateForm(initial={'category':'staff'})
         
-        self.assertIn('optional_staff_perms', form.fields)
-        self.assertIn('required_staff_perms', form.fields)
+        self.assertIn('permissions', form.fields)
+
+        self.assertEqual(list(form.fields['permissions'].queryset), list(Permission.objects.filter(id__in=[37,38])))
         
         form_2 = PermafrostRoleCreateForm(initial={'category':'administration'})
         
-        self.assertIn('optional_administration_perms', form_2.fields)
-        self.assertIn('required_administration_perms', form_2.fields)
-        
+        self.assertEqual(list(form_2.fields['permissions'].queryset), list(Permission.objects.filter(id__in=[39])))
         form_3 = PermafrostRoleCreateForm(initial={'category':'user'})
         
-        self.assertIn('optional_user_perms', form_3.fields)
-        self.assertIn('required_user_perms', form_3.fields)
+        self.assertEqual(list(form_3.fields['permissions'].queryset), list(Permission.objects.filter(id__in=[40])))
 
     def test_update_form_category_is_read_only_and_disabled(self):
         form = PermafrostRoleUpdateForm(instance=self.pf_role)
@@ -607,12 +633,3 @@ class PermafrostFormClassTests(TestCase):
         self.assertEqual(form['category'].value(), self.pf_role.category)
         self.assertEqual(form['description'].value(), self.pf_role.description)
         self.assertEqual(form['deleted'].value(), self.pf_role.deleted)
-    
-    def test_update_form_has_selected_optional_permission(self):
-        ## add optional permissions
-        self.pf_role.permissions_set(Permission.objects.filter(codename__in=['add_permafrostrole', 'change_permafrostrole']))
-        
-        form = PermafrostRoleUpdateForm(instance=self.pf_role)
-
-        self.assertEqual(form['required_staff_perms'].value(), [40])
-        self.assertEqual(form['optional_staff_perms'].value(), [37,38])
