@@ -146,7 +146,9 @@ class PermafrostRoleUpdateForm(PermafrostRoleCreateForm):
         self.fields['category'].widget.attrs.update({'readonly': True, 'disabled': True})
         self.fields['category'].disabled = True
         self.fields['category'].required = False
+        self.fields['category'].choices = [choice for choice in CHOICES if choice[0] == self.instance.category]
         self.fields['category'].initial = self.instance.category
+        ## limit choices to saved category
         self.fields['deleted'].initial = self.instance.deleted
 
     def save(self, commit=True):
