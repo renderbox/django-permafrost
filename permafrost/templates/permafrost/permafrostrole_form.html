@@ -6,19 +6,19 @@
 
 {% block content %}
 <form method="POST" id="role_form">
-<div class="d-sm-flex align-items-center justify-content-between mb-4">
-<h2> {% trans 'Roles & Permissions' %}</h2>
-<a href="{% if object %}{{ object.get_absolute_url }}{% else %}{% url 'permafrost:roles-manage' %}{% endif %}" class="btn btn-success btn-outline ml-auto">{% trans 'Cancel' %}</a>
-<button type="submit" class="btn btn-success ml-1">
-    {% if object %}
-        {% trans 'Save' %}                
-    {% else %}
-        {% trans 'Create' %}    
-    {% endif %}
-</button>
-</div>
-    {% csrf_token %}
-    <div class="card">
+  {% csrf_token %}
+    <div class="d-sm-flex align-items-center justify-content-between my-3">
+      <h1 class="text-gray-800 m-0"> {% trans 'Roles & Permissions' %}</h1>
+      <a href="{% if object %}{{ object.get_absolute_url }}{% else %}{% url 'permafrost:roles-manage' %}{% endif %}" class="btn btn-outline-success ml-auto">{% trans 'Cancel' %}</a>
+      <button type="submit" class="btn btn-success ml-1">
+          {% if object %}
+              {% trans 'Save' %}                
+          {% else %}
+              {% trans 'Create' %}    
+          {% endif %}
+      </button>
+    </div>
+    <div class="card text-gray-800 pb-5">
         <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
             <h6 class="m-0 text-primary font-weight-bold">
                 {% if object %}
@@ -32,7 +32,7 @@
             {{ form.non_field_errors }}
             <div class="form-row">
                 <div class="form-group col-12 col-md-4">
-                    <label class="text-gray-300" for="{{ form.name.id_for_label }}">
+                    <label class="text-gray-600" for="{{ form.name.id_for_label }}">
                         {{ form.name.label }}
                     </label>
                     {% if form.name.required %}<span class="required">*</span>{% endif %}
@@ -55,7 +55,7 @@
             </div>
             <div class="form-row">
                 <div class="form-group col">
-                    <label class="text-gray-300" for="{{ form.description.id_for_label }}">
+                    <label class="text-gray-600" for="{{ form.description.id_for_label }}">
                         {{ form.description.label }}
                     </label>
                     {% if form.description.required %}<span class="required">*</span>{% endif %}
@@ -77,13 +77,22 @@
             </div>
             <div class="form-row">
                 <div class="form-group col-12 col-md-4">
-                    <label class="text-gray-300" for="{{ form.category.id_for_label }}">
+                    <label class="text-gray-600" for="{{ form.category.id_for_label }}">
                         {{ form.category.label }}
                     </label>
                     {% if form.category.required %}<span class="required">*</span>{% endif %}
                     
+                    {% if object %}
+                    <div class="disabled-select-wrapper">
+                    {% endif %}
+                        
                     {{ form.category }}
-
+                    
+                    {% if object %}
+                        <i class="fas fa-lock"></i>
+                    </div> {# end disabled-select-wrapper #}
+                    {% endif %}
+                        
                     {% if form.category.errors %}
                         <div class="invalid-feedback">
                             {% for error in form.category.errors %}
@@ -107,14 +116,16 @@
                 {% endif %}
             </div>
             {% for content_type, category in permission_categories.items %}
-                <div class="form-row">
-                    <p class="small font-weight-bold col-12 text-gray-600 mt-3">{{ category.name }}</p>
+                <div class="row">
+                    <p class="small font-weight-bold col-12 text-gray-600 mt-3 text-capitalize">{{ category.name }}</p>
                     <div class="col-6">
                         {% for permission in category.required %}
                         <div class="d-flex align-items-center">
                             <span>{{ permission.name }}</span>
-                            <i class="fas fa-info-circle text-gray-600" aria-label="{% trans 'Info' %}"></i>
-                            <i class="ml-auto fas fa-lock text-gray-600" aria-label="{% trans 'Default Permission' %}"></i>
+                            {% if permission.short_description %} {# TODO: extend permission to include short_description for tooltip #}
+                            <i class="ml-2 fas fa-info-circle text-gray-600" aria-label="{% trans 'Info' %}"></i>
+                            {% endif %}
+                            <i class="ml-auto fas fa-lock" aria-label="{% trans 'Default Permission' %}"></i>
                         </div>
                         {% endfor %}
                     </div>
@@ -122,7 +133,10 @@
                         {% for permission in category.optional %}
                         <div class="d-flex align-items-center">
                             <span>{{ permission.name }}</span>
-                            <i class="fas fa-info-circle text-gray-600" aria-label="{% trans 'Info' %}"></i>
+                            
+                            {% if permission.short_description %}
+                            <i class="ml-2 fas fa-info-circle text-gray-600" aria-label="{% trans 'Info' %}"></i>
+                            {% endif %}
                             <input 
                                 class="ml-auto" 
                                 type="checkbox" 
@@ -134,6 +148,8 @@
                         {% endfor %}
                     </div>
                 </div>
+            {% empty %}
+                <div class="pb-5 row">{# used for spacing when empty #}</div>
             {% endfor %}
         </div>
     </div>

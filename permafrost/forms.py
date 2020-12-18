@@ -7,7 +7,7 @@ from django.forms.fields import CharField, ChoiceField, BooleanField
 from django.forms.models import ModelMultipleChoiceField
 from django.forms.widgets import CheckboxInput
 from django.utils.translation import ugettext_lazy as _
-from .models import PermafrostRole, get_optional_by_category, get_required_by_category, get_choices
+from .models import PermafrostRole, get_optional_by_category, get_choices
 
 CHOICES = [('', _("Choose Role Type"))] + get_choices()
 
@@ -78,7 +78,6 @@ class PermafrostRoleCreateForm(ModelForm):
             category = self.instance.category if self.instance.category else category
         
         if category:
-            
             all_optional_permissions = get_optional_by_category(category=category)
             ids = [perm.pk for perm in all_optional_permissions]
         
@@ -144,7 +143,9 @@ class PermafrostRoleUpdateForm(PermafrostRoleCreateForm):
         self.fields['category'].widget.attrs.update({'readonly': True, 'disabled': True})
         self.fields['category'].disabled = True
         self.fields['category'].required = False
+        self.fields['category'].choices = [choice for choice in CHOICES if choice[0] == self.instance.category]
         self.fields['category'].initial = self.instance.category
+        ## limit choices to saved category
         self.fields['deleted'].initial = self.instance.deleted
 
     def save(self, commit=True):
