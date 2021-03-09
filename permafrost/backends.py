@@ -5,11 +5,15 @@ from django.contrib.sites.models import Site
 
 class GroupSiteModelBackendMixin():
 
-    def get_group_permissions(self, user_obj, obj=None):
+    def get_group_permissions(self, user_obj, obj=None, site=None):
         '''
         Adds the SiteID for filtering Groups
         '''
-        current_site = Site.objects.get_current()
+        if site:
+            current_site = site
+        else:
+            current_site = Site.objects.get_current()
+    
         user_groups_field = get_user_model()._meta.get_field('groups')
         user_groups_query = 'group__%s' % user_groups_field.related_query_name()
 
