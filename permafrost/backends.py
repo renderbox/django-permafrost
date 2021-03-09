@@ -5,7 +5,7 @@ from django.contrib.sites.models import Site
 
 class GroupSiteModelBackendMixin():
 
-    def get_group_permissions(self, user_obj, obj=None, site=None):
+    def _get_group_permissions(self, user_obj, obj=None, site=None):
         '''
         Adds the SiteID for filtering Groups
         '''
