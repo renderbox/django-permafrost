@@ -206,6 +206,18 @@ class PermafrostRole(models.Model):
         '''
         return "{0}_{1}_{2}".format(self.site.pk, self.category, self.slug)
     
+    def get_group(self):
+        '''
+        Done this way to avoid migration issues with fixture race conditions
+        '''
+        group, created = Group.objects.get_or_create( name=self.get_group_name() )
+
+        if created:
+            group.save()                                    # Permission relationship is a MTM so it needs to be saved first to create the PK
+            self.permissions_set( self.category.includes )  # If a new group is generated, the permissions should be set to the Role Category 'includes' to start (list of strings, "app.perm")
+
+        return group
+    
     def permissions(self):
         return self.group.permissions
 
