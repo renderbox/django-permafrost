@@ -106,19 +106,24 @@ class PermafrostSiteMixin(PermafrostMixin):
         Must return an iterable.
 
         """
-        # TODO: site perms for the current user
-        perms = self.request.user.get_site_permissions(
-            self.request.site
-        )  # Per site query here using self.site #super().get_permission_required()
+        # TODO: check site perms for the current user using request.site to figure out which permissions they have
+        # TODO: Do not rely on adding anything to the user model
+        # TODO: Check the results against self.get_permission_required() to see if they have permissions
 
-        method_perms = getattr(
-            self, "permission_required_" + self.request.method.lower(), set()
-        )  # Extended Perms per method
+        # perms = self.request.user.get_site_permissions(
+        #     self.request.site
+        # )  # Per site query here using self.site #super().get_permission_required()
 
-        if isinstance(method_perms, str):
-            method_perms = (method_perms,)
+        # method_perms = getattr(
+        #     self, "permission_required_" + self.request.method.lower(), set()
+        # )  # Extended Perms per method
 
-        return set(list(perms) + list(method_perms))
+        # if isinstance(method_perms, str):
+        #     method_perms = (method_perms,)
+
+        # return set(list(perms) + list(method_perms))
+
+        return False
 
 
 class PermafrostLogMixin(object):
