@@ -147,7 +147,7 @@ class FilterByRequestSiteQuerysetMixin:
         return super().get_queryset()
 
 # Create Permission Group
-class PermafrostRoleCreateView(PermissionRequiredMixin, CreateView):
+class PermafrostRoleCreateView(PermafrostSiteMixin, CreateView):
     model = PermafrostRole
     permission_required = ["permafrost.add_permafrostrole"]
 
@@ -181,7 +181,7 @@ class PermafrostRoleCreateView(PermissionRequiredMixin, CreateView):
 
 
 # List Permission Groups
-class PermafrostRoleListView(PermissionRequiredMixin, FilterByRequestSiteQuerysetMixin, ListView):
+class PermafrostRoleListView(PermafrostSiteMixin, FilterByRequestSiteQuerysetMixin, ListView):
     model = PermafrostRole
     queryset = PermafrostRole.on_site.all()
     permission_required = ["permafrost.view_permafrostrole"]
@@ -212,7 +212,7 @@ class PermafrostRoleManageView(PermafrostRoleListView):
 
 
 # Detail Permission Groups
-class PermafrostRoleDetailView(PermissionRequiredMixin, FilterByRequestSiteQuerysetMixin, DetailView):
+class PermafrostRoleDetailView(PermafrostSiteMixin, FilterByRequestSiteQuerysetMixin, DetailView):
     model = PermafrostRole
     template_name = "permafrost/permafrostrole_manage.html"
     queryset = PermafrostRole.on_site.all()
@@ -236,7 +236,7 @@ class PermafrostRoleDetailView(PermissionRequiredMixin, FilterByRequestSiteQuery
 
 
 # Update Permission Group
-class PermafrostRoleUpdateView(PermissionRequiredMixin, FilterByRequestSiteQuerysetMixin, UpdateView):
+class PermafrostRoleUpdateView(PermafrostSiteMixin, FilterByRequestSiteQuerysetMixin, UpdateView):
     template_name = "permafrost/permafrostrole_form.html"
     form_class = PermafrostRoleUpdateForm
     model = PermafrostRole
