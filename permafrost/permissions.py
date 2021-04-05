@@ -30,7 +30,10 @@ class PermafrostRESTPermission(BasePermission):
         return True
 
 class PermafrostRESTSitePermission(BasePermission):
-    
+    """
+    This is a permission class that will only work for Django Rest Framework.
+    This class is expecting a middleware that adds the current site to the request.
+    """
     def has_permission(self, request, view):
         perms = getattr(view, "permission_required", set() )
         method_perms = getattr(view, "permission_required_" + request.method.lower(), set() )
