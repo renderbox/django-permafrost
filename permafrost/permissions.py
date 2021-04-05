@@ -32,37 +32,49 @@ class PermafrostRESTPermission(BasePermission):
 class PermafrostRESTSitePermission(BasePermission):
     
     def has_permission(self, request, view):
-        if request.user.is_superuser:
-            return True
-
-        has_permission = False
-
         perms = getattr(view, "permission_required", set() )
         method_perms = getattr(view, "permission_required_" + request.method.lower(), set() )
         
         check_list = list(perms) + list(method_perms)
         
-        if not check_list:
-            return True
-            
-        user_groups_field = get_user_model()._meta.get_field('groups')
-        user_groups_query = 'group__%s' % user_groups_field.related_query_name()
-        
-        user_permissions = Permission.objects.filter(
-            **{user_groups_query: request.user}, 
-            group__permafrost_role__site=request.site
-        )
+        return has_all_permissions(request, check_list)
 
-        for perm in check_list:
-            try:
-                app_label, codename = perm.split('.')
-                qry = {}
-                qry['content_type__app_label'] =  app_label
-                if codename:
-                    qry['codename'] = codename
-                user_permissions.get(**qry)
-                has_permission = True
-            except Permission.DoesNotExist:
-                return False
-            
-        return has_permission
+
+
+#--------------
+# PERMS HELPER
+#--------------
+
+def has_all_permissions(request, check_list=[]):
+    """
+    Checks if request.user the given list of permission on the current request.site
+    """
+    if not check_list:
+        return True
+        
+    if request.user.is_superuser: 
+        return True
+
+    has_permission = False
+    
+    user_groups_field = get_user_model()._meta.get_field('groups')
+    user_groups_query = 'group__%s' % user_groups_field.related_query_name()
+    
+    user_permissions = Permission.objects.filter(
+        **{user_groups_query: request.user}, 
+        group__permafrost_role__site=request.site
+    )
+
+    for perm in check_list:
+        try:
+            app_label, codename = perm.split('.')
+            qry = {}
+            qry['content_type__app_label'] =  app_label
+            if codename:
+                qry['codename'] = codename
+            user_permissions.get(**qry)
+            has_permission = True
+        except Permission.DoesNotExist:
+            return False
+        
+    return has_permission
