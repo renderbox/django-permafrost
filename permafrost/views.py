@@ -1,7 +1,9 @@
 import logging
 
 from django.contrib.auth.decorators import login_required
+from django.contrib.auth import get_user_model
 from django.contrib.auth.mixins import PermissionRequiredMixin
+from django.contrib.auth.models import Permission
 from django.forms.models import model_to_dict
 from django.http import HttpResponse, HttpResponseForbidden
 from django.http.response import Http404
@@ -18,7 +20,7 @@ from unittest import skipIf
 
 from django.views.generic.edit import CreateView, FormView
 
-from .models import PermafrostRole, get_optional_by_category, get_required_by_category
+from .models import PermafrostRole, get_optional_by_category, get_permission_objects, get_required_by_category
 from .forms import (
     PermafrostRoleCreateForm,
     PermafrostRoleUpdateForm,
@@ -98,33 +100,33 @@ class PermafrostMixin(PermissionRequiredMixin):
 
 
 class PermafrostSiteMixin(PermafrostMixin):
+    
     def has_permission(self):
         """
         This mixin can be added to a View to create a new method for retrieving permissions for users based on their per-site permafrost roles using request.site rather than SITE_ID.
-
-        Override this method to override the permission_required attribute.
-        Must return an iterable.
-
         """
-        # TODO: check site perms for the current user using request.site to figure out which permissions they have
-        # TODO: Do not rely on adding anything to the user model
-        # TODO: Check the results against self.get_permission_required() to see if they have permissions
+        has_permission = False
+        user_groups_field = get_user_model()._meta.get_field('groups')
+        user_groups_query = 'group__%s' % user_groups_field.related_query_name()
+        
+        user_permissions = Permission.objects.filter(
+            **{user_groups_query: self.request.user}, 
+            group__permafrost_role__site=self.request.site
+        )
 
-        # perms = self.request.user.get_site_permissions(
-        #     self.request.site
-        # )  # Per site query here using self.site #super().get_permission_required()
-
-        # method_perms = getattr(
-        #     self, "permission_required_" + self.request.method.lower(), set()
-        # )  # Extended Perms per method
-
-        # if isinstance(method_perms, str):
-        #     method_perms = (method_perms,)
-
-        # return set(list(perms) + list(method_perms))
-
-        return False
-
+        for perm in self.get_permission_required():
+            try:
+                app_label, codename = perm.split('.')
+                qry = {}
+                qry['content_type__app_label'] =  app_label
+                if codename:
+                    qry['codename'] = codename
+                user_permissions.get(**qry)
+                has_permission = True
+            except Permission.DoesNotExist:
+                return False
+            
+        return has_permission
 
 class PermafrostLogMixin(object):
     """
