@@ -105,6 +105,9 @@ class PermafrostSiteMixin(PermafrostMixin):
         """
         This mixin can be added to a View to create a new method for retrieving permissions for users based on their per-site permafrost roles using request.site rather than SITE_ID.
         """
+        if self.request.user.is_superuser: 
+            return True
+
         has_permission = False
         user_groups_field = get_user_model()._meta.get_field('groups')
         user_groups_query = 'group__%s' % user_groups_field.related_query_name()
