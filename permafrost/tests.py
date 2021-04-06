@@ -2,9 +2,10 @@ from unittest import skipIf
 from django.forms.forms import Form
 from django.forms.models import model_to_dict
 from django.forms.widgets import Textarea
-from django.test import TestCase, tag
+from django.test import TestCase, tag, RequestFactory
 from django.contrib.sites.models import Site
 from django.contrib.auth import get_user_model
+from django.core.exceptions import PermissionDenied
 from django.db.utils import IntegrityError
 from django.db import transaction
 from django.contrib.auth.models import Group, Permission
@@ -633,3 +634,34 @@ class PermafrostFormClassTests(TestCase):
         self.assertEqual(form['category'].value(), self.pf_role.category)
         self.assertEqual(form['description'].value(), self.pf_role.description)
         self.assertEqual(form['deleted'].value(), self.pf_role.deleted)
+
+class PermafrostSiteMixinTests(TestCase):
+    
+    fixtures = ['unit_test']
+    def setUp(self):
+        # Every test needs access to the request factory.
+        self.factory = RequestFactory()
+        self.user = get_user_model().objects.create(
+            username='jacob', email='jacob@…', password='top_secret')
+
+
+    def test_permissions_allowed_on_one_site_disabled_on_another(self):
+
+        request = self.factory.get('/manage/')
+        request.user = self.user
+        request.site = Site.objects.get(pk=2)
+
+        self.assertRaises(PermissionDenied, PermafrostRoleListView.as_view(), request)
+
+        # add to site 2 Administrator role
+        site_administrator = PermafrostRole.objects.get(pk=3)
+        site_administrator.users_add(self.user)
+
+        response = PermafrostRoleListView.as_view()(request)
+
+        self.assertEqual(response.status_code, 200)
+
+        # visit site 1's /manage pages
+        request.site = Site.objects.get(pk=1)
+
+        self.assertRaises(PermissionDenied, PermafrostRoleListView.as_view(), request)
