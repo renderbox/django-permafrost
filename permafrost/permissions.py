@@ -69,15 +69,14 @@ def has_all_permissions(request, check_list=[]):
     )
 
     for perm in check_list:
-        try:
-            app_label, codename = perm.split('.')
-            qry = {}
-            qry['content_type__app_label'] =  app_label
-            if codename:
-                qry['codename'] = codename
-            user_permissions.get(**qry)
-            has_permission = True
-        except Permission.DoesNotExist:
+        app_label, codename = perm.split('.')
+        qry = {}
+        qry['content_type__app_label'] =  app_label
+        if codename:
+            qry['codename'] = codename
+        perms = user_permissions.filter(**qry)
+        has_permission = True
+        if not perms:
             return False
         
     return has_permission
