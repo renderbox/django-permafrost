@@ -328,13 +328,14 @@ class PermafrostViewTests(TestCase):
 
     def test_permafrostrole_manage_template_displays_list_of_roles_on_site(self):
         uri = reverse('permafrost:roles-manage')
+        import html
         response = self.client.get(uri)
         objects = PermafrostRole.on_site.all()
         
         self.assertTrue(len(objects))
         
         for object in objects:
-            self.assertContains(response, f'{object}')
+            self.assertContains(response, html.escape(f'{object}'))
     
     def test_permafrostrole_manage_template_displays_selected_role_details(self):
         uri = reverse('permafrost:roles-manage')

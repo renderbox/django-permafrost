@@ -74,9 +74,10 @@ def has_all_permissions(request, check_list=[]):
         qry['content_type__app_label'] =  app_label
         if codename:
             qry['codename'] = codename
-        perms = user_permissions.filter(**qry)
-        has_permission = True
-        if not perms:
+        
+        if user_permissions.filter(**qry):
+            has_permission = True
+        else:
             return False
         
     return has_permission
