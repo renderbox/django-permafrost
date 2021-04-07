@@ -665,3 +665,25 @@ class PermafrostSiteMixinTests(TestCase):
         request.site = Site.objects.get(pk=1)
 
         self.assertRaises(PermissionDenied, PermafrostRoleListView.as_view(), request)
+    
+    def test_multiple_roles_with_shared_permissions(self):
+        """
+        Both Role id 9 and 12 share a single permission: 4: view_permafrostrole
+        """
+        request = self.factory.get('/manage/')
+        request.user = self.user
+        request.site = Site.objects.get(pk=1)
+
+        # add to site 2 Administrator role
+        bobs_staff_role = PermafrostRole.objects.get(pk=4)
+        bobs_staff_role.users_add(self.user)
+
+        response = PermafrostRoleListView.as_view()(request)
+
+        self.assertEqual(response.status_code, 200)
+
+        councilor_staff_role = PermafrostRole.objects.get(pk=2)
+        councilor_staff_role.users_add(self.user)
+        response = PermafrostRoleListView.as_view()(request)
+
+        self.assertEqual(response.status_code, 200)  
