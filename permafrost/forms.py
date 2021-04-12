@@ -8,7 +8,7 @@ from django.forms.fields import CharField, ChoiceField, BooleanField
 from django.forms.models import ModelMultipleChoiceField
 from django.forms.widgets import CheckboxInput
 from django.utils.translation import ugettext_lazy as _
-from .models import PermafrostRole, get_current_site, get_optional_by_category, get_choices
+from .models import PermafrostRole, get_optional_by_category, get_choices
 
 CHOICES = [('', _("Choose Role Type"))] + get_choices()
 
