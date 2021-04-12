@@ -156,7 +156,12 @@ class PermafrostRoleCreateView(PermafrostSiteMixin, CreateView):
             submitted = SelectPermafrostRoleTypeForm(request.POST)
             permission_categories = {}
             if submitted.is_valid():
-                form = PermafrostRoleCreateForm(initial=submitted.cleaned_data)
+                
+                kwargs = {'initial': submitted.cleaned_data}
+                if hasattr(request, 'site'):
+                    kwargs['site'] = request.site
+                
+                form = PermafrostRoleCreateForm(**kwargs)
                 category = submitted.cleaned_data["category"]
                 required = get_required_by_category(category=category)
                 optional = get_optional_by_category(category=category)
