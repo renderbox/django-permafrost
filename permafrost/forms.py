@@ -1,13 +1,14 @@
 # Permafrost Forms
 from django.conf import settings
 from django.contrib.auth.models import Permission
+from django.contrib.sites.models import Site
 from django.core.exceptions import ValidationError
 from django.forms import ModelForm
 from django.forms.fields import CharField, ChoiceField, BooleanField
 from django.forms.models import ModelMultipleChoiceField
 from django.forms.widgets import CheckboxInput
 from django.utils.translation import ugettext_lazy as _
-from .models import PermafrostRole, get_optional_by_category, get_choices
+from .models import PermafrostRole, get_current_site, get_optional_by_category, get_choices
 
 CHOICES = [('', _("Choose Role Type"))] + get_choices()
 
@@ -66,7 +67,7 @@ class PermafrostRoleCreateForm(ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-
+        self.site = kwargs.pop('site', Site.objects.get_current())
         self.fields['category'].choices = CHOICES
         
         category = self.initial.get(
@@ -86,6 +87,7 @@ class PermafrostRoleCreateForm(ModelForm):
         bootstrappify(self.fields)
         
     def save(self, commit=True):
+        self.instance.site = self.site
         instance = super().save(commit)        
         category = instance.category
 
@@ -109,7 +111,7 @@ class PermafrostRoleCreateForm(ModelForm):
                 name_exists = PermafrostRole.objects.filter(
 
                     name=name, 
-                    site__id=settings.SITE_ID,
+                    site=self.site,
 
                 ).exclude(pk=self.instance.pk).first()
             
@@ -118,7 +120,7 @@ class PermafrostRoleCreateForm(ModelForm):
             try:
                 name_exists = PermafrostRole.objects.get(
                     name=name, 
-                    site__id=settings.SITE_ID
+                    site=self.site
                 )
             except PermafrostRole.DoesNotExist:
                 pass
