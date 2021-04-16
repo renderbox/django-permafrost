@@ -261,6 +261,11 @@ class PermafrostRoleUpdateView(PermafrostSiteMixin, FilterByRequestSiteQuerysetM
         )
         return context
 
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        if hasattr(self.request, 'site'):
+            kwargs['site'] = self.request.site
+        return kwargs
 
 # Delete Permission Groups
 class PermafrostRoleDeleteView(DeleteView):
