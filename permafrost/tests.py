@@ -299,7 +299,7 @@ class PermafrostViewTests(TestCase):
     def setUp(self):
         self.client = Client()
         self.pf_role = PermafrostRole.objects.create(category="staff", name="Test Role", site=Site.objects.get_current())
-        self.pf_role = PermafrostRole.objects.create(category="staff", name="Test Role", site=Site.objects.get(pk=2))
+        PermafrostRole.objects.create(category="staff", name="Test Role", site=Site.objects.get(pk=2))
         self.super_user = get_user_model().objects.get(pk=1)
         self.client.force_login(self.super_user)
 
@@ -567,7 +567,6 @@ class PermafrostViewTests(TestCase):
         response = self.client.post(uri, data=data, follow=True)
         
         updated_permission_ids = [permission.id for permission in self.pf_role.permissions().all() if permission.id in allowed_optional_permission_ids]
-        
         try:
             self.assertEqual(updated_permission_ids, [])
         except:
@@ -585,11 +584,11 @@ class PermafrostViewTests(TestCase):
         response = self.client.post(uri, data=data, follow=True)
         
         try:
-            updated_role = PermafrostRole.objects.get(slug=self.pf_role.slug)
+            updated_role = PermafrostRole.objects.get(slug=self.pf_role.slug, site__id=1)
             self.assertEqual(updated_role.deleted, True)
         except:
             print("")
-            print(model_to_dict(PermafrostRole.objects.get(slug=self.pf_role.slug)))
+            print(model_to_dict(PermafrostRole.objects.get(slug=self.pf_role.slug, site__id=1)))
             print("")
             raise
     
