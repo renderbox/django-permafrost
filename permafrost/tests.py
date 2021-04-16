@@ -514,10 +514,9 @@ class PermafrostViewTests(TestCase):
         request.user = self.super_user
         request.site = Site.objects.get(pk=2)
         response = PermafrostRoleUpdateView.as_view()(request, slug='test-role')
-        self.assertContains(response, "Test Role")
+        response.client = self.client
+        self.assertRedirects(response, '/permafrost/role/test-role/')
         updated_role = PermafrostRole.objects.get(pk=self.pf_role.pk)
-        self.assertEqual(updated_role.name, "Test Role")
-        self.assertEqual(response.status_code, 200)
 
     
     def test_optional_permissions_are_updated_on_POST(self):
