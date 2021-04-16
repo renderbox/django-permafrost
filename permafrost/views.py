@@ -184,6 +184,12 @@ class PermafrostRoleCreateView(PermafrostSiteMixin, CreateView):
             return SelectPermafrostRoleTypeForm
         return PermafrostRoleCreateForm
 
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        if self.get_form_class() == PermafrostRoleCreateForm:
+            if hasattr(self.request, 'site'):
+                kwargs['site'] = self.request.site
+            return kwargs
 
 # List Permission Groups
 class PermafrostRoleListView(PermafrostSiteMixin, FilterByRequestSiteQuerysetMixin, ListView):
