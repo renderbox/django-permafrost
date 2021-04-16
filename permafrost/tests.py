@@ -298,9 +298,10 @@ class PermafrostViewTests(TestCase):
 
     def setUp(self):
         self.client = Client()
-        self.pf_role = PermafrostRole.objects.create(category="staff", name="Test Role")
-        super_user = get_user_model().objects.get(pk=1)
-        self.client.force_login(super_user)
+        self.pf_role = PermafrostRole.objects.create(category="staff", name="Test Role", site=Site.objects.get_current())
+        self.pf_role = PermafrostRole.objects.create(category="staff", name="Test Role", site=Site.objects.get(pk=2))
+        self.super_user = get_user_model().objects.get(pk=1)
+        self.client.force_login(self.super_user)
 
     def test_permafrost_base_url_resolves(self):
         found = resolve("/permafrost/")
@@ -504,6 +505,20 @@ class PermafrostViewTests(TestCase):
         self.assertContains(response, "Test Change")
         updated_role = PermafrostRole.objects.get(pk=self.pf_role.pk)
         self.assertEqual(updated_role.name, "Test Change")
+    
+    def test_role_update_POST_updates_when_no_values_are_changed(self):
+        uri = reverse('permafrost:role-update', kwargs={'slug': 'test-role'})
+       
+        request = RequestFactory().post(uri, data={'name': 'Test Role'}, follow=True)
+
+        request.user = self.super_user
+        request.site = Site.objects.get(pk=2)
+        response = PermafrostRoleUpdateView.as_view()(request, slug='test-role')
+        self.assertContains(response, "Test Role")
+        updated_role = PermafrostRole.objects.get(pk=self.pf_role.pk)
+        self.assertEqual(updated_role.name, "Test Role")
+        self.assertEqual(response.status_code, 200)
+
     
     def test_optional_permissions_are_updated_on_POST(self):
         ## ensure role currently has no optional permissions
