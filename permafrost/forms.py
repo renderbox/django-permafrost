@@ -66,8 +66,8 @@ class PermafrostRoleCreateForm(ModelForm):
         labels = LABELS
 
     def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
         self.site = kwargs.pop('site', Site.objects.get_current())
+        super().__init__(*args, **kwargs)
         self.fields['category'].choices = CHOICES
         
         category = self.initial.get(
