@@ -52,11 +52,11 @@ def has_all_permissions(request, check_list=[]):
     """
     Checks if request.user the given list of permission on the current request.site
     """
-    if not check_list:
+    if not check_list or request.user.is_superuser:
         return True
-        
-    if request.user.is_superuser: 
-        return True
+
+    if not request.user.is_authenticated:
+        return False
 
     has_permission = False
     
