@@ -62,6 +62,7 @@ setup(
             'wheel',
             'twine',
             'm2r',
+            'mistune<2.0.0',
         ],
         'docs': [                           # Packages needed to generate docs
             'recommonmark',
