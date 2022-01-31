@@ -61,6 +61,7 @@ setup(
             'setuptools',
             'wheel',
             'twine',
+            'mistune<2.0.0',
             'm2r',
         ],
         'docs': [                           # Packages needed to generate docs
