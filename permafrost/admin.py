@@ -47,7 +47,7 @@ def perms_to_code(modeladmin, request, queryset):
     key_order = list(data.keys())
     key_order.sort()
 
-    result = ["from django.utils.translation import ugettext_lazy as _\n", "PERMAFROST_CATEGORIES = {"]
+    result = ["from django.utils.translation import gettext_lazy as _\n", "PERMAFROST_CATEGORIES = {"]
 
     for key in key_order:
         result.append("    '{}': {{".format(key))

@@ -43,9 +43,9 @@ setup(
     packages=find_packages(),
     package_data={'permafrost': ['*.html', 'management/commands/*.py', 'templates/permafrost/*.html', 'templates/permafrost/admin/*.html']},
     include_package_data=True,
-    python_requires=">=3.6",
+    python_requires=">=3.7",
     install_requires=[
-        'Django>=3.0,<3.2',
+        'Django>=3.2,<4.1',
         'jsonfield',
     ],
     extras_require={
