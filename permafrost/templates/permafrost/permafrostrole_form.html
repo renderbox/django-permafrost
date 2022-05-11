@@ -132,16 +132,17 @@
                     <div class="col-6">
                         {% for permission in category.optional %}
                         <div class="d-flex align-items-center">
-                            <span>{{ permission.name }}</span>
-                            
+                            <label for="{{ permission.id }}">{{ permission.name }}</label>
+
                             {% if permission.short_description %}
                             <i class="ml-2 fas fa-info-circle text-gray-600" aria-label="{% trans 'Info' %}"></i>
                             {% endif %}
-                            <input 
-                                class="ml-auto" 
-                                type="checkbox" 
-                                name="{{ form.permissions.name }}" 
+                            <input
+                                class="ml-auto"
+                                type="checkbox"
+                                name="{{ form.permissions.name }}"
                                 value="{{ permission.id }}"
+                                id="{{ permission.id }}"
                                 {% if permission.selected %} checked{% endif %}
                             >
                         </div>
@@ -171,4 +172,3 @@
     </script>
     {% endif %}
 {% endblock %}
-    
