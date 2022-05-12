@@ -474,6 +474,7 @@ class PermafrostViewTests(TestCase):
                                 type="checkbox" 
                                 name="permissions" 
                                 value="37"
+                                id="permission-37"
                                  checked
                             >""")
             self.assertContains(response, """<input 
@@ -481,6 +482,7 @@ class PermafrostViewTests(TestCase):
                                 type="checkbox" 
                                 name="permissions" 
                                 value="38"
+                                id="permission-38"
                                  checked
                             >""")
         except:
