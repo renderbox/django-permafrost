@@ -469,22 +469,10 @@ class PermafrostViewTests(TestCase):
         uri = reverse('permafrost:role-update', kwargs={'slug': 'test-role'})
         response = self.client.get(uri)
         try:
-            self.assertContains(response, """<input 
-                                class="ml-auto" 
-                                type="checkbox" 
-                                name="permissions" 
-                                value="37"
-                                id="permission-37"
-                                 checked
-                            >""")
-            self.assertContains(response, """<input 
-                                class="ml-auto" 
-                                type="checkbox" 
-                                name="permissions" 
-                                value="38"
-                                id="permission-38"
-                                 checked
-                            >""")
+            self.assertContains(response, 'value="37"')
+            self.assertContains(response, 'value="38"')
+            self.assertContains(response, 'id="permission-37"')
+            self.assertContains(response, 'id="permission-38"')
         except:
             print("")
             print(response.content.decode())
