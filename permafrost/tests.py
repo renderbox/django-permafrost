@@ -473,6 +473,9 @@ class PermafrostViewTests(TestCase):
             self.assertContains(response, 'value="38"')
             self.assertContains(response, 'id="permission-37"')
             self.assertContains(response, 'id="permission-38"')
+            self.assertContains(response, 'checked')
+            self.assertContains(response, 'checked')
+
         except:
             print("")
             print(response.content.decode())
