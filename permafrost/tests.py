@@ -469,22 +469,20 @@ class PermafrostViewTests(TestCase):
         uri = reverse('permafrost:role-update', kwargs={'slug': 'test-role'})
         response = self.client.get(uri)
         try:
-            self.assertContains(response, """<input 
-                                class="ml-auto" 
-                                type="checkbox" 
-                                name="permissions" 
-                                value="37"
-                                id="permission-37"
-                                 checked
-                            >""")
-            self.assertContains(response, """<input 
-                                class="ml-auto" 
-                                type="checkbox" 
-                                name="permissions" 
-                                value="38"
-                                id="permission-38"
-                                 checked
-                            >""")
+            self.assertTrue(response.context['permission_categories']['permafrostrole']['optional'][0].selected)
+            self.assertTrue(response.context['permission_categories']['permafrostrole']['optional'][1].selected)
+            self.assertEqual(response.context['permission_categories']['permafrostrole']['optional'][0].id, 37)
+            self.assertEqual(response.context['permission_categories']['permafrostrole']['optional'][1].id, 38)
+            self.assertEqual(response.context['permission_categories']['permafrostrole']['optional'][0].name,
+                             'Can add Role')
+            self.assertEqual(response.context['permission_categories']['permafrostrole']['optional'][1].name,
+                             'Can change Role')
+            self.assertContains(response, 'value="37"')
+            self.assertContains(response, 'value="38"')
+            self.assertContains(response, 'id="permission-37"')
+            self.assertContains(response, 'id="permission-38"')
+            self.assertContains(response, 'checked')
+
         except:
             print("")
             print(response.content.decode())
