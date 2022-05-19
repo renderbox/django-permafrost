@@ -471,6 +471,12 @@ class PermafrostViewTests(TestCase):
         try:
             self.assertTrue(response.context['permission_categories']['permafrostrole']['optional'][0].selected)
             self.assertTrue(response.context['permission_categories']['permafrostrole']['optional'][1].selected)
+            self.assertEqual(response.context['permission_categories']['permafrostrole']['optional'][0].id, 37)
+            self.assertEqual(response.context['permission_categories']['permafrostrole']['optional'][1].id, 38)
+            self.assertEqual(response.context['permission_categories']['permafrostrole']['optional'][0].name,
+                             'Can add Role')
+            self.assertEqual(response.context['permission_categories']['permafrostrole']['optional'][1].name,
+                             'Can change Role')
             self.assertContains(response, 'value="37"')
             self.assertContains(response, 'value="38"')
             self.assertContains(response, 'id="permission-37"')
