@@ -469,8 +469,8 @@ class PermafrostViewTests(TestCase):
         uri = reverse('permafrost:role-update', kwargs={'slug': 'test-role'})
         response = self.client.get(uri)
         try:
-            self.assertEqual(str(list(response.context['form'].fields['permissions'].choices)[0][0]), '37')
-            self.assertEqual(str(list(response.context['form'].fields['permissions'].choices)[1][0]), '38')
+            self.assertTrue(response.context['permission_categories']['permafrostrole']['optional'][0].selected)
+            self.assertTrue(response.context['permission_categories']['permafrostrole']['optional'][1].selected)
             self.assertContains(response, 'value="37"')
             self.assertContains(response, 'value="38"')
             self.assertContains(response, 'id="permission-37"')
