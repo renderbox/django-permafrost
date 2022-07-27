@@ -112,6 +112,27 @@ def get_optional_by_category(category):
     return []
 
 
+def get_all_perms_for_all_categories():
+    perms = []
+    for category, category_data in CATEGORIES.items():
+        optional_perms = category_data['optional']
+        required_perms = category_data['required']
+        optional_and_required_perms = set(get_permission_objects(optional_perms) +
+                                          get_permission_objects(required_perms))
+        perms.extend(optional_and_required_perms)
+
+    perms = set([(perm.content_type.model, perm.content_type.app_label) for perm in perms])
+    return perms
+
+
+
+
+
+
+
+
+
+
 ###############
 # MANAGERS
 ###############
@@ -221,6 +242,17 @@ class PermafrostRole(models.Model):
         TODO!!!
         """
         return get_optional_by_category(self.category)
+
+    def non_default_permissions(self, required, optional):
+        model_content_types = []
+        for perm in required:
+            model_content_types.append(perm.content_type)
+
+        for perm in optional:
+            model_content_types.append(perm.content_type)
+
+        return list(Permission.objects.filter(content_type__in=model_content_types))
+
 
     def all_perm_ids(self):
         req = [perm.pk for perm in self.required_permissions()]

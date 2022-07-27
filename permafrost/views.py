@@ -1,6 +1,7 @@
 import logging
-
+from django.contrib.auth.models import Permission
 from django.contrib.auth.mixins import PermissionRequiredMixin
+from django.contrib.contenttypes.models import ContentType
 from django.shortcuts import render
 from django.views.generic import (
     ListView,
@@ -11,13 +12,13 @@ from django.views.generic import (
 
 from django.views.generic.edit import CreateView
 
-from .models import PermafrostRole, get_optional_by_category, get_required_by_category
+from .models import PermafrostRole, get_optional_by_category, get_required_by_category, get_all_perms_for_all_categories
 from .forms import (
     PermafrostRoleCreateForm,
     PermafrostRoleUpdateForm,
     SelectPermafrostRoleTypeForm,
 )
-
+from django.http import HttpResponseNotAllowed, HttpResponseBadRequest, HttpResponse
 from .permissions import has_all_permissions
 
 # --------------
@@ -259,12 +260,17 @@ class PermafrostRoleUpdateView(PermafrostSiteMixin, FilterByRequestSiteQuerysetM
         role = context["object"]
         required = role.required_permissions()
         optional = role.optional_permissions()
+
+        non_default_perms = role.non_default_permissions(required, optional)
+        optional = list(set(optional + non_default_perms))
+
         selected_optional = role.permissions().filter(
             id__in=[permission.id for permission in optional]
         )
         context["permission_categories"] = group_permission_categories(
             required, optional, selected_optional
         )
+        context['permission_objects_list'] = sorted(get_all_perms_for_all_categories())
         return context
 
     def get_form_kwargs(self):
@@ -276,6 +282,30 @@ class PermafrostRoleUpdateView(PermafrostSiteMixin, FilterByRequestSiteQuerysetM
 # Delete Permission Groups
 class PermafrostRoleDeleteView(DeleteView):
     model = PermafrostRole
+
+
+def add_permission_to_role(request, slug):
+    if request.method == 'POST':
+        new_permission = request.POST.get('new_permission', None)
+        permission_for = request.POST.get('permission_for_model', None)
+        if not new_permission and not permission_for:
+            return HttpResponseBadRequest()
+        role = PermafrostRole.objects.filter(site=request.site, slug=slug).last()
+        if role:
+            model, app_label = permission_for.split('-')
+            content_type = ContentType.objects.get(app_label=app_label, model=model)
+            code_name = new_permission.replace(' ', '_').lower()
+            perm, created = Permission.objects.get_or_create(
+                name=new_permission,
+                codename=code_name,
+                content_type=content_type
+            )
+            if created:
+                role.group.permissions.add(perm)
+
+        return HttpResponse()
+
+    return HttpResponseNotAllowed()
 
 
 # Future Views
