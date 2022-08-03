@@ -18,8 +18,10 @@ from .forms import (
     PermafrostRoleUpdateForm,
     SelectPermafrostRoleTypeForm,
 )
-from django.http import HttpResponseNotAllowed, HttpResponseBadRequest, HttpResponse
+from django.http import HttpResponseBadRequest, HttpResponse
 from .permissions import has_all_permissions
+from django.utils.translation import gettext_lazy as _
+from django.urls import reverse
 
 # --------------
 # UTILITIES
@@ -157,7 +159,7 @@ class PermafrostRoleCreateView(PermafrostSiteMixin, CreateView):
             submitted = SelectPermafrostRoleTypeForm(request.POST)
             permission_categories = {}
             if submitted.is_valid():
-                
+
                 kwargs = {'initial': submitted.cleaned_data}
                 if hasattr(request, 'site'):
                     kwargs['site'] = request.site
@@ -261,8 +263,10 @@ class PermafrostRoleUpdateView(PermafrostSiteMixin, FilterByRequestSiteQuerysetM
         required = role.required_permissions()
         optional = role.optional_permissions()
 
-        non_default_perms = role.non_default_permissions(required, optional)
-        optional = list(set(optional + non_default_perms))
+        if not role.is_default_role():
+            non_default_perms = role.non_default_permissions(required, optional)
+            optional = list(set(optional + non_default_perms))
+            context['permission_objects_list'] = sorted(get_all_perms_for_all_categories())
 
         selected_optional = role.permissions().filter(
             id__in=[permission.id for permission in optional]
@@ -270,7 +274,6 @@ class PermafrostRoleUpdateView(PermafrostSiteMixin, FilterByRequestSiteQuerysetM
         context["permission_categories"] = group_permission_categories(
             required, optional, selected_optional
         )
-        context['permission_objects_list'] = sorted(get_all_perms_for_all_categories())
         return context
 
     def get_form_kwargs(self):
@@ -284,8 +287,28 @@ class PermafrostRoleDeleteView(DeleteView):
     model = PermafrostRole
 
 
-def add_permission_to_role(request, slug):
-    if request.method == 'POST':
+# Custom Detail Permission Groups
+class PermafrostCustomRoleDetailView(PermafrostSiteMixin, FilterByRequestSiteQuerysetMixin, DetailView):
+    model = PermafrostRole
+    template_name = "permafrost/permissions_modal.html"
+    queryset = PermafrostRole.on_site.all()
+    permission_required = ["permafrost.change_permafrostrole"]
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        role = context["object"]
+        required = role.required_permissions()
+        optional = role.optional_permissions()
+        selected_optional = role.permissions().filter(
+            id__in=[permission.id for permission in optional]
+        )
+        context["permission_categories"] = group_permission_categories(
+            required, optional, selected_optional
+        )
+        return context
+
+
+    def post(self, request, slug, *args, **kwargs):
         new_permission = request.POST.get('new_permission', None)
         permission_for = request.POST.get('permission_for_model', None)
         if not new_permission and not permission_for:
@@ -304,8 +327,6 @@ def add_permission_to_role(request, slug):
                 role.group.permissions.add(perm)
 
         return HttpResponse()
-
-    return HttpResponseNotAllowed()
 
 
 # Future Views

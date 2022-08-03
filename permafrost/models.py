@@ -253,6 +253,9 @@ class PermafrostRole(models.Model):
 
         return list(Permission.objects.filter(content_type__in=model_content_types))
 
+    def is_default_role(self):
+        return self.name in ['Student', 'Supervisor', 'Councilor', 'Accounting', 'Super User',
+                             'Administrator', 'Curriculum Designer', 'Instructor', 'Site Owner']
 
     def all_perm_ids(self):
         req = [perm.pk for perm in self.required_permissions()]

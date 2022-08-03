@@ -10,7 +10,7 @@ urlpatterns = [
     path("role/create/", views.PermafrostRoleCreateView.as_view(), name="role-create"),
     path("role/<slug:slug>/", views.PermafrostRoleDetailView.as_view(), name="role-detail"),
     path("role/<slug:slug>/update/", views.PermafrostRoleUpdateView.as_view(), name="role-update"),
-    path("role/<slug:slug>/permissions/add", views.add_permission_to_role, name="role-add-permission"),
+    path("role/<slug:slug>/permissions/add", views.PermafrostCustomRoleDetailView.as_view(), name="custom-role-add-permissions"),
 ]
 
 

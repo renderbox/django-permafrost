@@ -36,13 +36,24 @@
                         {{ form.name.label }}
                     </label>
                     {% if form.name.required %}<span class="required">*</span>{% endif %}
-                    <input 
+                    {% if object and object.is_default_role %}
+                        <div class="disabled-select-wrapper">
+                    {% endif %}
+
+                    <input
                         name="{{ form.name.name }}" 
                         type="text" 
                         id="{{form.name.id_for_label}}" 
                         class="form-control{% if form.name.errors %} is-invalid{% endif %}" 
-                        placeholder="{{ form.name.help_text }}" value="{% firstof form.initial.name form.data.name form.instance.name '' %}" >
-                    
+                        placeholder="{{ form.name.help_text }}" value="{% firstof form.initial.name form.data.name form.instance.name '' %}"
+                        {% if object and object.is_default_role %}disabled{% endif %}
+                    >
+
+                    {% if object and object.is_default_role %}
+                        <i class="fas fa-lock"></i>
+                        </div>
+                    {% endif %}
+
                     {% if form.name.errors %}
                         <div class="invalid-feedback">
                             {% for error in form.name.errors %}
@@ -59,12 +70,21 @@
                         {{ form.description.label }}
                     </label>
                     {% if form.description.required %}<span class="required">*</span>{% endif %}
+                    {% if object and object.is_default_role %}
+                        <div class="disabled-select-wrapper">
+                    {% endif %}
                     <input 
                         name="{{ form.description.name }}" 
                         type="text" id="{{ form.description.id_for_label }}" 
                         class="form-control{% if form.description.errors %} is-invalid{% endif %}" 
                         placeholder="{{ form.description.help_text }}"
-                        value="{% firstof form.initial.description form.data.description form.instance.description '' %}" >
+                        value="{% firstof form.initial.description form.data.description form.instance.description '' %}"
+                        {% if object and object.is_default_role %}disabled{% endif %}
+                    >
+                    {% if object and object.is_default_role %}
+                        <i class="fas fa-lock"></i>
+                        </div>
+                    {% endif %}
 
                     {% if form.description.errors %}
                         <div class="invalid-feedback">
@@ -102,7 +122,13 @@
                     {% endif %}
                 </div>
             </div>
-            <div class="form-row">
+            <div class="row">
+                <div class="col-6">
+                    <a class="ml-auto text-success font-weight-bold" data-toggle="modal" data-target="#form_modal" href="{% url 'permafrost:custom-role-add-permissions' slug=object.slug %}"
+                    role="button"><i class="fas fa-plus mr-2" aria-label="{% trans 'Add Permissions' %}"></i> {% trans 'Add Permissions' %}</a>
+                </div>
+            </div>
+            <!--<div class="form-row">
                 <div class="form-group col-6 col-md-4">
                     <label class="text-gray-600" for="id_add_permission">
                         {% trans 'Add Permission' %}
@@ -136,10 +162,10 @@
                     {% endif %}
                 </div>
                 </div>
-            </div>
+            </div>-->
             <div class="form-row border-bottom-gray-300">
-                <p class="col-6 font-weight-bold">{% trans 'Required Permissions' %}</p>
-                <p class="col-6 font-weight-bold">{% trans 'Optional Permissions' %}</p>
+                <p class="col-4 font-weight-bold">{% trans 'Required Permissions' %}</p>
+                <p class="col-4 font-weight-bold">{% trans 'Optional Permissions' %}</p>
             </div>
             <div class="form-row">
                 {% if form.permissions.errors %}
@@ -160,13 +186,7 @@
                             {% if permission.short_description %} {# TODO: extend permission to include short_description for tooltip #}
                             <i class="ml-2 fas fa-info-circle text-gray-600" aria-label="{% trans 'Info' %}"></i>
                             {% endif %}
-                            <input
-                                class="ml-auto"
-                                type="checkbox"
-                                name="{{ form.permissions.name }}"
-                                value="{{ permission.id }}"
-                                {% if permission.selected %} checked{% endif %}
-                            >
+                            <i class="ml-auto fas fa-lock" aria-label="{% trans 'Default Permission' %}"></i>
                         </div>
                         {% endfor %}
                     </div>
@@ -195,6 +215,14 @@
         </div>
     </div>
 </form>
+
+<div class="modal fade" tabindex="-1" role="dialog" id="form_modal">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+
+    </div>
+  </div>
+</div>
 {% endblock %}
 
 {% block extra_js %}
@@ -213,6 +241,7 @@
         })
     </script>
     {% endif %}
+    {% comment %}
     <script>
           function containsWhitespace(str) {
               return /\s/.test(str);
@@ -250,5 +279,23 @@
 
           })
     </script>
+    {% endcomment %}
+
+    <script>
+        $(document).ready(function() {
+
+            $('#form_modal').on('show.bs.modal', function (evt) {
+                var modal = $(this).find('.modal-content');
+                var url = evt.relatedTarget.href; // pull form contents from href attr of button
+                $.ajax({
+                    url: url,
+                    context: document.body
+                }).done(function(response) {
+                    modal.html(response);
+                });
+            });
+
+        });
+        </script>
 {% endblock %}
     
