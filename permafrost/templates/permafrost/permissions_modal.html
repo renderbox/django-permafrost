@@ -17,7 +17,7 @@
     <div class="col-12">
         <div class="search-bar">
             <div class="input-group">
-                <input type="text" class="textinput textInput flex-fill" placeholder="{% trans 'Search' %}" aria-label="{% trans 'Search' %}" aria-describedby="basic-addon2">
+                <input type="text" id="search_field" class="textinput textInput flex-fill" placeholder="{% trans 'Search' %}" aria-label="{% trans 'Search' %}" aria-describedby="basic-addon2">
                 <div class="input-group-append">
                     <button class="btn bg-transparent close search-close" type="button" role="close" aria-role="close" id="perm-search-close">
                       <i class="fa fa-times"></i>
@@ -30,57 +30,35 @@
                 </div>
             </div>
         </div>
-        <form method="post" action="{% url 'permafrost:custom-role-add-permissions' slug=object.slug %}" id="base-form">
+        <form method="post" action="{% url 'permafrost:custom-role-add-permissions' slug=object.slug %}" id="perm-modal-form">
             {% csrf_token %}
-
-                {% for content_type, category in permission_categories.items %}
-                <div class="row">
-                    <p class="small font-weight-bold col-12 text-gray-600 mt-3 text-capitalize">{{ category.name }}</p>
-                    <div class="col-12">
-                        {% for permission in category.required %}
-                        <div class="d-flex align-items-center">
-                            <span>{{ permission.name }}</span>
-                            {% if permission.short_description %} {# TODO: extend permission to include short_description for tooltip #}
-                            <i class="ml-2 fas fa-info-circle text-gray-600" aria-label="{% trans 'Info' %}"></i>
-                            {% endif %}
-                            <input
-                                class="ml-auto"
-                                type="checkbox"
-                                name="{{ form.permissions.name }}"
-                                value="{{ permission.id }}"
-                                {% if permission.selected %} checked{% endif %}
-                            >
-                        </div>
-                        {% endfor %}
-                    </div>
-                    <div class="col-12">
-                        {% for permission in category.optional %}
-                        <div class="d-flex align-items-center">
-                            <span>{{ permission.name }}</span>
-
-                            {% if permission.short_description %}
-                            <i class="ml-2 fas fa-info-circle text-gray-600" aria-label="{% trans 'Info' %}"></i>
-                            {% endif %}
-                            <input
-                                class="ml-auto"
-                                type="checkbox"
-                                name="{{ form.permissions.name }}"
-                                value="{{ permission.id }}"
-                                {% if permission.selected %} checked{% endif %}
-                            >
-                        </div>
-                        {% endfor %}
-                    </div>
-                </div>
-            {% empty %}
-                <div class="pb-5 row">{# used for spacing when empty #}</div>
-            {% endfor %}
+            {% include 'permafrost/includes/permissions_table.html' %}
         </form>
     </div>
 </div>
 <div class="modal-footer">
     <a class="text-success font-weight-bold mr-3" data-dismiss="modal" role="button">{%  trans 'Cancel' %}</a>
-    <button type="submit" class="btn btn-success font-weight-bold" form="base-form">{%  trans 'Add' %}</button>
+    <button type="submit" class="btn btn-success font-weight-bold" form="base-form" id="add-button">{%  trans 'Add' %}</button>
 </div>
+
+<script>
+    function updateModalPermsTable(q){
+      let slug = "{{ slug }}";
+      let url = "{% url 'permafrost:custom-role-search-permissions' slug=slug %}?q=" + q
+      url.replace('/slug/', slug)
+      $('#perm-modal-form').html('').load(url);
+    }
+
+    $('#search_button').on('click', function(e){
+      updateModalPermsTable($('#search_field').val())
+    })
+
+    $('#add-button').on('click', function (e){
+      $('#perm-modal-form').submit()
+    })
+
+
+
+</script>
 
 

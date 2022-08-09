@@ -121,7 +121,6 @@ def get_all_perms_for_all_categories():
                                           get_permission_objects(required_perms))
         perms.extend(optional_and_required_perms)
 
-    perms = set([(perm.content_type.model, perm.content_type.app_label) for perm in perms])
     return perms
 
 

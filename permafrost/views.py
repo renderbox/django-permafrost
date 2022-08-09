@@ -1,15 +1,14 @@
 import logging
 from django.contrib.auth.models import Permission
 from django.contrib.auth.mixins import PermissionRequiredMixin
-from django.contrib.contenttypes.models import ContentType
-from django.shortcuts import render
+from django.shortcuts import render, redirect
 from django.views.generic import (
     ListView,
     DetailView,
     UpdateView,
     DeleteView,
 )
-
+from django.db.models import Q
 from django.views.generic.edit import CreateView
 
 from .models import PermafrostRole, get_optional_by_category, get_required_by_category, get_all_perms_for_all_categories
@@ -18,10 +17,8 @@ from .forms import (
     PermafrostRoleUpdateForm,
     SelectPermafrostRoleTypeForm,
 )
-from django.http import HttpResponseBadRequest, HttpResponse
+from django.http import HttpResponseBadRequest, HttpResponse, HttpResponseNotFound
 from .permissions import has_all_permissions
-from django.utils.translation import gettext_lazy as _
-from django.urls import reverse
 
 # --------------
 # UTILITIES
@@ -262,12 +259,8 @@ class PermafrostRoleUpdateView(PermafrostSiteMixin, FilterByRequestSiteQuerysetM
         role = context["object"]
         required = role.required_permissions()
         optional = role.optional_permissions()
-
-        if not role.is_default_role():
-            non_default_perms = role.non_default_permissions(required, optional)
-            optional = list(set(optional + non_default_perms))
-            context['permission_objects_list'] = sorted(get_all_perms_for_all_categories())
-
+        other = list(role.permissions().all())
+        optional = list(set(optional + other))
         selected_optional = role.permissions().filter(
             id__in=[permission.id for permission in optional]
         )
@@ -299,34 +292,52 @@ class PermafrostCustomRoleDetailView(PermafrostSiteMixin, FilterByRequestSiteQue
         role = context["object"]
         required = role.required_permissions()
         optional = role.optional_permissions()
-        selected_optional = role.permissions().filter(
-            id__in=[permission.id for permission in optional]
-        )
+        all_perms = get_all_perms_for_all_categories()
+        perms_excluding_current_role = list(set(all_perms) - set(optional + required))
+        context['slug'] = role.slug
         context["permission_categories"] = group_permission_categories(
-            required, optional, selected_optional
+            [], perms_excluding_current_role, []
         )
         return context
 
-
     def post(self, request, slug, *args, **kwargs):
-        new_permission = request.POST.get('new_permission', None)
-        permission_for = request.POST.get('permission_for_model', None)
-        if not new_permission and not permission_for:
-            return HttpResponseBadRequest()
         role = PermafrostRole.objects.filter(site=request.site, slug=slug).last()
-        if role:
-            model, app_label = permission_for.split('-')
-            content_type = ContentType.objects.get(app_label=app_label, model=model)
-            code_name = new_permission.replace(' ', '_').lower()
-            perm, created = Permission.objects.get_or_create(
-                name=new_permission,
-                codename=code_name,
-                content_type=content_type
-            )
-            if created:
-                role.group.permissions.add(perm)
+        permission_ids = request.POST.get('permissions', [])
+        if permission_ids:
+            perms_to_add = Permission.objects.filter(id__in=permission_ids)
+            role.group.permissions.add(*perms_to_add)
+        return redirect('permafrost:role-update', slug=slug)
 
-        return HttpResponse()
+
+def update_permission_table(request, slug):
+    # This is used on the add permissions modal on custom roles. Used to update the modal based on search query
+
+    if request.GET:
+        role = PermafrostRole.objects.filter(site=request.site, slug=slug).last()
+        if not role:
+            return HttpResponseNotFound()
+
+        context = {}
+        required = role.required_permissions()
+        optional = role.optional_permissions()
+        all_perms = get_all_perms_for_all_categories()
+        perms_excluding_current_role = list(set(all_perms) - set(optional + required))
+
+        query = request.GET.get('q', None)
+        if query:
+            # perform search filtering
+            perms_pks = [perm.pk for perm in perms_excluding_current_role]
+            filter1 = Q(name__icontains=query)
+            #filter2 = Q(content_type__name__icontains=query) # TODO why does this filter not work?
+            perms_queryset = Permission.objects.filter(pk__in=perms_pks)
+            perms_to_group = list(perms_queryset.filter(filter1))
+        else:
+            perms_to_group = perms_excluding_current_role
+
+        context["permission_categories"] = group_permission_categories([], perms_to_group, [])
+        return render(request, 'permafrost/includes/permissions_table.html', context)
+
+    return HttpResponseBadRequest()
 
 
 # Future Views
