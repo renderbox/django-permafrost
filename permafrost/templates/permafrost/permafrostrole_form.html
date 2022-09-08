@@ -122,50 +122,13 @@
                     {% endif %}
                 </div>
             </div>
-            <div class="row">
-                <div class="col-6">
-                    <a class="ml-auto text-success font-weight-bold" data-toggle="modal" data-target="#form_modal" href="{% url 'permafrost:custom-role-add-permissions' slug=object.slug %}"
-                    role="button"><i class="fas fa-plus mr-2" aria-label="{% trans 'Add Permissions' %}"></i> {% trans 'Add Permissions' %}</a>
-                </div>
-            </div>
-            <!--<div class="form-row">
-                <div class="form-group col-6 col-md-4">
-                    <label class="text-gray-600" for="id_add_permission">
-                        {% trans 'Add Permission' %}
-                    </label>
-
-                    {% if object %}
-                    <div class="disabled-select-wrapper">
-                    {% endif %}
-
-                    <input
-                        name="add-permission"
-                        type="text"
-                        id="id_add_permission"
-                        class="form-control{% if form.name.errors %} is-invalid{% endif %}">
-
-                    <select name="permission_object_name" class="form-control" id="id_permission_object_name">
-                        {% for perm_model, app_label in permission_objects_list %}
-                            <option value="{{ perm_model }}-{{ app_label }}">{{ perm_model|title }}</option>
-                        {% endfor %}
-
-                    </select>
-
-
-                        <br>
-                    <a href="#" id="add-permission-btn" class="btn btn-success ml-auto">{% trans 'Add' %}</a>
-
-                    {% if add_perms_error %}
-                        <div class="invalid-feedback">
-                                {{ add_perms_error }}
-                        </div>
-                    {% endif %}
-                </div>
-                </div>
-            </div>-->
             <div class="form-row border-bottom-gray-300">
                 <p class="col-4 font-weight-bold">{% trans 'Required Permissions' %}</p>
                 <p class="col-4 font-weight-bold">{% trans 'Optional Permissions' %}</p>
+                {% if object and not object.is_default_role %}
+                <a class="ml-auto text-success font-weight-bold text-right" data-toggle="modal" data-target="#form_modal" href="{% url 'permafrost:custom-role-add-permissions' slug=object.slug %}"
+                    role="button"><i class="fas fa-plus mr-2" aria-label="{% trans 'Add Permissions' %}"></i> {% trans 'Add Permissions' %}</a>
+                {% endif %}
             </div>
             <div class="form-row">
                 {% if form.permissions.errors %}
@@ -241,46 +204,6 @@
         })
     </script>
     {% endif %}
-    {% comment %}
-    <script>
-          function containsWhitespace(str) {
-              return /\s/.test(str);
-            }
-
-          $('#add-permission-btn').on('click', function (e){
-                e.preventDefault()
-                let newPerm = $('#id_add_permission').val();
-                let newPermModel = $('#id_permission_object_name').val();
-                if (newPerm){
-                  if (!containsWhitespace(newPerm)){
-                    alert("{% trans 'Make sure your permission is a verb. Should be more then one word.' %}")
-                    return;
-                  }
-                }else{
-                  alert("{% trans 'Add Permission field is required' %}")
-                  return;
-                }
-                var data = {
-                  'new_permission': newPerm,
-                  'permission_for_model': newPermModel
-                }
-                $.ajax({
-                    type: 'POST',
-                    url: "{% url 'permafrost:role-add-permission' slug=object.slug %}",
-                    data: data,
-                    headers: { 'X-CSRFToken': "{{ csrf_token }}" },
-                    success: function () {
-                        location.reload();
-                    },
-                    error: function (response) {
-                      console.log(response)
-                    }
-                })
-
-          })
-    </script>
-    {% endcomment %}
-
     <script>
         $(document).ready(function() {
 

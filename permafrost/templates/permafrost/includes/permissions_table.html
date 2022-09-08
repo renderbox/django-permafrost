@@ -18,6 +18,7 @@
                 value="{{ permission.id }}"
                 {% if permission.selected %} checked{% endif %}
             >
+            <input hidden="true" name="selected_permissions" value="" id="selected_permissions">
         </div>
         {% endfor %}
     </div>

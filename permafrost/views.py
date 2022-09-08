@@ -280,8 +280,8 @@ class PermafrostRoleDeleteView(DeleteView):
     model = PermafrostRole
 
 
-# Custom Detail Permission Groups
-class PermafrostCustomRoleDetailView(PermafrostSiteMixin, FilterByRequestSiteQuerysetMixin, DetailView):
+# Custom Role Modal View
+class PermafrostCustomRoleModalView(PermafrostSiteMixin, FilterByRequestSiteQuerysetMixin, DetailView):
     model = PermafrostRole
     template_name = "permafrost/permissions_modal.html"
     queryset = PermafrostRole.on_site.all()
@@ -293,6 +293,8 @@ class PermafrostCustomRoleDetailView(PermafrostSiteMixin, FilterByRequestSiteQue
         required = role.required_permissions()
         optional = role.optional_permissions()
         all_perms = get_all_perms_for_all_categories()
+        roles_current_perms = role.permissions().all()
+        all_perms = set(all_perms) - set(roles_current_perms)
         perms_excluding_current_role = list(set(all_perms) - set(optional + required))
         context['slug'] = role.slug
         context["permission_categories"] = group_permission_categories(
@@ -302,7 +304,7 @@ class PermafrostCustomRoleDetailView(PermafrostSiteMixin, FilterByRequestSiteQue
 
     def post(self, request, slug, *args, **kwargs):
         role = PermafrostRole.objects.filter(site=request.site, slug=slug).last()
-        permission_ids = request.POST.get('permissions', [])
+        permission_ids = request.POST.getlist('permissions', [])
         if permission_ids:
             perms_to_add = Permission.objects.filter(id__in=permission_ids)
             role.group.permissions.add(*perms_to_add)
