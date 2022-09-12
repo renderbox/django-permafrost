@@ -36,24 +36,19 @@
                         {{ form.name.label }}
                     </label>
                     {% if form.name.required %}<span class="required">*</span>{% endif %}
-                    {% if object and object.is_default_role %}
-                        <div class="disabled-select-wrapper">
-                    {% endif %}
-
-                    <input
-                        name="{{ form.name.name }}" 
-                        type="text" 
-                        id="{{form.name.id_for_label}}" 
-                        class="form-control{% if form.name.errors %} is-invalid{% endif %}" 
+                    <div class="{% if object and object.is_default_role %}disabled-select-wrapper{% endif %}">
+                        <input
+                        name="{{ form.name.name }}"
+                        type="text"
+                        id="{{form.name.id_for_label}}"
+                        class="form-control{% if form.name.errors %} is-invalid{% endif %}"
                         placeholder="{{ form.name.help_text }}" value="{% firstof form.initial.name form.data.name form.instance.name '' %}"
                         {% if object and object.is_default_role %}disabled{% endif %}
-                    >
-
-                    {% if object and object.is_default_role %}
+                        >
+                        {% if object and object.is_default_role %}
                         <i class="fas fa-lock"></i>
-                        </div>
-                    {% endif %}
-
+                        {% endif %}
+                    </div>
                     {% if form.name.errors %}
                         <div class="invalid-feedback">
                             {% for error in form.name.errors %}
@@ -70,22 +65,19 @@
                         {{ form.description.label }}
                     </label>
                     {% if form.description.required %}<span class="required">*</span>{% endif %}
-                    {% if object and object.is_default_role %}
-                        <div class="disabled-select-wrapper">
-                    {% endif %}
-                    <input 
-                        name="{{ form.description.name }}" 
-                        type="text" id="{{ form.description.id_for_label }}" 
-                        class="form-control{% if form.description.errors %} is-invalid{% endif %}" 
+                    <div class="{% if object and object.is_default_role %}disabled-select-wrapper{% endif %}">
+                        <input
+                        name="{{ form.description.name }}"
+                        type="text" id="{{ form.description.id_for_label }}"
+                        class="form-control{% if form.description.errors %} is-invalid{% endif %}"
                         placeholder="{{ form.description.help_text }}"
                         value="{% firstof form.initial.description form.data.description form.instance.description '' %}"
                         {% if object and object.is_default_role %}disabled{% endif %}
-                    >
-                    {% if object and object.is_default_role %}
+                        >
+                        {% if object and object.is_default_role %}
                         <i class="fas fa-lock"></i>
-                        </div>
-                    {% endif %}
-
+                        {% endif %}
+                    </div>
                     {% if form.description.errors %}
                         <div class="invalid-feedback">
                             {% for error in form.description.errors %}

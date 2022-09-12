@@ -24,6 +24,20 @@ logger = logging.getLogger(__name__)
 # CHOICES
 ###############
 
+try:
+    PERMAFROST_DEFAULT_ROLES = getattr(settings, 'PERMAFROST_DEFAULT_ROLES')
+except AttributeError:
+    PERMAFROST_DEFAULT_ROLES = [
+        'Student',
+        'Supervisor',
+        'Councilor',
+        'Accounting',
+        'Super User',
+        'Administrator',
+        'Curriculum Designer',
+        'Instructor',
+        'Site Owner'
+]
 
 try:
     CATEGORIES = getattr(settings, "PERMAFROST_CATEGORIES")
@@ -253,8 +267,7 @@ class PermafrostRole(models.Model):
         return list(Permission.objects.filter(content_type__in=model_content_types))
 
     def is_default_role(self):
-        return self.name in ['Student', 'Supervisor', 'Councilor', 'Accounting', 'Super User',
-                             'Administrator', 'Curriculum Designer', 'Instructor', 'Site Owner']
+        return self.name in PERMAFROST_DEFAULT_ROLES
 
     def all_perm_ids(self):
         req = [perm.pk for perm in self.required_permissions()]
