@@ -19,6 +19,7 @@ from .forms import (
 )
 from django.http import HttpResponseBadRequest, HttpResponse, HttpResponseNotFound
 from .permissions import has_all_permissions
+from django.middleware.csrf import get_token
 
 # --------------
 # UTILITIES
@@ -235,14 +236,7 @@ class PermafrostRoleDetailView(PermafrostSiteMixin, FilterByRequestSiteQuerysetM
         context["object_list"] = self.queryset
 
         role = context["object"]
-        visible_permission_ids = role.all_perm_ids()
-
-        context["permissions"] = (
-            role.permissions()
-            .filter(id__in=visible_permission_ids)
-            .order_by("content_type")
-        )
-
+        context['permissions'] = role.permissions().all().order_by("content_type")
         return context
 
 
@@ -300,6 +294,7 @@ class PermafrostCustomRoleModalView(PermafrostSiteMixin, FilterByRequestSiteQuer
         context["permission_categories"] = group_permission_categories(
             [], perms_excluding_current_role, []
         )
+        context['csrf_token'] = get_token(self.request)
         return context
 
     def post(self, request, slug, *args, **kwargs):
@@ -323,6 +318,8 @@ def update_permission_table(request, slug):
         required = role.required_permissions()
         optional = role.optional_permissions()
         all_perms = get_all_perms_for_all_categories()
+        roles_current_perms = role.permissions().all()
+        all_perms = set(all_perms) - set(roles_current_perms)
         perms_excluding_current_role = list(set(all_perms) - set(optional + required))
 
         query = request.GET.get('q', None)

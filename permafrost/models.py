@@ -26,8 +26,14 @@ logger = logging.getLogger(__name__)
 
 try:
     PERMAFROST_DEFAULT_ROLES = getattr(settings, 'PERMAFROST_DEFAULT_ROLES')
-except AttributeError:
-    PERMAFROST_DEFAULT_ROLES = [
+except AttributeError as e:
+    print(
+        """
+        !!! Warning: PERMAFROST_CATEGORIES are not defined!
+
+        They should look something like this and be defined in settings.py
+        
+        PERMAFROST_DEFAULT_ROLES = [
         'Student',
         'Supervisor',
         'Councilor',
@@ -37,11 +43,15 @@ except AttributeError:
         'Curriculum Designer',
         'Instructor',
         'Site Owner'
-]
+    ]
+        """
+    )
+    raise
 
 try:
     CATEGORIES = getattr(settings, "PERMAFROST_CATEGORIES")
 except AttributeError:
+    CATEGORIES = None
     print(
         """
     !!! Warning: PERMAFROST_CATEGORIES are not defined!
@@ -255,16 +265,6 @@ class PermafrostRole(models.Model):
         TODO!!!
         """
         return get_optional_by_category(self.category)
-
-    def non_default_permissions(self, required, optional):
-        model_content_types = []
-        for perm in required:
-            model_content_types.append(perm.content_type)
-
-        for perm in optional:
-            model_content_types.append(perm.content_type)
-
-        return list(Permission.objects.filter(content_type__in=model_content_types))
 
     def is_default_role(self):
         return self.name in PERMAFROST_DEFAULT_ROLES

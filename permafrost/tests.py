@@ -19,7 +19,13 @@ try:
 except ImportError:
     SKIP_DRF_TESTS = True
 
-from permafrost.models import PermafrostRole, get_current_site
+from permafrost.models import (
+    PermafrostRole,
+    get_current_site,
+    CATEGORIES,
+    get_all_perms_for_all_categories,
+    non_default_permissions
+)
 
 
 class PermafrostRoleModelTest(TestCase):
@@ -257,6 +263,37 @@ class PermafrostRoleModelTest(TestCase):
 
         with self.assertRaises(Group.DoesNotExist):
             group = Group.objects.get(name=group_name)
+
+    def test_get_all_perms_for_all_categories(self):
+        all_perm_names = [perm.name for perm in get_all_perms_for_all_categories()]
+
+        # grab all the names from CATEGORIES in settings
+        category_perm_names = []
+        for category, category_data in CATEGORIES.items():
+            for optional_perm_data in category_data['optional']:
+                category_perm_names.append(optional_perm_data['label'])
+
+            for optional_perm_data in category_data['required']:
+                category_perm_names.append(optional_perm_data['label'])
+
+        for perm in category_perm_names:
+            self.assertIn(perm, all_perm_names)
+
+    def test_non_default_permissions(self):
+        all_perm_names = [perm.name for perm in get_all_perms_for_all_categories()]
+
+        # grab all the names from CATEGORIES in settings
+        category_perm_names = []
+        for category, category_data in CATEGORIES.items():
+            for optional_perm_data in category_data['optional']:
+                category_perm_names.append(optional_perm_data['label'])
+
+            for optional_perm_data in category_data['required']:
+                category_perm_names.append(optional_perm_data['label'])
+
+        for perm in category_perm_names:
+            self.assertIn(perm, all_perm_names)
+
 
 
 # Don't run the following tests if DRF is not loaded

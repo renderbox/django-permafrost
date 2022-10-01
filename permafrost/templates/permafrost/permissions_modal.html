@@ -31,8 +31,11 @@
             </div>
         </div>
         <form method="post" action="{% url 'permafrost:custom-role-add-permissions' slug=object.slug %}" id="perm-modal-form">
-            {% csrf_token %}
-            {% include 'permafrost/includes/permissions_table.html' %}
+            <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
+            <div id="perm-table">
+                {% include 'permafrost/includes/permissions_table.html' %}
+            </div>
+
         </form>
     </div>
 </div>
@@ -46,7 +49,7 @@
       let slug = "{{ slug }}";
       let url = "{% url 'permafrost:custom-role-search-permissions' slug=slug %}?q=" + q
       url.replace('/slug/', slug)
-      $('#perm-modal-form').html('').load(url);
+      $('#perm-table').html('').load(url);
     }
 
     $('#search_button').on('click', function(e){
