@@ -183,7 +183,7 @@
 {% block extra_js %}
     {% if not object %} {# "Hide JS change handler on edit " #}
     <script>
-        $(document).ready(function(){
+        document.addEventListener("DOMContentLoaded", function(event) { 
             $('#id_category').on('change', function(){
                 if ($(this).val()){
                     $form = $(this).closest('form')
@@ -192,13 +192,11 @@
                 }
             })
 
-
         })
     </script>
     {% endif %}
     <script>
-        $(document).ready(function() {
-
+        document.addEventListener("DOMContentLoaded", function(event) { 
             $('#form_modal').on('show.bs.modal', function (evt) {
                 var modal = $(this).find('.modal-content');
                 var url = evt.relatedTarget.href; // pull form contents from href attr of button
