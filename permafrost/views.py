@@ -161,7 +161,7 @@ class PermafrostRoleCreateView(PermafrostSiteMixin, CreateView):
 
                 kwargs = {'initial': submitted.cleaned_data}
                 if hasattr(request, 'site'):
-                    kwargs['site'] = request.site
+                    kwargs['site'] = self.request.site
                 
                 form = PermafrostRoleCreateForm(**kwargs)
                 category = submitted.cleaned_data["category"]
@@ -300,7 +300,7 @@ class PermafrostCustomRoleModalView(PermafrostSiteMixin, FilterByRequestSiteQuer
         return context
 
     def post(self, request, slug, *args, **kwargs):
-        role = PermafrostRole.objects.filter(site=request.site, slug=slug).last()
+        role = PermafrostRole.objects.filter(site=self.request.site, slug=slug).last()
         permission_ids = request.POST.getlist('permissions', [])
         if permission_ids:
             perms_to_add = Permission.objects.filter(id__in=permission_ids)
@@ -312,8 +312,7 @@ def update_permission_table(request, slug):
     # This is used on the add permissions modal on custom roles. Used to update the modal based on search query
 
     if request.GET:
-        current_site = getattr(request, 'site', Site.objects.get_current())
-        role = PermafrostRole.objects.filter(site=current_site, slug=slug).last()
+        role = PermafrostRole.objects.filter(site=self.request.site, slug=slug).last()
         if not role:
             return HttpResponseNotFound()
 
