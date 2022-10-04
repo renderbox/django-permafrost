@@ -20,6 +20,7 @@ from .forms import (
 from django.http import HttpResponseBadRequest, HttpResponse, HttpResponseNotFound
 from .permissions import has_all_permissions
 from django.middleware.csrf import get_token
+from django.contrib.sites.models import Site
 
 # --------------
 # UTILITIES
@@ -311,7 +312,8 @@ def update_permission_table(request, slug):
     # This is used on the add permissions modal on custom roles. Used to update the modal based on search query
 
     if request.GET:
-        role = PermafrostRole.objects.filter(site=request.site, slug=slug).last()
+        current_site = getattr(request, 'site', Site.objects.get_current())
+        role = PermafrostRole.objects.filter(site=current_site, slug=slug).last()
         if not role:
             return HttpResponseNotFound()
 
