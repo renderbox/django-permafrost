@@ -300,7 +300,8 @@ class PermafrostCustomRoleModalView(PermafrostSiteMixin, FilterByRequestSiteQuer
         return context
 
     def post(self, request, slug, *args, **kwargs):
-        role = PermafrostRole.objects.filter(site=self.request.site, slug=slug).last()
+        current_site = getattr(request, 'site', Site.objects.get_current())
+        role = PermafrostRole.objects.filter(site=current_site, slug=slug).last()
         permission_ids = request.POST.getlist('permissions', [])
         if permission_ids:
             perms_to_add = Permission.objects.filter(id__in=permission_ids)
@@ -312,7 +313,8 @@ def update_permission_table(request, slug):
     # This is used on the add permissions modal on custom roles. Used to update the modal based on search query
 
     if request.GET:
-        role = PermafrostRole.objects.filter(site=self.request.site, slug=slug).last()
+        current_site = getattr(request, 'site', Site.objects.get_current())
+        role = PermafrostRole.objects.filter(site=current_site, slug=slug).last()
         if not role:
             return HttpResponseNotFound()
 
