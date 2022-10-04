@@ -1,0 +1,94 @@
+{% load i18n %}
+
+<div class="modal-header">
+    <h5 class="modal-title font-weight-bold text-gray-900">
+        {% trans 'Add Permissions' %}
+    </h5>
+    <button type="button" class="close text-success" data-dismiss="modal" aria-label="Close">
+        <span aria-hidden="true">&times;</span>
+    </button>
+</div>
+<div class="modal-body" style="overflow-y: auto; max-height: 50vh;">
+    {% if obj_title %}
+    <h2 class="text-primary-grey mb-3">
+        {{ obj_title }}
+    </h2>
+    {% endif %}
+    <div class="col-12">
+        <div class="search-bar">
+            <div class="input-group">
+                <input type="text" id="search_field" class="textinput textInput flex-fill" placeholder="{% trans 'Search' %}" aria-label="{% trans 'Search' %}" aria-describedby="basic-addon2">
+                <div class="input-group-append">
+                    <button class="btn bg-transparent close search-close show" type="button" role="close" aria-role="close" id="search_close">
+                      <i class="fa fa-times"></i>
+                    </button>
+                  </div>
+                <div class="input-group-append">
+                    <button id="search_button" class="btn btn-success" style="z-index: 15;">
+                        <i class="fas fa-search"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+        <form method="post" action="{% url 'permafrost:custom-role-add-permissions' slug=object.slug %}" id="perm-modal-form">
+            <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
+            <div id="perm-table">
+                {% include 'permafrost/includes/permissions_table.html' %}
+            </div>
+
+        </form>
+    </div>
+</div>
+<div class="modal-footer">
+    <a class="text-success font-weight-bold mr-3" data-dismiss="modal" role="button">{%  trans 'Cancel' %}</a>
+    <button type="submit" class="btn btn-success font-weight-bold" form="base-form" id="add-button">{%  trans 'Add' %}</button>
+</div>
+
+<script>
+    function updateModalPermsTable(q){
+      let slug = "{{ slug }}";
+      let url = "{% url 'permafrost:custom-role-search-permissions' slug=slug %}?q=" + q
+      url.replace('/slug/', slug)
+      $('#perm-table').html('').load(url);
+    }
+
+    $('#search_button').on('click', function(e){
+      updateModalPermsTable($('#search_field').val())
+    })
+
+    $('#add-button').on('click', function (e){
+      $('#perm-modal-form').submit()
+    })
+
+    $('#search_close').on('click', function(e){
+      updateModalPermsTable('')
+    })
+
+
+
+</script>
+<script>
+    var search_close = document.getElementById("search_close");
+    var q = search_close.closest('.input-group').querySelector('input[type="text"]');
+
+    function clearSearch() {
+        q.value = '';
+        showSearchX();
+        var q_form = q.closest('form');
+        q.form.submit();
+    }
+
+    function showSearchX() {
+        if (q && q.value) {
+            search_close.classList.add('show');
+        } else {
+            search_close.classList.remove('show');
+        }
+    }
+
+    showSearchX();
+    $('#search_close').click(clearSearch)
+    q.addEventListener('input', showSearchX);
+</script>
+
+

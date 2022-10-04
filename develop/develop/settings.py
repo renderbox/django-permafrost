@@ -170,4 +170,16 @@ PERMAFROST_CATEGORIES = {
     },
 }
 
+PERMAFROST_DEFAULT_ROLES = [
+        'Student',
+        'Supervisor',
+        'Councilor',
+        'Accounting',
+        'Super User',
+        'Administrator',
+        'Curriculum Designer',
+        'Instructor',
+        'Site Owner'
+]
+
 

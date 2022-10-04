@@ -1,0 +1,28 @@
+{% load i18n %}
+
+{% for content_type, category in permission_categories.items %}
+<div class="row">
+    <p class="small font-weight-bold col-12 text-gray-600 mt-3 text-capitalize">{{ category.name }}</p>
+    <div class="col-12">
+        {% for permission in category.optional %}
+        <div class="d-flex align-items-center">
+            <span class="text-gray-900">{{ permission.name }}</span>
+
+            {% if permission.short_description %}
+            <i class="ml-2 fas fa-info-circle text-gray-600" aria-label="{% trans 'Info' %}"></i>
+            {% endif %}
+            <input
+                class="ml-auto"
+                type="checkbox"
+                name="permissions"
+                value="{{ permission.id }}"
+                {% if permission.selected %} checked{% endif %}
+            >
+            <input hidden="true" name="selected_permissions" value="" id="selected_permissions">
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% empty %}
+<div class="pb-5 row">{# used for spacing when empty #}</div>
+{% endfor %}
