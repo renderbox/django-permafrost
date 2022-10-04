@@ -210,15 +210,16 @@ class PermafrostRoleManageView(PermafrostRoleListView):
         queryset = context["object_list"]
         landing_role = queryset.first()
 
-        visible_permission_ids = landing_role.all_perm_ids()
+        if landing_role:
+            visible_permission_ids = landing_role.all_perm_ids()
 
-        context["object"] = landing_role
+            context["object"] = landing_role
 
-        context["permissions"] = (
-            landing_role.permissions()
-            .filter(id__in=visible_permission_ids)
-            .order_by("content_type")
-        )
+            context["permissions"] = (
+                landing_role.permissions()
+                .filter(id__in=visible_permission_ids)
+                .order_by("content_type")
+            )
 
         return context
 
