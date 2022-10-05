@@ -24,6 +24,7 @@ package_metadata = {
     'description': 'Adds Client Definable Permissions to Django',
     'version': VERSION,
     'long_description': long_description,
+    'long_description_content_type': 'text/markdown',
     'url': 'https://github.com/renderbox/django-permafrost/',
     'author': 'Grant Viklund',
     'author_email': 'renderbox@gmail.com',
