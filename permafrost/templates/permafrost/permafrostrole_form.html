@@ -36,13 +36,19 @@
                         {{ form.name.label }}
                     </label>
                     {% if form.name.required %}<span class="required">*</span>{% endif %}
-                    <input 
-                        name="{{ form.name.name }}" 
-                        type="text" 
-                        id="{{form.name.id_for_label}}" 
-                        class="form-control{% if form.name.errors %} is-invalid{% endif %}" 
-                        placeholder="{{ form.name.help_text }}" value="{% firstof form.initial.name form.data.name form.instance.name '' %}" >
-                    
+                    <div class="{% if object and object.is_default_role %}disabled-select-wrapper{% endif %}">
+                        <input
+                        name="{{ form.name.name }}"
+                        type="text"
+                        id="{{form.name.id_for_label}}"
+                        class="form-control{% if form.name.errors %} is-invalid{% endif %}"
+                        placeholder="{{ form.name.help_text }}" value="{% firstof form.initial.name form.data.name form.instance.name '' %}"
+                        {% if object and object.is_default_role %}disabled{% endif %}
+                        >
+                        {% if object and object.is_default_role %}
+                        <i class="fas fa-lock"></i>
+                        {% endif %}
+                    </div>
                     {% if form.name.errors %}
                         <div class="invalid-feedback">
                             {% for error in form.name.errors %}
@@ -59,13 +65,19 @@
                         {{ form.description.label }}
                     </label>
                     {% if form.description.required %}<span class="required">*</span>{% endif %}
-                    <input 
-                        name="{{ form.description.name }}" 
-                        type="text" id="{{ form.description.id_for_label }}" 
-                        class="form-control{% if form.description.errors %} is-invalid{% endif %}" 
+                    <div class="{% if object and object.is_default_role %}disabled-select-wrapper{% endif %}">
+                        <input
+                        name="{{ form.description.name }}"
+                        type="text" id="{{ form.description.id_for_label }}"
+                        class="form-control{% if form.description.errors %} is-invalid{% endif %}"
                         placeholder="{{ form.description.help_text }}"
-                        value="{% firstof form.initial.description form.data.description form.instance.description '' %}" >
-
+                        value="{% firstof form.initial.description form.data.description form.instance.description '' %}"
+                        {% if object and object.is_default_role %}disabled{% endif %}
+                        >
+                        {% if object and object.is_default_role %}
+                        <i class="fas fa-lock"></i>
+                        {% endif %}
+                    </div>
                     {% if form.description.errors %}
                         <div class="invalid-feedback">
                             {% for error in form.description.errors %}
@@ -76,7 +88,7 @@
                 </div>
             </div>
             <div class="form-row">
-                <div class="form-group col-12 col-md-4">
+                <div class="form-group col-6 col-md-4">
                     <label class="text-gray-600" for="{{ form.category.id_for_label }}">
                         {{ form.category.label }}
                     </label>
@@ -103,8 +115,12 @@
                 </div>
             </div>
             <div class="form-row border-bottom-gray-300">
-                <p class="col-6 font-weight-bold">{% trans 'Required Permissions' %}</p>
-                <p class="col-6 font-weight-bold">{% trans 'Optional Permissions' %}</p>
+                <p class="col-4 font-weight-bold">{% trans 'Required Permissions' %}</p>
+                <p class="col-4 font-weight-bold">{% trans 'Optional Permissions' %}</p>
+                {% if object and not object.is_default_role %}
+                <a class="ml-auto text-success font-weight-bold text-right" data-toggle="modal" data-target="#form_modal" href="{% url 'permafrost:custom-role-add-permissions' slug=object.slug %}"
+                    role="button"><i class="fas fa-plus mr-2" aria-label="{% trans 'Add Permissions' %}"></i> {% trans 'Add Permissions' %}</a>
+                {% endif %}
             </div>
             <div class="form-row">
                 {% if form.permissions.errors %}
@@ -155,12 +171,20 @@
         </div>
     </div>
 </form>
+
+<div class="modal fade" tabindex="-1" role="dialog" id="form_modal">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+
+    </div>
+  </div>
+</div>
 {% endblock %}
 
 {% block extra_js %}
     {% if not object %} {# "Hide JS change handler on edit " #}
     <script>
-        $(document).ready(function(){
+        document.addEventListener("DOMContentLoaded", function(event) { 
             $('#id_category').on('change', function(){
                 if ($(this).val()){
                     $form = $(this).closest('form')
@@ -168,7 +192,25 @@
                     $form.submit()
                 }
             })
+
         })
     </script>
     {% endif %}
+    <script>
+        document.addEventListener("DOMContentLoaded", function(event) { 
+            $('#form_modal').on('show.bs.modal', function (evt) {
+                var modal = $(this).find('.modal-content');
+                var url = evt.relatedTarget.href; // pull form contents from href attr of button
+                $.ajax({
+                    url: url,
+                    context: document.body
+                }).done(function(response) {
+                    modal.html(response);
+                });
+            });
+
+        });
+        </script>
 {% endblock %}
+
+
