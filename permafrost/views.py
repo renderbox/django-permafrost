@@ -235,7 +235,7 @@ class PermafrostRoleDetailView(PermafrostSiteMixin, FilterByRequestSiteQuerysetM
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
 
-        context["object_list"] = self.queryset
+        context["object_list"] = self.get_queryset()
 
         role = context["object"]
         context['permissions'] = role.permissions().all().order_by("content_type")
