@@ -626,6 +626,25 @@ class PermafrostViewTests(TestCase):
             print("")
             raise
     
+    def test_delete_locked_role_POST_returns_validation_error(self):
+        self.pf_role.locked = True
+        self.pf_role.save()
+        uri = reverse('permafrost:role-update', kwargs={'slug': 'test-role'})
+        data = model_to_dict(self.pf_role)
+        data.update({'deleted': True})
+        ## iterator below used to remove 'description': None
+        data = {k: v for k, v in data.items() if v is not None}
+        response = self.client.post(uri, data=data, follow=True)
+        
+        try:
+            updated_role = PermafrostRole.objects.get(slug=self.pf_role.slug, site__id=1)
+            self.assertEqual(updated_role.deleted, False)
+        except:
+            print("")
+            print(model_to_dict(PermafrostRole.objects.get(slug=self.pf_role.slug, site__id=1)))
+            print("")
+            raise
+    
     def test_site_added_on_create_POST(self):
         site = get_current_site()
         data = {
