@@ -145,7 +145,7 @@ class PermafrostLogMixin(object):
 class FilterByRequestSiteQuerysetMixin:
     def get_queryset(self):
         if hasattr(self.request, 'site'):
-            return PermafrostRole.objects.filter(site=self.request.site)
+            return PermafrostRole.objects.filter(site=self.request.site, deleted=False)
         return super().get_queryset()
 
 # Create Permission Group

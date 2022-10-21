@@ -408,6 +408,20 @@ class PermafrostViewTests(TestCase):
             print("")
             pass
         pass
+
+    def test_list_view_excludes_deleted_roles_on_current_site(self):
+        uri = reverse('permafrost:role-list')
+        response = self.client.get(uri)
+        PermafrostRole.objects.get(pk=2).delete()
+        try:
+            roles = response.context['object_list']
+            self.assertEqual(len(roles), 2)
+        except:
+            print("Returned site ids")
+            print([role.site.id for role in response.context['object_list']])
+            print("")
+            pass
+        pass
     
     def test_administration_create_url_resolves(self):
         found = resolve("/permafrost/role/create/")
