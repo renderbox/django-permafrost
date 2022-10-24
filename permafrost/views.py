@@ -220,7 +220,7 @@ class PermafrostRoleManageView(PermafrostRoleListView):
             context["permissions"] = (
                 landing_role.permissions()
                 .filter(id__in=visible_permission_ids)
-                .order_by("content_type")
+                .order_by("content_type").distinct()
             )
 
         return context
@@ -239,7 +239,7 @@ class PermafrostRoleDetailView(PermafrostSiteMixin, FilterByRequestSiteQuerysetM
         context["object_list"] = self.get_queryset()
 
         role = context["object"]
-        context['permissions'] = role.permissions().all().order_by("content_type")
+        context['permissions'] = role.permissions().all().order_by("content_type").distinct()
         return context
 
 
