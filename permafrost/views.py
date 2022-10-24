@@ -298,7 +298,6 @@ class PermafrostCustomRoleModalView(PermafrostSiteMixin, FilterByRequestSiteQuer
         context["permission_categories"] = group_permission_categories(
             [], perms_excluding_current_role, []
         )
-        context['csrf_token'] = get_token(self.request)
         return context
 
     def post(self, request, slug, *args, **kwargs):

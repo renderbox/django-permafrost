@@ -31,7 +31,7 @@
             </div>
         </div>
         <form method="post" action="{% url 'permafrost:custom-role-add-permissions' slug=object.slug %}" id="perm-modal-form">
-            <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
+            {% csrf_token %}
             <div id="perm-table">
                 {% include 'permafrost/includes/permissions_table.html' %}
             </div>
@@ -46,8 +46,8 @@
 
 <script>
     function updateModalPermsTable(q){
-      let slug = "{{ slug }}";
-      let url = "{% url 'permafrost:custom-role-search-permissions' slug=slug %}?q=" + q
+      let slug = "{{ object.slug }}";
+      let url = "{% url 'permafrost:custom-role-search-permissions' slug=object.slug %}?q=" + q
       url.replace('/slug/', slug)
       $('#perm-table').html('').load(url);
     }
