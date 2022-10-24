@@ -149,6 +149,16 @@ class FilterByRequestSiteQuerysetMixin:
             return PermafrostRole.objects.filter(site=self.request.site, deleted=False)
         return super().get_queryset()
 
+class GetRoleExternalPermissionsMixin:
+    def get_perms_excluding_current_role(self, context):
+        role = context['object']
+        required = role.required_permissions()
+        optional = role.optional_permissions()
+        selected = list(role.permissions().all())
+        all_perms = get_all_perms_for_all_categories()
+        perms_excluding_current_role = list(set(all_perms) - set(required + optional + selected))
+        return perms_excluding_current_role
+
 # Create Permission Group
 class PermafrostRoleCreateView(PermafrostSiteMixin, CreateView):
     model = PermafrostRole
