@@ -17,7 +17,7 @@
               {% trans 'Create' %}    
           {% endif %}
         </button>
-        {% if not object.locked %}
+        {% if object and not object.locked %}
         <a href="{% url 'permafrost:role-delete' object.slug  %}" data-toggle="modal" data-target="#form_modal" class="btn btn-danger ml-1"> 
             {% trans 'Delete' %}
         </a>
