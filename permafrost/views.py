@@ -289,7 +289,7 @@ class PermafrostRoleDeleteView(PermafrostSiteMixin, FilterByRequestSiteQuerysetM
 
 
 # Custom Role Modal View
-class PermafrostCustomRoleModalView(PermafrostSiteMixin, FilterByRequestSiteQuerysetMixin, DetailView):
+class PermafrostCustomRoleModalView(PermafrostSiteMixin, FilterByRequestSiteQuerysetMixin, GetRoleExternalPermissionsMixin, DetailView):
     model = PermafrostRole
     template_name = "permafrost/permissions_modal.html"
     queryset = PermafrostRole.on_site.all()
@@ -297,14 +297,7 @@ class PermafrostCustomRoleModalView(PermafrostSiteMixin, FilterByRequestSiteQuer
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        role = context["object"]
-        required = role.required_permissions()
-        optional = role.optional_permissions()
-        all_perms = get_all_perms_for_all_categories()
-        roles_current_perms = role.permissions().all()
-        all_perms = set(all_perms) - set(roles_current_perms)
-        perms_excluding_current_role = list(set(all_perms) - set(optional + required))
-        context['slug'] = role.slug
+        perms_excluding_current_role = self.get_perms_excluding_current_role(context)
         context["permission_categories"] = group_permission_categories(
             [], perms_excluding_current_role, []
         )
@@ -319,25 +312,13 @@ class PermafrostCustomRoleModalView(PermafrostSiteMixin, FilterByRequestSiteQuer
             role.group.permissions.add(*perms_to_add)
         return redirect('permafrost:role-update', slug=slug)
 
-
-def update_permission_table(request, slug):
-    # This is used on the add permissions modal on custom roles. Used to update the modal based on search query
-
-    if request.GET:
-        current_site = getattr(request, 'site', Site.objects.get_current())
-        role = PermafrostRole.objects.filter(site=current_site, slug=slug).last()
-        if not role:
-            return HttpResponseNotFound()
-
-        context = {}
-        required = role.required_permissions()
-        optional = role.optional_permissions()
-        all_perms = get_all_perms_for_all_categories()
-        roles_current_perms = role.permissions().all()
-        all_perms = set(all_perms) - set(roles_current_perms)
-        perms_excluding_current_role = list(set(all_perms) - set(optional + required))
-
-        query = request.GET.get('q', None)
+class UpdatePermissionTableView(GetRoleExternalPermissionsMixin, PermafrostRoleUpdateView):
+    model = PermafrostRole
+    template_name = 'permafrost/includes/permissions_table.html'
+    def get_context_data(self, **kwargs):
+        context =  super().get_context_data(**kwargs)
+        perms_excluding_current_role = self.get_perms_excluding_current_role(context)
+        query = self.request.GET.get('q', None)
         if query:
             # perform search filtering
             perms_pks = [perm.pk for perm in perms_excluding_current_role]
@@ -349,10 +330,8 @@ def update_permission_table(request, slug):
             perms_to_group = perms_excluding_current_role
 
         context["permission_categories"] = group_permission_categories([], perms_to_group, [])
-        return render(request, 'permafrost/includes/permissions_table.html', context)
-
-    return HttpResponseBadRequest()
-
+        
+        return context
 
 # Future Views
 
