@@ -1,4 +1,5 @@
 import logging
+from django.urls import reverse_lazy
 from django.contrib.auth.models import Permission
 from django.contrib.auth.mixins import PermissionRequiredMixin
 from django.shortcuts import render, redirect
@@ -272,8 +273,9 @@ class PermafrostRoleUpdateView(PermafrostSiteMixin, FilterByRequestSiteQuerysetM
         return kwargs
 
 # Delete Permission Groups
-class PermafrostRoleDeleteView(DeleteView):
+class PermafrostRoleDeleteView(PermafrostSiteMixin, FilterByRequestSiteQuerysetMixin, DeleteView):
     model = PermafrostRole
+    success_url = reverse_lazy('permafrost:roles-manage')  
 
 
 # Custom Role Modal View

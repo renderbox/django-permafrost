@@ -8,15 +8,20 @@
 <form method="POST" id="role_form">
   {% csrf_token %}
     <div class="d-sm-flex align-items-center justify-content-between my-3">
-      <h1 class="text-gray-800 m-0"> {% trans 'Roles & Permissions' %}</h1>
-      <a href="{% if object %}{{ object.get_absolute_url }}{% else %}{% url 'permafrost:roles-manage' %}{% endif %}" class="btn btn-outline-success ml-auto">{% trans 'Cancel' %}</a>
-      <button type="submit" class="btn btn-success ml-1">
+        <h1 class="text-gray-800 m-0"> {% trans 'Roles & Permissions' %}</h1>
+        <a href="{% if object %}{{ object.get_absolute_url }}{% else %}{% url 'permafrost:roles-manage' %}{% endif %}" class="btn btn-outline-success ml-auto">{% trans 'Cancel' %}</a>
+        <button type="submit" class="btn btn-success ml-1">
           {% if object %}
               {% trans 'Save' %}                
           {% else %}
               {% trans 'Create' %}    
           {% endif %}
-      </button>
+        </button>
+        {% if not object.locked %}
+        <a href="{% url 'permafrost:role-delete' object.slug  %}" data-toggle="modal" data-target="#form_modal" class="btn btn-danger ml-1"> 
+            {% trans 'Delete' %}
+        </a>
+        {% endif %}
     </div>
     <div class="card text-gray-800 pb-5">
         <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
