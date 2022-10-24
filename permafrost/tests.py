@@ -277,6 +277,11 @@ class PermafrostRoleModelTest(TestCase):
 
         self.assertListEqual(sorted(all_perm_names), sorted(category_perm_names))
 
+    def test_unable_to_delete_default_roles(self):
+        role = PermafrostRole.objects.get(pk=3)
+        role.delete()
+        role = PermafrostRole.objects.get(pk=3)
+        self.assertFalse(role.deleted)
 
 
 # Don't run the following tests if DRF is not loaded

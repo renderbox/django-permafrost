@@ -396,8 +396,8 @@ class PermafrostRole(models.Model):
     # Delete
 
     def delete(self, using=None, keep_parents=False):
-        self.deleted = True
-        return self.save()
+        if not self.locked and self.name not in PERMAFROST_DEFAULT_ROLES:
+            return super().delete()
 
 @receiver(
     post_delete,
