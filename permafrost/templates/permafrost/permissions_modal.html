@@ -47,7 +47,7 @@
 <script>
     function updateModalPermsTable(q){
       let slug = "{{ object.slug }}";
-      let url = "{% url 'permafrost:custom-role-search-permissions' slug=object.slug %}?q=" + q
+      let url = "{% url 'permafrost:custom-role-add-permissions' slug=object.slug %}?q=" + q
       url.replace('/slug/', slug)
       $('#perm-table').html('').load(url);
     }
