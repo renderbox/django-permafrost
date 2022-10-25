@@ -321,12 +321,16 @@ class PermafrostCustomRoleModalView(PermafrostSiteMixin, FilterByRequestSiteQuer
     def post(self, request, slug, *args, **kwargs):
         current_site = getattr(request, 'site', Site.objects.get_current())
         role = PermafrostRole.objects.filter(site=current_site, slug=slug).last()
-        permission_ids = request.POST.getlist('permissions', [])
-        if permission_ids:
-            perms_to_add = Permission.objects.filter(id__in=permission_ids)
+        perms_to_add = self.get_permissions_queryset()
+        if perms_to_add:
             role.group.permissions.add(*perms_to_add)
         return redirect('permafrost:role-update', slug=slug)
-
+    
+    def get_permissions_queryset(self):
+        permission_ids = self.request.POST.getlist('permissions', [])
+        if permission_ids:
+            return Permission.objects.filter(id__in=permission_ids)
+        return None
 # Future Views
 
 # TODO: Role User List (For easier pagination) & bulk editing
