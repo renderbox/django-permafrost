@@ -313,9 +313,9 @@ class PermafrostCustomRoleModalView(PermafrostSiteMixin, FilterByRequestSiteQuer
         return context
     
     def get_template_names(self):
-        if self.request.GET.get('q', None):
-            return ['permafrost/includes/permissions_table.html']
-        return super().get_template_names()
+        if self.request.GET.get('q') == None:
+            return super().get_template_names()
+        return ['permafrost/includes/permissions_table.html']
    
     def post(self, request, slug, *args, **kwargs):
         current_site = getattr(request, 'site', Site.objects.get_current())
