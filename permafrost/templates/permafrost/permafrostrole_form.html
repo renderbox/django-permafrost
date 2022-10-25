@@ -205,6 +205,14 @@
         document.addEventListener("DOMContentLoaded", function(event) { 
             $('#form_modal').on('show.bs.modal', function (evt) {
                 var modal = $(this).find('.modal-content');
+                // clear html
+                modal.html(`
+                <div class="d-flex justify-content-center p-5">
+                    <div class="spinner-border" role="status">
+                        <span class="sr-only">Loading...</span>
+                    </div>
+                </div>
+                `)
                 var url = evt.relatedTarget.href; // pull form contents from href attr of button
                 $.ajax({
                     url: url,
