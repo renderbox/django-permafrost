@@ -286,6 +286,7 @@ class PermafrostRoleUpdateView(PermafrostSiteMixin, FilterByRequestSiteQuerysetM
 class PermafrostRoleDeleteView(PermafrostSiteMixin, FilterByRequestSiteQuerysetMixin, DeleteView):
     model = PermafrostRole
     success_url = reverse_lazy('permafrost:roles-manage')  
+    permission_required = ["permafrost.delete_permafrostrole"]
 
 
 # Custom Role Modal View
