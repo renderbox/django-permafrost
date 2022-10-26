@@ -151,7 +151,7 @@ class PermafrostRoleUpdateForm(PermafrostRoleCreateForm):
         self.fields['deleted'].initial = self.instance.deleted
 
     def save(self, commit=True):
-        if self.cleaned_data['deleted']:
+        if self.cleaned_data['deleted'] and not self.instance.locked and not self.instance.is_default_role():
             self.instance.deleted = self.cleaned_data['deleted']
         instance = super().save(commit)
         return instance

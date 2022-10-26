@@ -29,7 +29,7 @@ try:
 except AttributeError as e:
     print(
         """
-        !!! Warning: PERMAFROST_CATEGORIES are not defined!
+        !!! Warning: PERMAFROST_DEFAULT_ROLES are not defined!
 
         They should look something like this and be defined in settings.py
         
@@ -391,7 +391,13 @@ class PermafrostRole(models.Model):
         self.conform_group()  # Apply after a successful save and Group creation (if needed)
 
         return result
+    
+    # -------------
+    # Delete
 
+    def delete(self, using=None, keep_parents=False):
+        if not self.locked and not self.is_default_role():
+            return super().delete()
 
 @receiver(
     post_delete,
