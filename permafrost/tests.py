@@ -667,6 +667,36 @@ class PermafrostViewTests(TestCase):
             print(response.content.decode())
             print("")
             raise
+                
+    def test_modal_search_excludes_current_roles_REQUIRED_permissions(self):
+        role = PermafrostRole.objects.get(slug='bobs-staff-group')
+        uri = reverse('permafrost:custom-role-add-permissions', kwargs={'slug': 'bobs-staff-group'})
+        response = self.client.get(uri)
+
+        try:
+            permissions = role.required_permissions()
+            for perm in permissions:
+                self.assertNotContains(response, perm.name)
+        except:
+            print("")
+            print(response.content.decode())
+            print("")
+            raise
+
+    def test_modal_search_excludes_current_roles_SELECTED_permissions(self):
+        role = PermafrostRole.objects.get(slug='bobs-staff-group')
+        uri = reverse('permafrost:custom-role-add-permissions', kwargs={'slug': 'bobs-staff-group'})
+        response = self.client.get(uri)
+
+        try:
+            permissions = role.permissions().all()
+            for perm in permissions:
+                self.assertNotContains(response, perm.name)
+        except:
+            print("")
+            print(response.content.decode())
+            print("")
+            raise
 
 # @tag('admin_tests')
 class PermafrostFormClassTests(TestCase):
