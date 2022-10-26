@@ -305,6 +305,7 @@ class PermafrostCustomRoleModalView(PermafrostSiteMixin, FilterByRequestSiteQuer
             perms_pks = [perm.pk for perm in perms_excluding_current_role]
             filter1 = Q(name__icontains=query)
             #filter2 = Q(content_type__name__icontains=query) # TODO why does this filter not work?
+            # @fahzee1 tried adding the filter back, i think because name is an @property on the model and not a db column
             perms_queryset = Permission.objects.filter(pk__in=perms_pks)
             perms_to_group = list(perms_queryset.filter(filter1))
         else:
