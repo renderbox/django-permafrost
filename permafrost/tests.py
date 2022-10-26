@@ -277,6 +277,11 @@ class PermafrostRoleModelTest(TestCase):
 
         self.assertListEqual(sorted(all_perm_names), sorted(category_perm_names))
 
+    def test_unable_to_delete_default_roles(self):
+        role = PermafrostRole.objects.get(pk=3)
+        role.delete()
+        role = PermafrostRole.objects.get(pk=3)
+        self.assertFalse(role.deleted)
 
 
 # Don't run the following tests if DRF is not loaded
@@ -402,6 +407,20 @@ class PermafrostViewTests(TestCase):
         try:
             roles = response.context['object_list']
             self.assertTrue(all(role.site.id == site_id for role in roles))
+        except:
+            print("Returned site ids")
+            print([role.site.id for role in response.context['object_list']])
+            print("")
+            pass
+        pass
+
+    def test_list_view_excludes_deleted_roles_on_current_site(self):
+        uri = reverse('permafrost:role-list')
+        response = self.client.get(uri)
+        PermafrostRole.objects.get(pk=2).delete()
+        try:
+            roles = response.context['object_list']
+            self.assertEqual(len(roles), 2)
         except:
             print("Returned site ids")
             print([role.site.id for role in response.context['object_list']])
@@ -612,6 +631,25 @@ class PermafrostViewTests(TestCase):
             print("")
             raise
     
+    def test_delete_locked_role_POST_returns_validation_error(self):
+        self.pf_role.locked = True
+        self.pf_role.save()
+        uri = reverse('permafrost:role-update', kwargs={'slug': 'test-role'})
+        data = model_to_dict(self.pf_role)
+        data.update({'deleted': True})
+        ## iterator below used to remove 'description': None
+        data = {k: v for k, v in data.items() if v is not None}
+        response = self.client.post(uri, data=data, follow=True)
+        
+        try:
+            updated_role = PermafrostRole.objects.get(slug=self.pf_role.slug, site__id=1)
+            self.assertEqual(updated_role.deleted, False)
+        except:
+            print("")
+            print(model_to_dict(PermafrostRole.objects.get(slug=self.pf_role.slug, site__id=1)))
+            print("")
+            raise
+    
     def test_site_added_on_create_POST(self):
         site = get_current_site()
         data = {
@@ -624,6 +662,36 @@ class PermafrostViewTests(TestCase):
         try:
             role = PermafrostRole.objects.get(name='Test Site Role')
             self.assertEqual(role.site.id, site)
+        except:
+            print("")
+            print(response.content.decode())
+            print("")
+            raise
+                
+    def test_modal_search_excludes_current_roles_REQUIRED_permissions(self):
+        role = PermafrostRole.objects.get(slug='bobs-staff-group')
+        uri = reverse('permafrost:custom-role-add-permissions', kwargs={'slug': 'bobs-staff-group'})
+        response = self.client.get(uri)
+
+        try:
+            permissions = role.required_permissions()
+            for perm in permissions:
+                self.assertNotContains(response, perm.name)
+        except:
+            print("")
+            print(response.content.decode())
+            print("")
+            raise
+
+    def test_modal_search_excludes_current_roles_SELECTED_permissions(self):
+        role = PermafrostRole.objects.get(slug='bobs-staff-group')
+        uri = reverse('permafrost:custom-role-add-permissions', kwargs={'slug': 'bobs-staff-group'})
+        response = self.client.get(uri)
+
+        try:
+            permissions = role.permissions().all()
+            for perm in permissions:
+                self.assertNotContains(response, perm.name)
         except:
             print("")
             print(response.content.decode())
