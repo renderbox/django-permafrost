@@ -48,10 +48,8 @@ except AttributeError as e:
     )
     raise
 
-try:
-    PERMAFROST_EXCLUDED_ROLES = getattr(settings, 'PERMAFROST_EXCLUDED_ROLES')
-except AttributeError as e:
-    PERMAFROST_EXCLUDED_ROLES = []
+PERMAFROST_EXCLUDED_ROLES = getattr(settings, 'PERMAFROST_EXCLUDED_ROLES', [])
+
 
 try:
     CATEGORIES = getattr(settings, "PERMAFROST_CATEGORIES")
