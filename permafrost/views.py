@@ -14,7 +14,6 @@ from django.views.generic.edit import CreateView
 
 from .models import (
     PermafrostRole,
-    PERMAFROST_DEFAULT_ROLES,
     get_optional_by_category,
     get_required_by_category,
     get_all_perms_for_all_categories
@@ -221,7 +220,7 @@ class PermafrostRoleListView(PermafrostSiteMixin, FilterByRequestSiteQuerysetMix
     def get_queryset(self):
         qs = super(PermafrostRoleListView, self).get_queryset()
         # Should be reflected in TC
-        return qs.filter(name__in=PERMAFROST_DEFAULT_ROLES)
+        return qs.exclude(name__in=['Supervisor', 'Councilor', 'Accounting', 'Super User'])
     
 
 class PermafrostRoleManageView(PermafrostRoleListView):
@@ -269,7 +268,7 @@ class PermafrostRoleDetailView(PermafrostSiteMixin, FilterByRequestSiteQuerysetM
     def get_queryset(self):
         qs = super(PermafrostRoleDetailView, self).get_queryset()
         # Should be reflected in TC
-        return qs.filter(name__in=PERMAFROST_DEFAULT_ROLES)
+        return qs.exclude(name__in=['Supervisor', 'Councilor', 'Accounting', 'Super User'])
 
 
 # Update Permission Group
