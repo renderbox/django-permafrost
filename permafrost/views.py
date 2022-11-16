@@ -12,7 +12,14 @@ from django.views.generic import (
 from django.db.models import Q
 from django.views.generic.edit import CreateView
 
-from .models import PermafrostRole, get_optional_by_category, get_required_by_category, get_all_perms_for_all_categories
+from .models import (
+    PermafrostRole,
+    PERMAFROST_DEFAULT_ROLES,
+    get_optional_by_category,
+    get_required_by_category,
+    get_all_perms_for_all_categories
+)
+
 from .forms import (
     PermafrostRoleCreateForm,
     PermafrostRoleUpdateForm,
@@ -204,12 +211,19 @@ class PermafrostRoleCreateView(PermafrostSiteMixin, CreateView):
                 kwargs['site'] = self.request.site
         return kwargs
 
+
 # List Permission Groups
 class PermafrostRoleListView(PermafrostSiteMixin, FilterByRequestSiteQuerysetMixin, ListView):
     model = PermafrostRole
     queryset = PermafrostRole.on_site.all()
     permission_required = ["permafrost.view_permafrostrole"]
+
+    def get_queryset(self):
+        qs = super(PermafrostRoleListView, self).get_queryset()
+        # Should be reflected in TC
+        return qs.filter(name__in=PERMAFROST_DEFAULT_ROLES)
     
+
 class PermafrostRoleManageView(PermafrostRoleListView):
     """
     Landing Listview with selected model for detail display
@@ -251,6 +265,11 @@ class PermafrostRoleDetailView(PermafrostSiteMixin, FilterByRequestSiteQuerysetM
         role = context["object"]
         context['permissions'] = role.permissions().all().order_by("content_type").distinct()
         return context
+
+    def get_queryset(self):
+        qs = super(PermafrostRoleDetailView, self).get_queryset()
+        # Should be reflected in TC
+        return qs.filter(name__in=PERMAFROST_DEFAULT_ROLES)
 
 
 # Update Permission Group
