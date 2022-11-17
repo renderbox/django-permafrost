@@ -108,3 +108,5 @@ build_notes.txt
 # VSCode config
 .vscode
 *.bak
+
+.idea/

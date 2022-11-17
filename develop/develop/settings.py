@@ -183,10 +183,7 @@ PERMAFROST_DEFAULT_ROLES = [
 ]
 
 PERMAFROST_EXCLUDED_ROLES = [
-        'Supervisor',
-        'Councilor',
-        'Accounting',
-        'Super User',
+
 ]
 
 
