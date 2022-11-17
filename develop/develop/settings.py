@@ -182,4 +182,11 @@ PERMAFROST_DEFAULT_ROLES = [
         'Site Owner'
 ]
 
+PERMAFROST_EXCLUDED_ROLES = [
+        'Supervisor',
+        'Councilor',
+        'Accounting',
+        'Super User',
+]
+
 
