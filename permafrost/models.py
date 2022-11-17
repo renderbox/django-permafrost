@@ -408,4 +408,8 @@ class PermafrostRole(models.Model):
     dispatch_uid="delete_matching_permafrost_role_group",
 )
 def delete_matching_group(sender, instance, using, **kwargs):
-    instance.group.delete()
+    try:
+        instance.group.delete()
+    except ObjectDoesNotExist as e:
+        logger.warn(f'{e} for Permafrost Role {instance}')
+        pass
