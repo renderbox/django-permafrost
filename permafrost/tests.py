@@ -23,7 +23,8 @@ from permafrost.models import (
     PermafrostRole,
     get_current_site,
     CATEGORIES,
-    get_all_perms_for_all_categories
+    get_all_perms_for_all_categories,
+    PERMAFROST_EXCLUDED_ROLES
 )
 
 
@@ -357,6 +358,7 @@ class PermafrostViewTests(TestCase):
         import html
         response = self.client.get(uri)
         objects = PermafrostRole.on_site.all()
+        objects = objects.exclude(name__in=PERMAFROST_EXCLUDED_ROLES)
         
         self.assertTrue(len(objects))
         
