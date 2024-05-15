@@ -83,16 +83,6 @@ def perms_to_code(modeladmin, request, queryset):
 perms_to_code.short_description = "Convert Model Permissions to Code"
 
 
-def create_missing_groups(modeladmin, request, queryset):
-
-    for item in queryset.all():
-        # Make sure group exists and create if not after model is saved.
-        item.get_group()
-
-
-create_missing_groups.short_description = "Create a Django Group if missing"
-
-
 ###############
 # MODEL ADMINS
 ###############
@@ -102,7 +92,7 @@ class PermafrostRoleAdmin(admin.ModelAdmin):
     list_display = ('name', 'category', 'group', 'site')
     ordering = ('name',)
     readonly_fields=('slug',)
-    actions = [create_missing_groups, perms_to_code]
+    actions = [perms_to_code]
 
 
 # class PermafrostCategoryAdmin(admin.ModelAdmin):
