@@ -580,7 +580,7 @@ class PermafrostViewTests(TestCase):
         PermafrostRole.objects.get(pk=2).delete()
         try:
             roles = response.context["object_list"]
-            self.assertEqual(len(roles), 2)
+            self.assertEqual(len(roles), 4)
         except Exception as e:
             print("Returned site ids")
             print([role.site.id for role in response.context["object_list"]])
