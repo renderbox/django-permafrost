@@ -6,13 +6,23 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('permafrost', '0012_remove_permafrostrole_category'),
+        ("permafrost", "0012_remove_permafrostrole_category"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='permafrostrole',
-            name='category',
-            field=models.CharField(blank=True, choices=[('administrator', 'Administrator'), ('staff', 'Staff'), ('user', 'User')], max_length=32, null=True, verbose_name='Category'),
+            model_name="permafrostrole",
+            name="category",
+            field=models.CharField(
+                blank=True,
+                choices=[
+                    ("administrator", "Administrator"),
+                    ("staff", "Staff"),
+                    ("user", "User"),
+                ],
+                max_length=32,
+                null=True,
+                verbose_name="Category",
+            ),
         ),
     ]

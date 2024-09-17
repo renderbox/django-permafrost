@@ -2,19 +2,21 @@
 
 from django.db import migrations
 
+
 def attach_group(apps, schema_editor):
-    PermafrostRoleModel = apps.get_model('permafrost', 'PermafrostRole')
-    GroupModel = apps.get_model('auth', 'Group')
-    
+    PermafrostRoleModel = apps.get_model("permafrost", "PermafrostRole")
+    GroupModel = apps.get_model("auth", "Group")
+
     for row in PermafrostRoleModel.objects.all():
-        group_name = "{0}_{1}_{2}".format( row.site.pk, row.category.slug, row.slug)
-        row.group, created = GroupModel.objects.get_or_create(name=group_name) 
+        group_name = "{0}_{1}_{2}".format(row.site.pk, row.category.slug, row.slug)
+        row.group, created = GroupModel.objects.get_or_create(name=group_name)
         row.save()
+
 
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('permafrost', '0008_permafrostrole_group'),
+        ("permafrost", "0008_permafrostrole_group"),
     ]
 
     operations = [

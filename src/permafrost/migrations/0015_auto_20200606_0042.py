@@ -6,13 +6,21 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('permafrost', '0014_convert_category'),
+        ("permafrost", "0014_convert_category"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='permafrostrole',
-            name='category',
-            field=models.CharField(choices=[('administration', 'Administration'), ('staff', 'Staff'), ('user', 'User')], max_length=32, verbose_name='Category'),
+            model_name="permafrostrole",
+            name="category",
+            field=models.CharField(
+                choices=[
+                    ("administration", "Administration"),
+                    ("staff", "Staff"),
+                    ("user", "User"),
+                ],
+                max_length=32,
+                verbose_name="Category",
+            ),
         ),
     ]

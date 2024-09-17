@@ -2,8 +2,9 @@
 
 from django.db import migrations
 
+
 def set_missing_category(apps, schema_editor):
-    PermafrostRole = apps.get_model('permafrost', 'PermafrostRole')
+    PermafrostRole = apps.get_model("permafrost", "PermafrostRole")
     for role in PermafrostRole.objects.all():
         if not role.category and role.group:
             role.category = role.group.name.split("_")[1]
@@ -13,9 +14,11 @@ def set_missing_category(apps, schema_editor):
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('permafrost', '0013_permafrostrole_category'),
+        ("permafrost", "0013_permafrostrole_category"),
     ]
 
     operations = [
-        migrations.RunPython(set_missing_category, reverse_code=migrations.RunPython.noop),
+        migrations.RunPython(
+            set_missing_category, reverse_code=migrations.RunPython.noop
+        ),
     ]

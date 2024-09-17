@@ -8,15 +8,15 @@ import django.db.models.manager
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('permafrost', '0011_auto_20200506_2128'),
+        ("permafrost", "0011_auto_20200506_2128"),
     ]
 
     operations = [
         migrations.AlterModelManagers(
-            name='permafrostrole',
+            name="permafrostrole",
             managers=[
-                ('objects', django.db.models.manager.Manager()),
-                ('on_site', django.contrib.sites.managers.CurrentSiteManager()),
+                ("objects", django.db.models.manager.Manager()),
+                ("on_site", django.contrib.sites.managers.CurrentSiteManager()),
             ],
         ),
     ]

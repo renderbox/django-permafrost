@@ -6,17 +6,23 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('permafrost', '0003_auto_20200227_2356'),
+        ("permafrost", "0003_auto_20200227_2356"),
     ]
 
     operations = [
         migrations.AlterModelOptions(
-            name='permafrostrole',
-            options={'permissions': (('add_user_to_role', 'Can Add Users to Role'),), 'verbose_name': 'Permafrost Role', 'verbose_name_plural': 'Permafrost Roles'},
+            name="permafrostrole",
+            options={
+                "permissions": (("add_user_to_role", "Can Add Users to Role"),),
+                "verbose_name": "Permafrost Role",
+                "verbose_name_plural": "Permafrost Roles",
+            },
         ),
         migrations.AddField(
-            model_name='permafrostrole',
-            name='deleted',
-            field=models.BooleanField(default=False, help_text='Soft Delete the Role', verbose_name='Deleted'),
+            model_name="permafrostrole",
+            name="deleted",
+            field=models.BooleanField(
+                default=False, help_text="Soft Delete the Role", verbose_name="Deleted"
+            ),
         ),
     ]

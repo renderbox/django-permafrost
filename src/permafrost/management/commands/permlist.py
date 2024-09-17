@@ -1,10 +1,10 @@
-#--------------------------------------------
+# --------------------------------------------
 # Copyright 2013-2019, Grant Viklund
 # @Author: Grant Viklund
 # @Date:   2017-02-20 13:50:51
 # @Last Modified by:   Grant Viklund
 # @Last Modified time: 2019-12-21 15:12:35
-#--------------------------------------------
+# --------------------------------------------
 
 # https://timonweb.com/posts/how-to-get-a-list-of-all-user-permissions-available-in-django-based-project/
 
@@ -17,6 +17,7 @@ from django.core.management.base import BaseCommand
 from django.conf import settings
 from django.contrib.auth import get_user_model, get_backends
 from django.contrib.auth.models import Permission
+
 
 class Command(BaseCommand):
 
@@ -38,7 +39,7 @@ class Command(BaseCommand):
     #     Set instance variables based on an options dict
     #     """
     #     self.dryrun = options['dry_run']
-    #     self.source_data = os.path.abspath( options['source'] ) 
+    #     self.source_data = os.path.abspath( options['source'] )
 
     def handle(self, *args, **options):
         # self.set_options(**options)
@@ -50,28 +51,38 @@ class Command(BaseCommand):
             print("\nExiting...")
             return
 
-
     def process_permission_list(self):
         permissions = Permission.objects.all()
 
-        ignore_apps = getattr(settings, "PERMAFROST_IGNORE_APPS", ['admin', 'auth', 'contenttypes', 'sessions', 'sites']) #, 'permafrost'])
+        ignore_apps = getattr(
+            settings,
+            "PERMAFROST_IGNORE_APPS",
+            ["admin", "auth", "contenttypes", "sessions", "sites"],
+        )  # , 'permafrost'])
 
         print("Permlist formatted for your PermafrostRoles configuration")
 
-        for perm in permissions:            # Permission's Natural Key = codename + content_type.natural_key()      "{1}.{0}".format(*perm.natural_key())
+        for (
+            perm
+        ) in (
+            permissions
+        ):  # Permission's Natural Key = codename + content_type.natural_key()      "{1}.{0}".format(*perm.natural_key())
             keys = list(perm.natural_key())
             if keys[1] not in ignore_apps:
-                print("{{'label':_('{0}'), 'permission': {1}}},".format(perm.name, perm.natural_key()) )
+                print(
+                    "{{'label':_('{0}'), 'permission': {1}}},".format(
+                        perm.name, perm.natural_key()
+                    )
+                )
 
         print("\n")
 
         # for perm in permissions:
         #     print( perm )                   # Permission's __str__ = '%s | %s' % (self.content_type, self.name)
 
-
     # def process(self):
     #     permissions = set()
-    #     ignore_list = []   
+    #     ignore_list = []
 
     #     tmp_superuser = get_user_model()( is_active=True, is_superuser=True )
 

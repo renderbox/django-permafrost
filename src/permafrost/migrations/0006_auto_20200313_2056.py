@@ -8,14 +8,18 @@ import permafrost.models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('sites', '0002_alter_domain_unique'),
-        ('permafrost', '0005_auto_20200311_1701'),
+        ("sites", "0002_alter_domain_unique"),
+        ("permafrost", "0005_auto_20200311_1701"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='permafrostrole',
-            name='site',
-            field=models.ForeignKey(default=permafrost.models.get_current_site, on_delete=django.db.models.deletion.CASCADE, to='sites.Site'),
+            model_name="permafrostrole",
+            name="site",
+            field=models.ForeignKey(
+                default=permafrost.models.get_current_site,
+                on_delete=django.db.models.deletion.CASCADE,
+                to="sites.Site",
+            ),
         ),
     ]

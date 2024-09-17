@@ -6,12 +6,22 @@ from django.db import migrations
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('permafrost', '0004_auto_20200310_2228'),
+        ("permafrost", "0004_auto_20200310_2228"),
     ]
 
     operations = [
         migrations.AlterModelOptions(
-            name='permafrostrole',
-            options={'permissions': (('add_user_to_role', 'Can Add Users to Role'), ('add_user_to_administration', 'Can Add Users to the Administration Roles')), 'verbose_name': 'Permafrost Role', 'verbose_name_plural': 'Permafrost Roles'},
+            name="permafrostrole",
+            options={
+                "permissions": (
+                    ("add_user_to_role", "Can Add Users to Role"),
+                    (
+                        "add_user_to_administration",
+                        "Can Add Users to the Administration Roles",
+                    ),
+                ),
+                "verbose_name": "Permafrost Role",
+                "verbose_name_plural": "Permafrost Roles",
+            },
         ),
     ]

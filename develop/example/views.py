@@ -10,11 +10,11 @@ from permafrost.permissions import PermafrostRESTPermission
 
 
 class PermCheckAPIView(APIView):
-    """
-    """
+    """ """
+
     # authentication_classes = [authentication.TokenAuthentication]
     permission_classes = [PermafrostRESTPermission]
-    permission_required = ('permafrost.add_permafrostrole',)
+    permission_required = ("permafrost.add_permafrostrole",)
 
     def get(self, request, format=None):
         """

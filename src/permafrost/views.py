@@ -17,7 +17,7 @@ from .models import (
     PERMAFROST_EXCLUDED_ROLES,
     get_optional_by_category,
     get_required_by_category,
-    get_all_perms_for_all_categories
+    get_all_perms_for_all_categories,
 )
 
 from .forms import (
@@ -101,16 +101,18 @@ class PermafrostMixin(PermissionRequiredMixin):
 
         return set(list(perms) + list(method_perms))
 
+
 class PermafrostSiteMixin(PermafrostMixin):
     """
     This mixin can be added to a View to create a new method for retrieving permissions for users based on their per-site permafrost roles using request.site rather than SITE_ID.
     """
+
     def has_permission(self):
-        
+
         check_list = self.get_permission_required()
-        
+
         return has_all_permissions(self.request, check_list)
-        
+
 
 class PermafrostLogMixin(object):
     """
@@ -150,21 +152,26 @@ class PermafrostLogMixin(object):
 
         super().handle_no_permission()
 
+
 class FilterByRequestSiteQuerysetMixin:
     def get_queryset(self):
-        if hasattr(self.request, 'site'):
+        if hasattr(self.request, "site"):
             return PermafrostRole.objects.filter(site=self.request.site, deleted=False)
         return super().get_queryset()
 
+
 class GetRoleExternalPermissionsMixin:
     def get_perms_excluding_current_role(self, context):
-        role = context['object']
+        role = context["object"]
         required = role.required_permissions()
         optional = role.optional_permissions()
         selected = list(role.permissions().all())
         all_perms = get_all_perms_for_all_categories()
-        perms_excluding_current_role = list(set(all_perms) - set(required + optional + selected))
+        perms_excluding_current_role = list(
+            set(all_perms) - set(required + optional + selected)
+        )
         return perms_excluding_current_role
+
 
 # Create Permission Group
 class PermafrostRoleCreateView(PermafrostSiteMixin, CreateView):
@@ -177,10 +184,10 @@ class PermafrostRoleCreateView(PermafrostSiteMixin, CreateView):
             permission_categories = {}
             if submitted.is_valid():
 
-                kwargs = {'initial': submitted.cleaned_data}
-                if hasattr(request, 'site'):
-                    kwargs['site'] = self.request.site
-                
+                kwargs = {"initial": submitted.cleaned_data}
+                if hasattr(request, "site"):
+                    kwargs["site"] = self.request.site
+
                 form = PermafrostRoleCreateForm(**kwargs)
                 category = submitted.cleaned_data["category"]
                 required = get_required_by_category(category=category)
@@ -207,13 +214,15 @@ class PermafrostRoleCreateView(PermafrostSiteMixin, CreateView):
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
         if self.get_form_class() == PermafrostRoleCreateForm:
-            if hasattr(self.request, 'site'):
-                kwargs['site'] = self.request.site
+            if hasattr(self.request, "site"):
+                kwargs["site"] = self.request.site
         return kwargs
 
 
 # List Permission Groups
-class PermafrostRoleListView(PermafrostSiteMixin, FilterByRequestSiteQuerysetMixin, ListView):
+class PermafrostRoleListView(
+    PermafrostSiteMixin, FilterByRequestSiteQuerysetMixin, ListView
+):
     model = PermafrostRole
     queryset = PermafrostRole.on_site.all()
     permission_required = ["permafrost.view_permafrostrole"]
@@ -222,7 +231,7 @@ class PermafrostRoleListView(PermafrostSiteMixin, FilterByRequestSiteQuerysetMix
         qs = super(PermafrostRoleListView, self).get_queryset()
         # Should be reflected in TC
         return qs.exclude(name__in=PERMAFROST_EXCLUDED_ROLES)
-    
+
 
 class PermafrostRoleManageView(PermafrostRoleListView):
     """
@@ -244,14 +253,17 @@ class PermafrostRoleManageView(PermafrostRoleListView):
             context["permissions"] = (
                 landing_role.permissions()
                 .filter(id__in=visible_permission_ids)
-                .order_by("content_type").distinct()
+                .order_by("content_type")
+                .distinct()
             )
 
         return context
 
 
 # Detail Permission Groups
-class PermafrostRoleDetailView(PermafrostSiteMixin, FilterByRequestSiteQuerysetMixin, DetailView):
+class PermafrostRoleDetailView(
+    PermafrostSiteMixin, FilterByRequestSiteQuerysetMixin, DetailView
+):
     model = PermafrostRole
     template_name = "permafrost/permafrostrole_manage.html"
     queryset = PermafrostRole.on_site.all()
@@ -263,7 +275,9 @@ class PermafrostRoleDetailView(PermafrostSiteMixin, FilterByRequestSiteQuerysetM
         context["object_list"] = self.get_queryset()
 
         role = context["object"]
-        context['permissions'] = role.permissions().all().order_by("content_type").distinct()
+        context["permissions"] = (
+            role.permissions().all().order_by("content_type").distinct()
+        )
         return context
 
     def get_queryset(self):
@@ -273,7 +287,9 @@ class PermafrostRoleDetailView(PermafrostSiteMixin, FilterByRequestSiteQuerysetM
 
 
 # Update Permission Group
-class PermafrostRoleUpdateView(PermafrostSiteMixin, FilterByRequestSiteQuerysetMixin, UpdateView):
+class PermafrostRoleUpdateView(
+    PermafrostSiteMixin, FilterByRequestSiteQuerysetMixin, UpdateView
+):
     template_name = "permafrost/permafrostrole_form.html"
     form_class = PermafrostRoleUpdateForm
     model = PermafrostRole
@@ -297,19 +313,27 @@ class PermafrostRoleUpdateView(PermafrostSiteMixin, FilterByRequestSiteQuerysetM
 
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
-        if hasattr(self.request, 'site'):
-            kwargs['site'] = self.request.site
+        if hasattr(self.request, "site"):
+            kwargs["site"] = self.request.site
         return kwargs
 
+
 # Delete Permission Groups
-class PermafrostRoleDeleteView(PermafrostSiteMixin, FilterByRequestSiteQuerysetMixin, DeleteView):
+class PermafrostRoleDeleteView(
+    PermafrostSiteMixin, FilterByRequestSiteQuerysetMixin, DeleteView
+):
     model = PermafrostRole
-    success_url = reverse_lazy('permafrost:roles-manage')  
+    success_url = reverse_lazy("permafrost:roles-manage")
     permission_required = ["permafrost.delete_permafrostrole"]
 
 
 # Custom Role Modal View
-class PermafrostCustomRoleModalView(PermafrostSiteMixin, FilterByRequestSiteQuerysetMixin, GetRoleExternalPermissionsMixin, DetailView):
+class PermafrostCustomRoleModalView(
+    PermafrostSiteMixin,
+    FilterByRequestSiteQuerysetMixin,
+    GetRoleExternalPermissionsMixin,
+    DetailView,
+):
     model = PermafrostRole
     template_name = "permafrost/permissions_modal.html"
     permission_required = ["permafrost.change_permafrostrole"]
@@ -317,40 +341,44 @@ class PermafrostCustomRoleModalView(PermafrostSiteMixin, FilterByRequestSiteQuer
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         perms_excluding_current_role = self.get_perms_excluding_current_role(context)
-        query = self.request.GET.get('q', None)
-        
+        query = self.request.GET.get("q", None)
+
         if query:
             # perform search filtering
             perms_pks = [perm.pk for perm in perms_excluding_current_role]
             filter1 = Q(name__icontains=query)
-            #filter2 = Q(content_type__name__icontains=query) # TODO why does this filter not work?
+            # filter2 = Q(content_type__name__icontains=query) # TODO why does this filter not work?
             # @fahzee1 tried adding the filter back, i think because name is an @property on the model and not a db column
             perms_queryset = Permission.objects.filter(pk__in=perms_pks)
             perms_to_group = list(perms_queryset.filter(filter1))
         else:
             perms_to_group = perms_excluding_current_role
-        
-        context["permission_categories"] = group_permission_categories([], perms_to_group, [])
+
+        context["permission_categories"] = group_permission_categories(
+            [], perms_to_group, []
+        )
         return context
-    
+
     def get_template_names(self):
-        if self.request.GET.get('q') == None:
+        if self.request.GET.get("q") == None:
             return super().get_template_names()
-        return ['permafrost/includes/permissions_table.html']
-   
+        return ["permafrost/includes/permissions_table.html"]
+
     def post(self, request, slug, *args, **kwargs):
-        current_site = getattr(request, 'site', Site.objects.get_current())
+        current_site = getattr(request, "site", Site.objects.get_current())
         role = PermafrostRole.objects.filter(site=current_site, slug=slug).last()
         perms_to_add = self.get_permissions_queryset()
         if perms_to_add:
             role.group.permissions.add(*perms_to_add)
-        return redirect('permafrost:role-update', slug=slug)
-    
+        return redirect("permafrost:role-update", slug=slug)
+
     def get_permissions_queryset(self):
-        permission_ids = self.request.POST.getlist('permissions', [])
+        permission_ids = self.request.POST.getlist("permissions", [])
         if permission_ids:
             return Permission.objects.filter(id__in=permission_ids)
         return None
+
+
 # Future Views
 
 # TODO: Role User List (For easier pagination) & bulk editing

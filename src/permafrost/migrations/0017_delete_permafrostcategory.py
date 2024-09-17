@@ -6,11 +6,11 @@ from django.db import migrations
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('permafrost', '0016_merge_20200729_1716'),
+        ("permafrost", "0016_merge_20200729_1716"),
     ]
 
     operations = [
         migrations.DeleteModel(
-            name='PermafrostCategory',
+            name="PermafrostCategory",
         ),
     ]

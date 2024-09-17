@@ -7,13 +7,10 @@ from django.contrib.auth.models import Group, Permission
 # from django.contrib.sites.shortcuts import get_current_site
 from django.utils.translation import gettext_lazy as _
 from django.utils.text import slugify
-from django.core.exceptions import ObjectDoesNotExist
 from django.contrib.sites.managers import CurrentSiteManager
 from django.db.models.signals import post_delete
 from django.dispatch import receiver
 from django.urls import reverse
-
-from jsonfield import JSONField  # Using this instead of the PSQL one for portability
 
 import logging
 
@@ -25,7 +22,7 @@ logger = logging.getLogger(__name__)
 ###############
 
 try:
-    PERMAFROST_DEFAULT_ROLES = getattr(settings, 'PERMAFROST_DEFAULT_ROLES')
+    PERMAFROST_DEFAULT_ROLES = getattr(settings, "PERMAFROST_DEFAULT_ROLES")
 except AttributeError as e:
     print(
         """
@@ -48,7 +45,7 @@ except AttributeError as e:
     )
     raise
 
-PERMAFROST_EXCLUDED_ROLES = getattr(settings, 'PERMAFROST_EXCLUDED_ROLES', [])
+PERMAFROST_EXCLUDED_ROLES = getattr(settings, "PERMAFROST_EXCLUDED_ROLES", [])
 
 
 try:
@@ -142,21 +139,15 @@ def get_optional_by_category(category):
 def get_all_perms_for_all_categories():
     perms = []
     for category, category_data in CATEGORIES.items():
-        optional_perms = category_data['optional']
-        required_perms = category_data['required']
-        optional_and_required_perms = set(get_permission_objects(optional_perms) +
-                                          get_permission_objects(required_perms))
+        optional_perms = category_data["optional"]
+        required_perms = category_data["required"]
+        optional_and_required_perms = set(
+            get_permission_objects(optional_perms)
+            + get_permission_objects(required_perms)
+        )
         perms.extend(optional_and_required_perms)
 
     return perms
-
-
-
-
-
-
-
-
 
 
 ###############
@@ -394,13 +385,14 @@ class PermafrostRole(models.Model):
         self.conform_group()  # Apply after a successful save and Group creation (if needed)
 
         return result
-    
+
     # -------------
     # Delete
 
     def delete(self, using=None, keep_parents=False):
         if not self.locked and not self.is_default_role():
             return super().delete()
+
 
 @receiver(
     post_delete,

@@ -2,38 +2,57 @@
 
 from django.db import migrations, models
 import django.db.models.deletion
+
 # import jsonfield.fields       # This is not needed and is a deprecated 3rd party package.
 
 
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('permafrost', '0002_auto_20200218_2234'),
+        ("permafrost", "0002_auto_20200218_2234"),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='PermafrostCategory',
+            name="PermafrostCategory",
             fields=[
-                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('name', models.CharField(max_length=50, verbose_name='Name')),
-                ('slug', models.SlugField(blank=True, null=True, verbose_name='Slug')),
-                ('level', models.IntegerField(default=1, verbose_name='Security Level')),
+                (
+                    "id",
+                    models.AutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("name", models.CharField(max_length=50, verbose_name="Name")),
+                ("slug", models.SlugField(blank=True, null=True, verbose_name="Slug")),
+                (
+                    "level",
+                    models.IntegerField(default=1, verbose_name="Security Level"),
+                ),
                 # ('permissions', jsonfield.fields.JSONField(blank=True, default=list)),
                 # ('includes', jsonfield.fields.JSONField(blank=True, default=list)),
             ],
             options={
-                'verbose_name': 'Permafrost Category',
-                'verbose_name_plural': 'Permafrost Categories',
+                "verbose_name": "Permafrost Category",
+                "verbose_name_plural": "Permafrost Categories",
             },
         ),
         migrations.AlterModelOptions(
-            name='permafrostrole',
-            options={'verbose_name': 'Permafrost Role', 'verbose_name_plural': 'Permafrost Roles'},
+            name="permafrostrole",
+            options={
+                "verbose_name": "Permafrost Role",
+                "verbose_name_plural": "Permafrost Roles",
+            },
         ),
         migrations.AlterField(
-            model_name='permafrostrole',
-            name='category',
-            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='permafrost.PermafrostCategory', verbose_name='Category'),
+            model_name="permafrostrole",
+            name="category",
+            field=models.ForeignKey(
+                on_delete=django.db.models.deletion.CASCADE,
+                to="permafrost.PermafrostCategory",
+                verbose_name="Category",
+            ),
         ),
     ]
