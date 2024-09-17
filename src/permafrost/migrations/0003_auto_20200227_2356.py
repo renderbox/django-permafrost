@@ -2,7 +2,7 @@
 
 from django.db import migrations, models
 import django.db.models.deletion
-import jsonfield.fields
+# import jsonfield.fields       # This is not needed and is a deprecated 3rd party package.
 
 
 class Migration(migrations.Migration):
@@ -19,8 +19,8 @@ class Migration(migrations.Migration):
                 ('name', models.CharField(max_length=50, verbose_name='Name')),
                 ('slug', models.SlugField(blank=True, null=True, verbose_name='Slug')),
                 ('level', models.IntegerField(default=1, verbose_name='Security Level')),
-                ('permissions', jsonfield.fields.JSONField(blank=True, default=list)),
-                ('includes', jsonfield.fields.JSONField(blank=True, default=list)),
+                # ('permissions', jsonfield.fields.JSONField(blank=True, default=list)),
+                # ('includes', jsonfield.fields.JSONField(blank=True, default=list)),
             ],
             options={
                 'verbose_name': 'Permafrost Category',
