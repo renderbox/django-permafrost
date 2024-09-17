@@ -1,5 +1,5 @@
 # Permafrost Forms
-from django.conf import settings
+# from django.conf import settings
 from django.contrib.auth.models import Permission
 from django.contrib.sites.models import Site
 from django.core.exceptions import ValidationError
@@ -117,7 +117,7 @@ class PermafrostRoleCreateForm(ModelForm):
         name = self.cleaned_data["name"]
         name_exists = False
 
-        if self.instance:  ## on update check if name change exists
+        if self.instance:  # on update check if name change exists
 
             if "name" in self.changed_data:
                 name_exists = (

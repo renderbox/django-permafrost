@@ -29,7 +29,7 @@ except AttributeError as e:
         !!! Warning: PERMAFROST_DEFAULT_ROLES are not defined!
 
         They should look something like this and be defined in settings.py
-        
+
         PERMAFROST_DEFAULT_ROLES = [
         'Student',
         'Supervisor',
@@ -43,6 +43,7 @@ except AttributeError as e:
     ]
         """
     )
+    print(e)
     raise
 
 PERMAFROST_EXCLUDED_ROLES = getattr(settings, "PERMAFROST_EXCLUDED_ROLES", [])
@@ -115,8 +116,8 @@ def get_permission_objects(natural_keys_list):
         try:
             permission = Permission.objects.get_by_natural_key(*item["permission"])
             permissions.append(permission)
-        except:
-            logger.warn(
+        except Permission.DoesNotExist:
+            logger.warning(
                 f'Permission not found in PERMAFROST_CATEGORIES: {item["permission"]}'
             )
             pass

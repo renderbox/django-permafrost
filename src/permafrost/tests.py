@@ -1,8 +1,6 @@
 from unittest import skipIf
-from django.forms.forms import Form
 from django.forms.models import model_to_dict
-from django.forms.widgets import Textarea
-from django.test import TestCase, tag, RequestFactory
+from django.test import TestCase, RequestFactory
 from django.contrib.sites.models import Site
 from django.contrib.auth import get_user_model
 from django.core.exceptions import PermissionDenied
@@ -84,7 +82,7 @@ class PermafrostRoleModelTest(TestCase):
         role.name = "OK Students"
         role.save()
 
-        new_role_group = Group.objects.get(name=role.get_group_name())
+        # new_role_group = Group.objects.get(name=role.get_group_name())
 
         self.assertEqual(role.group.name, "1_user_ok-students")
         self.assertEqual(
@@ -499,8 +497,8 @@ class PermafrostViewTests(TestCase):
     def test_manage_permafrost_roles_returns_correct_template(self):
         uri = reverse("permafrost:roles-manage")
         response = self.client.get(uri)
-        objects = PermafrostRole.on_site.all()
-        default_role = objects.first()
+        # objects = PermafrostRole.on_site.all()
+        # default_role = objects.first()
         self.assertTemplateUsed(response, "permafrost/base.html")
         self.assertTemplateUsed(response, "permafrost/permafrostrole_manage.html")
 
@@ -568,9 +566,10 @@ class PermafrostViewTests(TestCase):
         try:
             roles = response.context["object_list"]
             self.assertTrue(all(role.site.id == site_id for role in roles))
-        except:
-            print("Returned site ids")
+        except Exception as e:
+            print("Returned site ids")  # TODO: Should revisit this error handling
             print([role.site.id for role in response.context["object_list"]])
+            print("Error: " + str(e))
             print("")
             pass
         pass
@@ -582,9 +581,10 @@ class PermafrostViewTests(TestCase):
         try:
             roles = response.context["object_list"]
             self.assertEqual(len(roles), 2)
-        except:
+        except Exception as e:
             print("Returned site ids")
             print([role.site.id for role in response.context["object_list"]])
+            print("Error: " + str(e))
             print("")
             pass
         pass
@@ -615,9 +615,10 @@ class PermafrostViewTests(TestCase):
             self.assertIsInstance(
                 response.context["form"], SelectPermafrostRoleTypeForm
             )
-        except:
+        except Exception as e:
             print("")
             print(response.content.decode())
+            print("Error: " + str(e))
             raise
 
     def test_role_edit_url_resolves(self):
@@ -648,9 +649,10 @@ class PermafrostViewTests(TestCase):
             # self.assertContains(response, 'name="deleted"')
 
             self.assertIsInstance(response.context["form"], PermafrostRoleUpdateForm)
-        except:
+        except Exception as e:
             print("")
             print(response.content.decode())
+            print("Error: " + str(e))
             raise
 
     def test_role_update_resolves(self):
@@ -715,9 +717,10 @@ class PermafrostViewTests(TestCase):
             self.assertContains(response, 'id="permission-38"')
             self.assertContains(response, "checked")
 
-        except:
+        except Exception as e:
             print("")
             print(response.content.decode())
+            print("Error: " + str(e))
             print("")
             raise
 
@@ -726,9 +729,10 @@ class PermafrostViewTests(TestCase):
         response = self.client.get(uri)
         try:
             self.assertContains(response, "Not Found", status_code=404)
-        except:
+        except Exception as e:
             print("")
             print(response.content.decode())
+            print("Error: " + str(e))
             raise
 
     def test_role_update_POST_updates_name(self):
@@ -748,7 +752,7 @@ class PermafrostViewTests(TestCase):
         response = PermafrostRoleUpdateView.as_view()(request, slug="test-role")
         response.client = self.client
         self.assertRedirects(response, "/permafrost/role/test-role/")
-        updated_role = PermafrostRole.objects.get(pk=self.pf_role.pk)
+        # updated_role = PermafrostRole.objects.get(pk=self.pf_role.pk)
 
     def test_optional_permissions_are_updated_on_POST(self):
         ## ensure role currently has no optional permissions
@@ -828,9 +832,10 @@ class PermafrostViewTests(TestCase):
         ]
         try:
             self.assertEqual(updated_permission_ids, [])
-        except:
+        except Exception as e:
             print("")
             print(response.content.decode())
+            print("Error: " + str(e))
             print("")
             raise
 
@@ -840,20 +845,21 @@ class PermafrostViewTests(TestCase):
         data.update({"deleted": True})
         ## iterator below used to remove 'description': None
         data = {k: v for k, v in data.items() if v is not None}
-        response = self.client.post(uri, data=data, follow=True)
+        self.client.post(uri, data=data, follow=True)
 
         try:
             updated_role = PermafrostRole.objects.get(
                 slug=self.pf_role.slug, site__id=1
             )
             self.assertEqual(updated_role.deleted, True)
-        except:
+        except Exception as e:
             print("")
             print(
                 model_to_dict(
                     PermafrostRole.objects.get(slug=self.pf_role.slug, site__id=1)
                 )
             )
+            print("Error: " + str(e))
             print("")
             raise
 
@@ -865,20 +871,21 @@ class PermafrostViewTests(TestCase):
         data.update({"deleted": True})
         ## iterator below used to remove 'description': None
         data = {k: v for k, v in data.items() if v is not None}
-        response = self.client.post(uri, data=data, follow=True)
+        self.client.post(uri, data=data, follow=True)
 
         try:
             updated_role = PermafrostRole.objects.get(
                 slug=self.pf_role.slug, site__id=1
             )
             self.assertEqual(updated_role.deleted, False)
-        except:
+        except Exception as e:
             print("")
             print(
                 model_to_dict(
                     PermafrostRole.objects.get(slug=self.pf_role.slug, site__id=1)
                 )
             )
+            print("Error: " + str(e))
             print("")
             raise
 
@@ -894,9 +901,10 @@ class PermafrostViewTests(TestCase):
         try:
             role = PermafrostRole.objects.get(name="Test Site Role")
             self.assertEqual(role.site.id, site)
-        except:
+        except Exception as e:
             print("")
             print(response.content.decode())
+            print("Error: " + str(e))
             print("")
             raise
 
@@ -912,9 +920,10 @@ class PermafrostViewTests(TestCase):
             permissions = role.required_permissions()
             for perm in permissions:
                 self.assertNotContains(response, perm.name)
-        except:
+        except Exception as e:
             print("")
             print(response.content.decode())
+            print("Error: " + str(e))
             print("")
             raise
 
@@ -930,9 +939,10 @@ class PermafrostViewTests(TestCase):
             permissions = role.permissions().all()
             for perm in permissions:
                 self.assertNotContains(response, perm.name)
-        except:
+        except Exception as e:
             print("")
             print(response.content.decode())
+            print("Error: " + str(e))
             print("")
             raise
 

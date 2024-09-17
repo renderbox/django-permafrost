@@ -1,5 +1,5 @@
-from pprint import pprint
-import json
+# from pprint import pprint
+# import json
 
 from django.contrib import admin
 from django.shortcuts import render
@@ -25,7 +25,7 @@ def perms_to_code(modeladmin, request, queryset):
             label = role.get_category_display()
 
         if (
-            not key in data
+            key not in data
         ):  # First time though, assume everything available is required
             data[key] = {
                 "req": list(role.group.permissions.all()),

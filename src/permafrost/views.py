@@ -9,6 +9,7 @@ from django.views.generic import (
     UpdateView,
     DeleteView,
 )
+from django.core.exceptions import ImproperlyConfigured
 from django.db.models import Q
 from django.views.generic.edit import CreateView
 
@@ -25,9 +26,7 @@ from .forms import (
     PermafrostRoleUpdateForm,
     SelectPermafrostRoleTypeForm,
 )
-from django.http import HttpResponseBadRequest, HttpResponse, HttpResponseNotFound
 from .permissions import has_all_permissions
-from django.middleware.csrf import get_token
 from django.contrib.sites.models import Site
 
 # --------------
@@ -360,7 +359,7 @@ class PermafrostCustomRoleModalView(
         return context
 
     def get_template_names(self):
-        if self.request.GET.get("q") == None:
+        if self.request.GET.get("q") is None:
             return super().get_template_names()
         return ["permafrost/includes/permissions_table.html"]
 

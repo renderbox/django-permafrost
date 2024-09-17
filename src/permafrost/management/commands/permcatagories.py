@@ -8,17 +8,9 @@
 
 # https://timonweb.com/posts/how-to-get-a-list-of-all-user-permissions-available-in-django-based-project/
 
-# import os
-# import subprocess
-# import json
-# import fileinput
-
-import pprint
-
 from django.core.management.base import BaseCommand
 from django.conf import settings
 
-# from django.contrib.auth import get_user_model, get_backends
 from django.contrib.auth.models import Permission
 from permafrost.models import PermafrostCategory
 

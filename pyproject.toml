@@ -55,6 +55,8 @@ test = [
     "bandit",
     "isort",
     "coverage",
+    "django-crispy-forms",
+    "django-rest-framework",
 ]
 
 [project.urls]
