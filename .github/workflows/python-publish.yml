@@ -5,6 +5,29 @@ on:
     branches: ["master"]
 
 jobs:
+  bump-version:
+    if: github.event.pull_request.merged == true || github.event_name == 'workflow_dispatch'
+    name: Bump package version
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Get current version
+        run: echo "current_version=$(grep 'version = ' pyproject.toml | cut -d '=' -f2 | tr -d ' "')" >> $GITHUB_ENV
+
+      - name: Add version commit and tag
+        uses: WhiteMoonDreamsInc/bump-version@main
+        with:
+          part: "${{ github.event.inputs.part || 'patch' }}"
+          current_version: "${{ env.current_version }}"
+          files: pyproject.toml
+          commit_name: github-actions[bot]
+          commit_email: github-actions[bot]@users.noreply.github.com
+          token: "${{ secrets.VERSION_BOT_TOKEN }}"
+
   build:
     name: Build distribution 📦
     runs-on: ubuntu-latest
@@ -52,7 +75,7 @@ jobs:
           path: dist/
 
       - name: Publish distribution 📦 to PyPI
-        uses: pypa/gh-action-pypi-publish@release/v1
+        uses: pypa/gh-action-pypi-publish@release/v1.12
         # with:
         #   user: __token__
         #   password: ${{ secrets.pypi_password }}
@@ -75,6 +98,13 @@ jobs:
           name: python-package-distributions
           path: dist/
 
+      # Extract the version directly from a built .whl file
+      - name: Extract version from Python package
+        id: get_version
+        run: |
+          VERSION=$(ls dist/*.whl | head -n 1 | awk -F'-' '{print $2}')
+          echo "PACKAGE_VERSION=$VERSION" >> $GITHUB_ENV
+
       - name: Sign the dists with Sigstore
         uses: sigstore/gh-action-sigstore-python@v2.1.1
         with:
@@ -87,9 +117,10 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
         run: >-
           gh release create
-          '${{ github.ref_name }}'
+          "v${{ env.PACKAGE_VERSION }}"
           --repo '${{ github.repository }}'
-          --notes ""
+          --title "Release v${{ env.PACKAGE_VERSION }}"
+          --notes "Release for version ${{ env.PACKAGE_VERSION }}"
 
       - name: Upload artifact signatures to GitHub Release
         env:
@@ -99,5 +130,5 @@ jobs:
         # sigstore-produced signatures and certificates.
         run: >-
           gh release upload
-          '${{ github.ref_name }}' dist/**
+          "v${{ env.PACKAGE_VERSION }}" dist/**
           --repo '${{ github.repository }}'
