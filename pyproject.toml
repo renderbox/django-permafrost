@@ -7,7 +7,7 @@ universal = true
 
 [project]
 name = "django-permafrost"
-version = "0.3.0"
+version = "0.3.1"
 
 authors = [
   { name="Grant Viklund", email="renderbox@gmail.com" },
