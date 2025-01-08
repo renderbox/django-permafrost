@@ -7,6 +7,7 @@ on:
 jobs:
   bump-version:
     name: Bump package version
+    if: "!contains(github.event.head_commit.message, 'Bump version')"
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repo
@@ -26,7 +27,7 @@ jobs:
           commit_name: github-actions[bot]
           commit_email: github-actions[bot]@users.noreply.github.com
           login: "${{ github.actor }}"
-          token: "${{ secrets.VERSION_BOT_TOKEN }}"
+          token: "${{ secrets.GITHUB_TOKEN }}"
 
   build:
     name: Build distribution 📦
