@@ -6,7 +6,6 @@ on:
 
 jobs:
   bump-version:
-    if: github.event.pull_request.merged == true || github.event_name == 'workflow_dispatch'
     name: Bump package version
     runs-on: ubuntu-latest
     steps:
