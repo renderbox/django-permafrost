@@ -1,0 +1,134 @@
+name: Publish Python 🐍 distribution 📦 to PyPI
+
+on:
+  push:
+    branches: ["master"]
+
+jobs:
+  bump-version:
+    if: github.event.pull_request.merged == true || github.event_name == 'workflow_dispatch'
+    name: Bump package version
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Get current version
+        run: echo "current_version=$(grep 'version = ' pyproject.toml | cut -d '=' -f2 | tr -d ' "')" >> $GITHUB_ENV
+
+      - name: Add version commit and tag
+        uses: WhiteMoonDreamsInc/bump-version@main
+        with:
+          part: "${{ github.event.inputs.part || 'patch' }}"
+          current_version: "${{ env.current_version }}"
+          files: pyproject.toml
+          commit_name: github-actions[bot]
+          commit_email: github-actions[bot]@users.noreply.github.com
+          token: "${{ secrets.VERSION_BOT_TOKEN }}"
+
+  build:
+    name: Build distribution 📦
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.10
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+
+      - name: Install Dependencies
+        run: |
+          python -m pip install -U pip
+          python -m pip install build --user
+
+      - name: Build a binary wheel and a source tarball
+        run: python -m build
+
+      - name: Store the distribution packages
+        uses: actions/upload-artifact@v4
+        with:
+          name: python-package-distributions
+          path: dist/
+
+  publish-to-pypi:
+    name: >-
+      Publish Python 🐍 distribution 📦 to PyPI
+    if: startsWith(github.ref, 'refs/tags/') # only publish to PyPI on tag pushes
+    needs:
+      - build
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/p/django-permafrost # PyPI project name
+    permissions:
+      id-token: write # IMPORTANT: mandatory for trusted publishing
+
+    steps:
+      - name: Download all the dists artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: python-package-distributions
+          path: dist/
+
+      - name: Publish distribution 📦 to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1.12
+        # with:
+        #   user: __token__
+        #   password: ${{ secrets.pypi_password }}
+
+  github-release:
+    name: >-
+      Sign the Python 🐍 distribution 📦 with Sigstore
+      and upload them to GitHub Release
+    needs:
+      - publish-to-pypi
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # IMPORTANT: mandatory for making GitHub Releases
+      id-token: write # IMPORTANT: mandatory for sigstore
+
+    steps:
+      - name: Download all the dists
+        uses: actions/download-artifact@v4
+        with:
+          name: python-package-distributions
+          path: dist/
+
+      # Extract the version directly from a built .whl file
+      - name: Extract version from Python package
+        id: get_version
+        run: |
+          VERSION=$(ls dist/*.whl | head -n 1 | awk -F'-' '{print $2}')
+          echo "PACKAGE_VERSION=$VERSION" >> $GITHUB_ENV
+
+      - name: Sign the dists with Sigstore
+        uses: sigstore/gh-action-sigstore-python@v2.1.1
+        with:
+          inputs: >-
+            ./dist/*.tar.gz
+            ./dist/*.whl
+
+      - name: Create GitHub Release
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: >-
+          gh release create
+          "v${{ env.PACKAGE_VERSION }}"
+          --repo '${{ github.repository }}'
+          --title "Release v${{ env.PACKAGE_VERSION }}"
+          --notes "Release for version ${{ env.PACKAGE_VERSION }}"
+
+      - name: Upload artifact signatures to GitHub Release
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        # Upload to GitHub Release using the `gh` CLI.
+        # `dist/` contains the built packages, and the
+        # sigstore-produced signatures and certificates.
+        run: >-
+          gh release upload
+          "v${{ env.PACKAGE_VERSION }}" dist/**
+          --repo '${{ github.repository }}'

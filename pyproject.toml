@@ -1,0 +1,63 @@
+[build-system]
+requires = ["setuptools>=61.0.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.distutils.bdist_wheel]
+universal = true
+
+[project]
+name = "django-permafrost"
+version = "0.3.0"
+
+authors = [
+  { name="Grant Viklund", email="renderbox@gmail.com" },
+  { name="Devon Jackson"}
+]
+description = "A Django app that adds Client Definable Permissions to Django."
+readme = "README.md"
+requires-python = ">=3.8"
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+]
+keywords = ["django", "app"]
+dependencies = [
+    "Django>=4.0,<5.2",
+]
+
+[project.optional-dependencies]
+dev = [
+    "black",
+    "flake8",
+    "flake8-black",
+    "mypy",
+    "bandit",
+    "isort",
+    "django-crispy-forms",
+    "django-allauth",
+    "django-extensions",
+    "django-rest-framework",
+    "toml",
+]
+docs= [
+    "coverage",
+]
+test = [
+    "black",
+    "flake8",
+    "flake8-black",
+    "mypy",
+    "bandit",
+    "isort",
+    "coverage",
+    "django-crispy-forms",
+    "django-rest-framework",
+]
+
+[project.urls]
+"Homepage" = "https://github.com/renderbox/django-permafrost"
+"Bug Tracker" = "https://github.com/renderbox/django-permafrost/issues"

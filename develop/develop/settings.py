@@ -21,71 +21,71 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 # See https://docs.djangoproject.com/en/2.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = '&1mmk1e%&9p87fvr=&v84u6fx1)$7f&%)*t9#$zfnu$#h#+5v^'
+SECRET_KEY = "&1mmk1e%&9p87fvr=&v84u6fx1)$7f&%)*t9#$zfnu$#h#+5v^"
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = os.getenv('DEBUG', False)
+DEBUG = os.getenv("DEBUG", False)
 
 ALLOWED_HOSTS = []
 
 SITE_ID = 1
 
-LOGIN_REDIRECT_URL = '/'
+LOGIN_REDIRECT_URL = "/"
 
 # Application definition
 
 INSTALLED_APPS = [
-    'django.contrib.admin',
-    'django.contrib.auth',
-    'django.contrib.contenttypes',
-    'django.contrib.sessions',
-    'django.contrib.messages',
-    'django.contrib.staticfiles',
-    'django.contrib.sites',
-    'crispy_forms',
-    'permafrost',
-    'example',
+    "django.contrib.admin",
+    "django.contrib.auth",
+    "django.contrib.contenttypes",
+    "django.contrib.sessions",
+    "django.contrib.messages",
+    "django.contrib.staticfiles",
+    "django.contrib.sites",
+    "crispy_forms",
+    "permafrost",
+    "example",
 ]
 
 MIDDLEWARE = [
-    'django.middleware.security.SecurityMiddleware',
-    'django.contrib.sessions.middleware.SessionMiddleware',
-    'django.middleware.common.CommonMiddleware',
-    'django.middleware.csrf.CsrfViewMiddleware',
-    'django.contrib.auth.middleware.AuthenticationMiddleware',
-    'django.contrib.messages.middleware.MessageMiddleware',
-    'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    "django.middleware.security.SecurityMiddleware",
+    "django.contrib.sessions.middleware.SessionMiddleware",
+    "django.middleware.common.CommonMiddleware",
+    "django.middleware.csrf.CsrfViewMiddleware",
+    "django.contrib.auth.middleware.AuthenticationMiddleware",
+    "django.contrib.messages.middleware.MessageMiddleware",
+    "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
 
-ROOT_URLCONF = 'develop.urls'
+ROOT_URLCONF = "develop.urls"
 
 TEMPLATES = [
     {
-        'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [ os.path.join(BASE_DIR, 'templates') ],
-        'APP_DIRS': True,
-        'OPTIONS': {
-            'context_processors': [
-                'django.template.context_processors.debug',
-                'django.template.context_processors.request',
-                'django.contrib.auth.context_processors.auth',
-                'django.contrib.messages.context_processors.messages',
+        "BACKEND": "django.template.backends.django.DjangoTemplates",
+        "DIRS": [os.path.join(BASE_DIR, "templates")],
+        "APP_DIRS": True,
+        "OPTIONS": {
+            "context_processors": [
+                "django.template.context_processors.debug",
+                "django.template.context_processors.request",
+                "django.contrib.auth.context_processors.auth",
+                "django.contrib.messages.context_processors.messages",
             ],
         },
     },
 ]
 
-WSGI_APPLICATION = 'develop.wsgi.application'
+WSGI_APPLICATION = "develop.wsgi.application"
 
 
 # Database
 # https://docs.djangoproject.com/en/2.2/ref/settings/#databases
-DEFAULT_AUTO_FIELD = 'django.db.models.AutoField'
+DEFAULT_AUTO_FIELD = "django.db.models.AutoField"
 
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
+    "default": {
+        "ENGINE": "django.db.backends.sqlite3",
+        "NAME": os.path.join(BASE_DIR, "db.sqlite3"),
     }
 }
 
@@ -95,16 +95,16 @@ DATABASES = {
 
 AUTH_PASSWORD_VALIDATORS = [
     {
-        'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
+        "NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator",
     },
     {
-        'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
+        "NAME": "django.contrib.auth.password_validation.MinimumLengthValidator",
     },
     {
-        'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
+        "NAME": "django.contrib.auth.password_validation.CommonPasswordValidator",
     },
     {
-        'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
+        "NAME": "django.contrib.auth.password_validation.NumericPasswordValidator",
     },
 ]
 
@@ -112,9 +112,9 @@ AUTH_PASSWORD_VALIDATORS = [
 # Internationalization
 # https://docs.djangoproject.com/en/2.2/topics/i18n/
 
-LANGUAGE_CODE = 'en-us'
+LANGUAGE_CODE = "en-us"
 
-TIME_ZONE = 'UTC'
+TIME_ZONE = "UTC"
 
 USE_I18N = True
 
@@ -126,64 +126,84 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/2.2/howto/static-files/
 
-STATIC_URL = '/static/'
+STATIC_URL = "/static/"
 
 REST_FRAMEWORK = {
-    'DEFAULT_PERMISSION_CLASSES': [
-        'rest_framework.permissions.IsAuthenticated',
+    "DEFAULT_PERMISSION_CLASSES": [
+        "rest_framework.permissions.IsAuthenticated",
     ]
 }
 
-CRISPY_TEMPLATE_PACK = 'bootstrap4'
+CRISPY_TEMPLATE_PACK = "bootstrap4"
 
 PERMAFROST_CATEGORIES = {
-    'administration': {
-        'label': _('Administration'),
-        'level': 50,
-        'optional': [
-            {'label': _('Can delete Role'), 'permission': ('delete_permafrostrole', 'permafrost', 'permafrostrole') },
+    "administration": {
+        "label": _("Administration"),
+        "level": 50,
+        "optional": [
+            {
+                "label": _("Can delete Role"),
+                "permission": ("delete_permafrostrole", "permafrost", "permafrostrole"),
+            },
         ],
-        'required': [
-            {'label': _('Can add Role'), 'permission': ('add_permafrostrole', 'permafrost', 'permafrostrole') },
-            {'label': _('Can change Role'), 'permission': ('change_permafrostrole', 'permafrost', 'permafrostrole') },
-            {'label': _('Can view Role'), 'permission': ('view_permafrostrole', 'permafrost', 'permafrostrole') },
+        "required": [
+            {
+                "label": _("Can add Role"),
+                "permission": ("add_permafrostrole", "permafrost", "permafrostrole"),
+            },
+            {
+                "label": _("Can change Role"),
+                "permission": ("change_permafrostrole", "permafrost", "permafrostrole"),
+            },
+            {
+                "label": _("Can view Role"),
+                "permission": ("view_permafrostrole", "permafrost", "permafrostrole"),
+            },
         ],
     },
-    'staff': {
-        'label': _('Staff'),
-        'level': 30,
-        'optional': [
-            {'label': _('Can add Role'), 'permission': ('add_permafrostrole', 'permafrost', 'permafrostrole') },
-            {'label': _('Can change Role'), 'permission': ('change_permafrostrole', 'permafrost', 'permafrostrole') },
+    "staff": {
+        "label": _("Staff"),
+        "level": 30,
+        "optional": [
+            {
+                "label": _("Can add Role"),
+                "permission": ("add_permafrostrole", "permafrost", "permafrostrole"),
+            },
+            {
+                "label": _("Can change Role"),
+                "permission": ("change_permafrostrole", "permafrost", "permafrostrole"),
+            },
         ],
-        'required': [
-            {'label': _('Can view Role'), 'permission': ('view_permafrostrole', 'permafrost', 'permafrostrole') },
+        "required": [
+            {
+                "label": _("Can view Role"),
+                "permission": ("view_permafrostrole", "permafrost", "permafrostrole"),
+            },
         ],
     },
-    'user': {
-        'label': _('User'),
-        'level': 1,
-        'optional': [
-            {'label': _('Can view Role'), 'permission': ('view_permafrostrole', 'permafrost', 'permafrostrole') },
+    "user": {
+        "label": _("User"),
+        "level": 1,
+        "optional": [
+            {
+                "label": _("Can view Role"),
+                "permission": ("view_permafrostrole", "permafrost", "permafrostrole"),
+            },
         ],
-        'required': [],
+        "required": [],
     },
 }
 
 PERMAFROST_DEFAULT_ROLES = [
-        'Student',
-        'Supervisor',
-        'Councilor',
-        'Accounting',
-        'Super User',
-        'Administrator',
-        'Curriculum Designer',
-        'Instructor',
-        'Site Owner'
+    "Student",
+    "Supervisor",
+    "Councilor",
+    "Accounting",
+    "Super User",
+    "Administrator",
+    "Curriculum Designer",
+    "Instructor",
+    "Site Owner",
 ]
 
-PERMAFROST_EXCLUDED_ROLES = [
-
-]
-
-
+PERMAFROST_EXCLUDED_ROLES = []
