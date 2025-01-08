@@ -29,6 +29,8 @@ jobs:
 
   build:
     name: Build distribution 📦
+    needs:
+      - bump-version
     runs-on: ubuntu-latest
 
     steps:
