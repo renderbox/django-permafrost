@@ -25,6 +25,7 @@ jobs:
           files: pyproject.toml
           commit_name: github-actions[bot]
           commit_email: github-actions[bot]@users.noreply.github.com
+          login: "${{ github.actor }}"
           token: "${{ secrets.VERSION_BOT_TOKEN }}"
 
   build:
