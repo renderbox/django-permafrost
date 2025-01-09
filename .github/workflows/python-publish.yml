@@ -19,7 +19,7 @@ jobs:
         run: echo "current_version=$(grep 'version = ' pyproject.toml | cut -d '=' -f2 | tr -d ' "')" >> $GITHUB_ENV
 
       - name: Add version commit and tag
-        uses: WhiteMoonDreamsInc/bump-version@main
+        uses: FragileTech/bump-version@main
         with:
           part: "${{ github.event.inputs.part || 'patch' }}"
           current_version: "${{ env.current_version }}"
