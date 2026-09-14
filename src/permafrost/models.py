@@ -1,5 +1,7 @@
 # import sys
 from django.conf import settings
+from django.contrib.contenttypes.fields import GenericForeignKey
+from django.contrib.contenttypes.models import ContentType
 from django.contrib.sites.models import Site
 from django.db import models
 from django.contrib.auth.models import Group, Permission
@@ -11,6 +13,12 @@ from django.contrib.sites.managers import CurrentSiteManager
 from django.db.models.signals import post_delete
 from django.dispatch import receiver
 from django.urls import reverse
+from .context import (
+    DEFAULT_CONTEXT_MODEL,
+    get_context_content_type,
+    get_context_model_label,
+    get_default_context_object,
+)
 
 import logging
 
@@ -21,84 +29,9 @@ logger = logging.getLogger(__name__)
 # CHOICES
 ###############
 
-try:
-    PERMAFROST_DEFAULT_ROLES = getattr(settings, "PERMAFROST_DEFAULT_ROLES")
-except AttributeError as e:
-    print(
-        """
-        !!! Warning: PERMAFROST_DEFAULT_ROLES are not defined!
-
-        They should look something like this and be defined in settings.py
-
-        PERMAFROST_DEFAULT_ROLES = [
-        'Student',
-        'Supervisor',
-        'Councilor',
-        'Accounting',
-        'Super User',
-        'Administrator',
-        'Curriculum Designer',
-        'Instructor',
-        'Site Owner'
-    ]
-        """
-    )
-    print(e)
-    raise
-
+PERMAFROST_DEFAULT_ROLES = getattr(settings, "PERMAFROST_DEFAULT_ROLES", [])
 PERMAFROST_EXCLUDED_ROLES = getattr(settings, "PERMAFROST_EXCLUDED_ROLES", [])
-
-
-try:
-    CATEGORIES = getattr(settings, "PERMAFROST_CATEGORIES")
-except AttributeError:
-    CATEGORIES = None
-    print(
-        """
-    !!! Warning: PERMAFROST_CATEGORIES are not defined!
-
-    They should look something like this and be defined in settings.py
-
-    PERMAFROST_CATEGORIES = {
-        'administration': {
-            'label': _('Administration'),
-            'level': 50,
-            'optional': [
-                {'label': _('Can delete Role'), 'permission': ('delete_permafrostrole', 'permafrost', 'permafrostrole') },
-            ],
-            'required': [
-                {'label': _('Can add Role'), 'permission': ('add_permafrostrole', 'permafrost', 'permafrostrole') },
-                {'label': _('Can change Role'), 'permission': ('change_permafrostrole', 'permafrost', 'permafrostrole') },
-                {'label': _('Can view Role'), 'permission': ('view_permafrostrole', 'permafrost', 'permafrostrole') },
-            ],
-        },
-        'staff': {
-            'label': _('Staff'),
-            'level': 30,
-            'optional': [
-                {'label': _('Can add Role'), 'permission': ('add_permafrostrole', 'permafrost', 'permafrostrole') },
-                {'label': _('Can change Role'), 'permission': ('change_permafrostrole', 'permafrost', 'permafrostrole') },
-                {'label': _('Can view Role'), 'permission': ('view_permafrostrole', 'permafrost', 'permafrostrole') },
-            ],
-            'required': [
-                {'label': _('Can view Role'), 'permission': ('view_permafrostrole', 'permafrost', 'permafrostrole') },
-            ],
-        },
-        'user': {
-            'label': _('User'),
-            'level': 1,
-            'optional': [
-                {'label': _('Can view Role'), 'permission': ('view_permafrostrole', 'permafrost', 'permafrostrole') },
-            ],
-            'required': [],
-        },
-    }
-
-    See README.md for more information.
-    """
-    )
-    # sys.exit()
-    raise
+CATEGORIES = getattr(settings, "PERMAFROST_CATEGORIES", {})
 
 
 ###############
@@ -126,22 +59,18 @@ def get_permission_objects(natural_keys_list):
 
 
 def get_required_by_category(category):
-    if "required" in CATEGORIES[category]:
-        return get_permission_objects(CATEGORIES[category]["required"])
-    return []
+    return get_permission_objects(CATEGORIES.get(category, {}).get("required", []))
 
 
 def get_optional_by_category(category):
-    if "optional" in CATEGORIES[category]:
-        return get_permission_objects(CATEGORIES[category]["optional"])
-    return []
+    return get_permission_objects(CATEGORIES.get(category, {}).get("optional", []))
 
 
 def get_all_perms_for_all_categories():
     perms = []
     for category, category_data in CATEGORIES.items():
-        optional_perms = category_data["optional"]
-        required_perms = category_data["required"]
+        optional_perms = category_data.get("optional", [])
+        required_perms = category_data.get("required", [])
         optional_and_required_perms = set(
             get_permission_objects(optional_perms)
             + get_permission_objects(required_perms)
@@ -161,8 +90,20 @@ class PermafrostRoleManager(models.Manager):
     Standard Django manager with natural key support added.
     """
 
-    def get_by_natural_key(self, slug, site):
-        return self.get(slug=slug, site=site)
+    def get_by_natural_key(
+        self, slug, context_content_type_key=None, context_object_id=None
+    ):
+        if context_content_type_key is not None and context_object_id is not None:
+            context_content_type = ContentType.objects.get_by_natural_key(
+                *context_content_type_key
+            )
+            return self.get(
+                slug=slug,
+                context_content_type=context_content_type,
+                context_object_id=context_object_id,
+            )
+
+        return self.get(slug=slug, site=context_content_type_key)
 
 
 ###############
@@ -220,6 +161,18 @@ class PermafrostRole(models.Model):
         blank=True,
         null=True,
     )  # NOTE: Need to make sure this is exported with natural key values as it can have a different PK on different servers
+    context_content_type = models.ForeignKey(
+        ContentType,
+        verbose_name=_("Context content type"),
+        on_delete=models.CASCADE,
+        blank=True,
+        null=True,
+        editable=False,
+    )
+    context_object_id = models.PositiveBigIntegerField(
+        _("Context object ID"), blank=True, null=True, editable=False
+    )
+    context = GenericForeignKey("context_content_type", "context_object_id")
 
     objects = PermafrostRoleManager()
     on_site = CurrentSiteManager()
@@ -227,7 +180,12 @@ class PermafrostRole(models.Model):
     class Meta:
         verbose_name = _("Permafrost Role")
         verbose_name_plural = _("Permafrost Roles")
-        unique_together = (("name", "site"),)
+        constraints = [
+            models.UniqueConstraint(
+                fields=["name", "context_content_type", "context_object_id"],
+                name="unique_permafrost_role_name_per_context",
+            )
+        ]
 
         permissions = (
             ("add_user_to_role", "Can Add Users to Role"),
@@ -238,7 +196,11 @@ class PermafrostRole(models.Model):
         return self.name
 
     def natural_key(self):
-        return (self.slug, self.site)
+        return (
+            self.slug,
+            self.context_content_type.natural_key(),
+            self.context_object_id,
+        )
 
     def get_absolute_url(self):
         return reverse("permafrost:role-detail", kwargs={"slug": self.slug})
@@ -287,7 +249,35 @@ class PermafrostRole(models.Model):
         """
         Creates the standard name for the group
         """
-        return "{0}_{1}_{2}".format(self.site.pk, self.category, self.slug)
+        context_object = self.get_context_object()
+        if get_context_model_label() == DEFAULT_CONTEXT_MODEL and isinstance(
+            context_object, Site
+        ):
+            return "{0}_{1}_{2}".format(context_object.pk, self.category, self.slug)
+
+        context_label = context_object._meta.label_lower.replace(".", "_")
+        return "{0}_{1}_{2}_{3}".format(
+            context_label,
+            context_object.pk,
+            self.category,
+            self.slug,
+        )
+
+    def get_context_object(self):
+        if self.context is not None:
+            return self.context
+
+        if self.site_id and get_context_model_label() == DEFAULT_CONTEXT_MODEL:
+            return self.site
+
+        return get_default_context_object()
+
+    def set_context(self, context_object):
+        self.context_content_type = get_context_content_type(context_object)
+        self.context_object_id = context_object.pk
+        self._state.fields_cache.pop("context", None)
+        if isinstance(context_object, Site):
+            self.site = context_object
 
     def permissions(self):
         return self.group.permissions
@@ -315,9 +305,12 @@ class PermafrostRole(models.Model):
         This updates the group's Django permissions to only include what was passed in and passes the check against optional and required permissions.
         """
         id_check = [required.pk for required in self.optional_permissions()]
+        submitted_permissions = (
+            permissions.all() if hasattr(permissions, "all") else permissions
+        )
 
         optional_perms = [
-            perm for perm in permissions.all() if perm.pk in id_check
+            perm for perm in submitted_permissions if perm.pk in id_check
         ]  # perms passed in that meet the optional filter check
         required_perms = self.required_permissions()
 
@@ -363,11 +356,29 @@ class PermafrostRole(models.Model):
         """
         self.group.user_set.clear()
 
+    def ensure_group(self):
+        """
+        Ensure this role has the matching Django Group and that it is conformed
+        to the role's allowed permissions.
+        """
+        group_name = self.get_group_name()
+        if not self.group_id:
+            self.group, created = Group.objects.get_or_create(name=group_name)
+            self.save(update_fields=["group"])
+        elif self.group.name != group_name:
+            self.group.name = group_name
+            self.group.save()
+
+        self.conform_group()
+        return self.group
+
     # -------------
     # Save
 
     def save(self, *args, **kwargs):
         self.slug = slugify(self.name)
+        if not self.context_content_type_id or not self.context_object_id:
+            self.set_context(self.get_context_object())
         group_name = self.get_group_name()
 
         if not self.pk:  # if this is a new role, create the matching group
@@ -401,4 +412,5 @@ class PermafrostRole(models.Model):
     dispatch_uid="delete_matching_permafrost_role_group",
 )
 def delete_matching_group(sender, instance, using, **kwargs):
-    instance.group.delete()
+    if instance.group_id:
+        instance.group.delete()

@@ -6,26 +6,27 @@ from django.contrib.auth.backends import (
     RemoteUserBackend,
     AllowAllUsersRemoteUserBackend,
 )
-from django.contrib.sites.models import Site
+from .context import get_context_filter, get_default_context_object
 
 
 class GroupSiteModelBackendMixin:
 
-    def _get_group_permissions(self, user_obj, obj=None, site=None):
+    def _get_group_permissions(self, user_obj, obj=None, site=None, context=None):
         """
-        Adds the SiteID for filtering Groups
+        Adds the configured Permafrost context for filtering Groups.
         """
-        if site:
-            current_site = site
-        else:
-            current_site = Site.objects.get_current()
+        current_context = context or site or get_default_context_object()
 
         user_groups_field = get_user_model()._meta.get_field("groups")
         user_groups_query = "group__%s" % user_groups_field.related_query_name()
 
         return Permission.objects.filter(
-            **{user_groups_query: user_obj}, group__permafrost_role__site=current_site
-        )  # TODO: Should it return Groups that do not have a Permafrost Role also?
+            **{user_groups_query: user_obj},
+            **{
+                f"group__permafrost_role__{key}": value
+                for key, value in get_context_filter(current_context).items()
+            },
+        )
 
 
 class PermafrostModelBackend(GroupSiteModelBackendMixin, ModelBackend):

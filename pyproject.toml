@@ -2,12 +2,9 @@
 requires = ["setuptools>=61.0.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
-[tool.distutils.bdist_wheel]
-universal = true
-
 [project]
 name = "django-permafrost"
-version = "0.3.0"
+version = "0.3.1"
 
 authors = [
   { name="Grant Viklund", email="renderbox@gmail.com" },
@@ -15,7 +12,7 @@ authors = [
 ]
 description = "A Django app that adds Client Definable Permissions to Django."
 readme = "README.md"
-requires-python = ">=3.8"
+requires-python = ">=3.11"
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
@@ -23,10 +20,16 @@ classifiers = [
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Programming Language :: Python :: 3.15",
+    "Framework :: Django",
+    "Framework :: Django :: 5.2",
+    "Framework :: Django :: 6.0",
+    "Framework :: Django :: 6.1",
 ]
 keywords = ["django", "app"]
 dependencies = [
-    "Django>=4.0,<5.2",
+    "Django>=5.2,<6.2",
 ]
 
 [project.optional-dependencies]
@@ -40,7 +43,7 @@ dev = [
     "django-crispy-forms",
     "django-allauth",
     "django-extensions",
-    "django-rest-framework",
+    "djangorestframework",
     "toml",
 ]
 docs= [
@@ -55,9 +58,23 @@ test = [
     "isort",
     "coverage",
     "django-crispy-forms",
-    "django-rest-framework",
+    "djangorestframework",
 ]
 
 [project.urls]
 "Homepage" = "https://github.com/renderbox/django-permafrost"
 "Bug Tracker" = "https://github.com/renderbox/django-permafrost/issues"
+
+[tool.setuptools]
+include-package-data = true
+
+[tool.setuptools.package-data]
+permafrost = [
+    "fixtures/*.json",
+    "templates/permafrost/*.html",
+    "templates/permafrost/admin/*.html",
+    "templates/permafrost/includes/*.html",
+]
+
+[tool.black]
+target-version = ["py311"]

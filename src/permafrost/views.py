@@ -27,7 +27,7 @@ from .forms import (
     SelectPermafrostRoleTypeForm,
 )
 from .permissions import has_all_permissions
-from django.contrib.sites.models import Site
+from .context import get_context_filter, get_request_context_object
 
 # --------------
 # UTILITIES
@@ -154,9 +154,10 @@ class PermafrostLogMixin(object):
 
 class FilterByRequestSiteQuerysetMixin:
     def get_queryset(self):
-        if hasattr(self.request, "site"):
-            return PermafrostRole.objects.filter(site=self.request.site, deleted=False)
-        return super().get_queryset()
+        context_object = get_request_context_object(self.request)
+        return PermafrostRole.objects.filter(
+            **get_context_filter(context_object), deleted=False
+        )
 
 
 class GetRoleExternalPermissionsMixin:
@@ -184,8 +185,7 @@ class PermafrostRoleCreateView(PermafrostSiteMixin, CreateView):
             if submitted.is_valid():
 
                 kwargs = {"initial": submitted.cleaned_data}
-                if hasattr(request, "site"):
-                    kwargs["site"] = self.request.site
+                kwargs["context_object"] = get_request_context_object(request)
 
                 form = PermafrostRoleCreateForm(**kwargs)
                 category = submitted.cleaned_data["category"]
@@ -214,7 +214,7 @@ class PermafrostRoleCreateView(PermafrostSiteMixin, CreateView):
         kwargs = super().get_form_kwargs()
         if self.get_form_class() == PermafrostRoleCreateForm:
             if hasattr(self.request, "site"):
-                kwargs["site"] = self.request.site
+                kwargs["context_object"] = get_request_context_object(self.request)
         return kwargs
 
 
@@ -312,8 +312,7 @@ class PermafrostRoleUpdateView(
 
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
-        if hasattr(self.request, "site"):
-            kwargs["site"] = self.request.site
+        kwargs["context_object"] = get_request_context_object(self.request)
         return kwargs
 
 
@@ -364,11 +363,13 @@ class PermafrostCustomRoleModalView(
         return ["permafrost/includes/permissions_table.html"]
 
     def post(self, request, slug, *args, **kwargs):
-        current_site = getattr(request, "site", Site.objects.get_current())
-        role = PermafrostRole.objects.filter(site=current_site, slug=slug).last()
+        context_object = get_request_context_object(request)
+        role = PermafrostRole.objects.filter(
+            **get_context_filter(context_object), slug=slug
+        ).last()
         perms_to_add = self.get_permissions_queryset()
-        if perms_to_add:
-            role.group.permissions.add(*perms_to_add)
+        if role and perms_to_add:
+            role.permissions_add(*perms_to_add)
         return redirect("permafrost:role-update", slug=slug)
 
     def get_permissions_queryset(self):
