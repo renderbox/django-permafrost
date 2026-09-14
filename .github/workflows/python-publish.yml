@@ -2,12 +2,6 @@ name: Publish Python 🐍 distribution 📦 to PyPI
 
 on:
   workflow_dispatch:
-    inputs:
-      ref:
-        description: "Branch, tag, or SHA to publish"
-        required: true
-        default: "master"
-        type: string
 
 jobs:
   build:
@@ -17,7 +11,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ inputs.ref }}
+          ref: master
 
       - name: Record publish ref
         run: echo "PUBLISH_SHA=$(git rev-parse HEAD)" >> $GITHUB_ENV
