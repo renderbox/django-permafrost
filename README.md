@@ -69,6 +69,26 @@ In the above, we define the User category, give it the localizable label of "Use
 
 There is also an access_level setting to help make sorting access levels more easily.
 
+### Context model
+
+Permafrost roles are scoped to a context object. By default, that context is Django's `Site` model, which preserves the original subdomain/site-per-client behavior:
+
+```python
+PERMAFROST_CONTEXT_MODEL = "sites.Site"
+PERMAFROST_CONTEXT_REQUEST_ATTR = "site"
+```
+
+Projects that use a different tenant model can set the context model once at the beginning of the project, similar to how a custom user model is configured:
+
+```python
+PERMAFROST_CONTEXT_MODEL = "accounts.Organization"
+PERMAFROST_CONTEXT_REQUEST_ATTR = "organization"
+```
+
+Permafrost expects the current context object to be available on the request using `PERMAFROST_CONTEXT_REQUEST_ATTR`. For example, middleware might attach `request.organization`. If no request context is available, the configured context model must provide a manager method named `get_current()`. The built-in `Site` default uses `Site.objects.get_current()`.
+
+Internally, Permafrost stores the context through Django's content type framework, but each project should configure exactly one context model for the lifetime of that project.
+
 ## Recommendations
 
 It is recommended that you update your code to use PermafrotRole's built-in functions to add users and permissions. They add an extra level of checking to make sure the permissions passed in are allowed by the PERMAFROST_CATEGORIES configuration.

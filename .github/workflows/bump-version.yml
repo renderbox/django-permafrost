@@ -1,0 +1,52 @@
+name: Bump Version
+
+on:
+  workflow_dispatch:
+    inputs:
+      part:
+        description: 'Version part to bump'
+        required: true
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
+
+jobs:
+  bump:
+    name: Bump ${{ inputs.part }} version
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Guard — must run on develop
+        if: github.ref != 'refs/heads/develop'
+        run: |
+          echo "Version bumps must be run on develop, not '${{ github.ref_name }}'."
+          exit 1
+
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install bump2version
+        run: pip install "bump2version>=1.0.1"
+
+      - name: Configure git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Bump version
+        run: bump2version ${{ inputs.part }}
+
+      - name: Push commit and tag
+        run: |
+          git push
+          git push --tags

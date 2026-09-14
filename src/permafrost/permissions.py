@@ -4,6 +4,7 @@ This is a permission class that will only work for Django Rest Framework.
 
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Permission
+from .context import get_context_filter, get_request_context_object
 
 try:
     from rest_framework.permissions import BasePermission
@@ -73,7 +74,13 @@ def has_all_permissions(request, check_list=[]):
     user_groups_query = "group__%s" % user_groups_field.related_query_name()
 
     user_permissions = Permission.objects.filter(
-        **{user_groups_query: request.user}, group__permafrost_role__site=request.site
+        **{user_groups_query: request.user},
+        **{
+            f"group__permafrost_role__{key}": value
+            for key, value in get_context_filter(
+                get_request_context_object(request)
+            ).items()
+        },
     )
 
     for perm in check_list:

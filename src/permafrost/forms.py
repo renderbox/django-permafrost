@@ -8,6 +8,7 @@ from django.forms.fields import CharField, ChoiceField, BooleanField
 from django.forms.models import ModelMultipleChoiceField
 from django.forms.widgets import CheckboxInput
 from django.utils.translation import gettext_lazy as _
+from .context import get_default_context_object
 from .models import PermafrostRole, get_optional_by_category, get_choices
 
 CHOICES = [("", _("Choose Role Type"))] + get_choices()
@@ -81,8 +82,14 @@ class PermafrostRoleCreateForm(ModelForm):
         labels = LABELS
 
     def __init__(self, *args, **kwargs):
-        self.site = kwargs.pop("site", Site.objects.get_current())
+        self.context_object = kwargs.pop("context_object", None)
+        self.site = kwargs.pop("site", None)
+        if self.context_object is None:
+            self.context_object = self.site or get_default_context_object()
+        if self.site is None and isinstance(self.context_object, Site):
+            self.site = self.context_object
         super().__init__(*args, **kwargs)
+        self.instance.set_context(self.context_object)
         self.fields["category"].choices = CHOICES
 
         category = self.initial.get("category", self.data.get("category", None))
@@ -99,7 +106,7 @@ class PermafrostRoleCreateForm(ModelForm):
         bootstrappify(self.fields)
 
     def save(self, commit=True):
-        self.instance.site = self.site
+        self.instance.set_context(self.context_object)
         instance = super().save(commit)
         category = instance.category
 
@@ -123,7 +130,8 @@ class PermafrostRoleCreateForm(ModelForm):
                 name_exists = (
                     PermafrostRole.objects.filter(
                         name=name,
-                        site=self.site,
+                        context_content_type=self.instance.context_content_type,
+                        context_object_id=self.instance.context_object_id,
                     )
                     .exclude(pk=self.instance.pk)
                     .first()
@@ -132,7 +140,11 @@ class PermafrostRoleCreateForm(ModelForm):
         else:
 
             try:
-                name_exists = PermafrostRole.objects.get(name=name, site=self.site)
+                name_exists = PermafrostRole.objects.get(
+                    name=name,
+                    context_content_type=self.instance.context_content_type,
+                    context_object_id=self.instance.context_object_id,
+                )
             except PermafrostRole.DoesNotExist:
                 pass
 

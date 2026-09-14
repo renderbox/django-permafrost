@@ -1,3 +1,4 @@
 include LICENSE.txt
 include README.md
-recursive-include permafrost/templates *
+recursive-include src/permafrost/templates *
+recursive-include src/permafrost/fixtures *.json
