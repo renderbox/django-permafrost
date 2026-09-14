@@ -1,8 +1,8 @@
-name: Python Tests (Develop)
+name: Python Tests (Master)
 
 on:
   pull_request:
-    branches: ["develop"]
+    branches: ["master"]
 
 jobs:
   test:
@@ -13,7 +13,25 @@ jobs:
         include:
           - python-version: "3.11"
             django-version: ">=5.2,<5.3"
+          - python-version: "3.12"
+            django-version: ">=5.2,<5.3"
+          - python-version: "3.12"
+            django-version: ">=6.0,<6.1"
+          - python-version: "3.12"
+            django-version: ">=6.1,<6.2"
+          - python-version: "3.13"
+            django-version: ">=5.2,<5.3"
+          - python-version: "3.13"
+            django-version: ">=6.0,<6.1"
+          - python-version: "3.13"
+            django-version: ">=6.1,<6.2"
           - python-version: "3.14"
+            django-version: ">=5.2,<5.3"
+          - python-version: "3.14"
+            django-version: ">=6.0,<6.1"
+          - python-version: "3.14"
+            django-version: ">=6.1,<6.2"
+          - python-version: "3.15-dev"
             django-version: ">=6.1,<6.2"
 
     steps:
