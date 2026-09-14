@@ -9,7 +9,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: master
 
@@ -17,7 +17,7 @@ jobs:
         run: echo "PUBLISH_SHA=$(git rev-parse HEAD)" >> $GITHUB_ENV
 
       - name: Set up Python 3.13
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v7
         with:
           python-version: "3.13"
 
@@ -33,7 +33,7 @@ jobs:
         run: python -m twine check dist/*
 
       - name: Store the distribution packages
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: python-package-distributions
           path: dist/
@@ -42,7 +42,7 @@ jobs:
         run: echo "${PUBLISH_SHA}" > publish-sha.txt
 
       - name: Upload publish metadata
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: publish-metadata
           path: publish-sha.txt
@@ -61,13 +61,13 @@ jobs:
 
     steps:
       - name: Download all the dists artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: python-package-distributions
           path: dist/
 
       - name: Publish distribution 📦 to PyPI
-        uses: pypa/gh-action-pypi-publish@release/v1.12
+        uses: pypa/gh-action-pypi-publish@v1.14.2
         # with:
         #   user: __token__
         #   password: ${{ secrets.pypi_password }}
@@ -85,13 +85,13 @@ jobs:
 
     steps:
       - name: Download all the dists
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: python-package-distributions
           path: dist/
 
       - name: Download publish metadata
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: publish-metadata
           path: .
@@ -107,7 +107,7 @@ jobs:
           echo "PACKAGE_VERSION=$VERSION" >> $GITHUB_ENV
 
       - name: Sign the dists with Sigstore
-        uses: sigstore/gh-action-sigstore-python@v2.1.1
+        uses: sigstore/gh-action-sigstore-python@v3.4.0
         with:
           inputs: >-
             ./dist/*.tar.gz
