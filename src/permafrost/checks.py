@@ -2,6 +2,7 @@ from django.conf import settings
 from django.apps import apps
 from django.contrib.auth.models import Permission
 from django.core.checks import Error, Warning, register
+from django.db import OperationalError, ProgrammingError
 
 
 @register()
@@ -83,6 +84,8 @@ def check_permafrost_settings(app_configs, **kwargs):
 
                 try:
                     Permission.objects.get_by_natural_key(*permission_key)
+                except (OperationalError, ProgrammingError):
+                    continue
                 except (Permission.DoesNotExist, TypeError, ValueError):
                     messages.append(
                         Error(
