@@ -1,61 +1,57 @@
 name: Publish Python 🐍 distribution 📦 to PyPI
 
 on:
-  push:
-    branches: ["master"]
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: "Branch, tag, or SHA to publish"
+        required: true
+        default: "master"
+        type: string
 
 jobs:
-  bump-version:
-    name: Bump package version
-    if: "!contains(github.event.head_commit.message, 'Bump version')"
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout Repo
-        uses: actions/checkout@v4
-        with:
-          persist-credentials: false
-
-      - name: Get current version
-        run: echo "current_version=$(grep 'version = ' pyproject.toml | cut -d '=' -f2 | tr -d ' "')" >> $GITHUB_ENV
-
-      - name: Add version commit and tag
-        uses: FragileTech/bump-version@main
-        with:
-          part: "${{ github.event.inputs.part || 'patch' }}"
-          current_version: "${{ env.current_version }}"
-          files: pyproject.toml
-          commit_name: github-actions[bot]
-          commit_email: github-actions[bot]@users.noreply.github.com
-          login: "${{ github.actor }}"
-          token: "${{ secrets.GITHUB_TOKEN }}"
-
   build:
     name: Build distribution 📦
-    needs:
-      - bump-version
     runs-on: ubuntu-latest
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref }}
 
-      - name: Set up Python 3.10
+      - name: Record publish ref
+        run: echo "PUBLISH_SHA=$(git rev-parse HEAD)" >> $GITHUB_ENV
+
+      - name: Set up Python 3.13
         uses: actions/setup-python@v5
         with:
-          python-version: "3.10"
+          python-version: "3.13"
 
       - name: Install Dependencies
         run: |
           python -m pip install -U pip
-          python -m pip install build --user
+          python -m pip install build twine --user
 
       - name: Build a binary wheel and a source tarball
         run: python -m build
+
+      - name: Check distribution metadata
+        run: python -m twine check dist/*
 
       - name: Store the distribution packages
         uses: actions/upload-artifact@v4
         with:
           name: python-package-distributions
           path: dist/
+
+      - name: Store publish metadata
+        run: echo "${PUBLISH_SHA}" > publish-sha.txt
+
+      - name: Upload publish metadata
+        uses: actions/upload-artifact@v4
+        with:
+          name: publish-metadata
+          path: publish-sha.txt
 
   publish-to-pypi:
     name: >-
@@ -100,6 +96,15 @@ jobs:
           name: python-package-distributions
           path: dist/
 
+      - name: Download publish metadata
+        uses: actions/download-artifact@v4
+        with:
+          name: publish-metadata
+          path: .
+
+      - name: Read publish metadata
+        run: echo "PUBLISH_SHA=$(cat publish-sha.txt)" >> $GITHUB_ENV
+
       # Extract the version directly from a built .whl file
       - name: Extract version from Python package
         id: get_version
@@ -121,6 +126,7 @@ jobs:
           gh release create
           "v${{ env.PACKAGE_VERSION }}"
           --repo '${{ github.repository }}'
+          --target "${{ env.PUBLISH_SHA }}"
           --title "Release v${{ env.PACKAGE_VERSION }}"
           --notes "Release for version ${{ env.PACKAGE_VERSION }}"
 

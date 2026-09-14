@@ -109,7 +109,7 @@ def create_missing_groups(modeladmin, request, queryset):
 
     for item in queryset.all():
         # Make sure group exists and create if not after model is saved.
-        item.get_group()
+        item.ensure_group()
 
 
 create_missing_groups.short_description = "Create a Django Group if missing"

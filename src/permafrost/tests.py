@@ -1,6 +1,6 @@
 from unittest import skipIf
 from django.forms.models import model_to_dict
-from django.test import TestCase, RequestFactory
+from django.test import TestCase, RequestFactory, override_settings
 from django.contrib.sites.models import Site
 from django.contrib.auth import get_user_model
 from django.core.exceptions import PermissionDenied
@@ -172,7 +172,8 @@ class PermafrostRoleModelTest(TestCase):
         perms = list(self.staffuser.get_all_permissions())
 
         self.assertEqual(
-            [perm.name for perm in role.group.permissions.all()], ["Can view Role"]
+            [perm.codename for perm in role.group.permissions.all()],
+            ["view_permafrostrole"],
         )  # Make sure the required permission is present in the group
         self.assertEqual(
             role.group.name, "1_staff_bobs-staff-group"
@@ -213,7 +214,8 @@ class PermafrostRoleModelTest(TestCase):
         perms = list(self.staffuser.get_all_permissions())
 
         self.assertEqual(
-            [perm.name for perm in role.group.permissions.all()], ["Can view Role"]
+            [perm.codename for perm in role.group.permissions.all()],
+            ["view_permafrostrole"],
         )  # Make sure the required permission is present in the group
         self.assertEqual(
             role.group.name, "1_staff_bobs-staff-group"
@@ -229,7 +231,8 @@ class PermafrostRoleModelTest(TestCase):
         perms = list(self.staffuser.get_all_permissions())
 
         self.assertEqual(
-            [perm.name for perm in role.group.permissions.all()], ["Can view Role"]
+            [perm.codename for perm in role.group.permissions.all()],
+            ["view_permafrostrole"],
         )  # Make sure the required permission is present in the group
         self.assertEqual(
             role.group.name, "1_staff_bobs-staff-group"
@@ -248,8 +251,8 @@ class PermafrostRoleModelTest(TestCase):
         perms.sort()
 
         self.assertListEqual(
-            [perm.name for perm in role.group.permissions.all()],
-            ["Can add Role", "Can change Role", "Can view Role"],
+            [perm.codename for perm in role.group.permissions.all()],
+            ["add_permafrostrole", "change_permafrostrole", "view_permafrostrole"],
         )  # Make sure the required permission is present in the group
         self.assertEqual(
             role.group.name, "1_administration_bobs-administration-group"
@@ -274,8 +277,13 @@ class PermafrostRoleModelTest(TestCase):
         perms.sort()
 
         self.assertListEqual(
-            [perm.name for perm in role.group.permissions.all()],
-            ["Can add Role", "Can change Role", "Can delete Role", "Can view Role"],
+            [perm.codename for perm in role.group.permissions.all()],
+            [
+                "add_permafrostrole",
+                "change_permafrostrole",
+                "delete_permafrostrole",
+                "view_permafrostrole",
+            ],
         )  # Make sure the required permission is present in the group
         self.assertEqual(
             role.group.name, "1_administration_bobs-administration-group"
@@ -302,8 +310,13 @@ class PermafrostRoleModelTest(TestCase):
         perms.sort()
 
         self.assertListEqual(
-            [perm.name for perm in role.group.permissions.all()],
-            ["Can add Role", "Can change Role", "Can delete Role", "Can view Role"],
+            [perm.codename for perm in role.group.permissions.all()],
+            [
+                "add_permafrostrole",
+                "change_permafrostrole",
+                "delete_permafrostrole",
+                "view_permafrostrole",
+            ],
         )  # Make sure the required permission is present in the group
         self.assertEqual(
             role.group.name, "1_administration_bobs-administration-group"
@@ -330,8 +343,8 @@ class PermafrostRoleModelTest(TestCase):
         perms.sort()
 
         self.assertListEqual(
-            [perm.name for perm in role.group.permissions.all()],
-            ["Can add Role", "Can change Role", "Can view Role"],
+            [perm.codename for perm in role.group.permissions.all()],
+            ["add_permafrostrole", "change_permafrostrole", "view_permafrostrole"],
         )  # Make sure the required permission is present in the group
         self.assertEqual(
             role.group.name, "1_administration_bobs-administration-group"
@@ -375,6 +388,31 @@ class PermafrostRoleModelTest(TestCase):
                 )
                 role_d.save()
 
+    def test_role_defaults_to_site_context(self):
+        role = PermafrostRole(name="Context Default Role", category="user")
+        role.save()
+
+        self.assertEqual(role.context, Site.objects.get_current())
+        self.assertEqual(role.context_object_id, Site.objects.get_current().pk)
+        self.assertEqual(role.get_group_name(), "1_user_context-default-role")
+
+    @override_settings(PERMAFROST_CONTEXT_MODEL="auth.Group")
+    def test_same_role_name_allowed_in_different_configured_contexts(self):
+        context_a = Group.objects.create(name="Context A")
+        context_b = Group.objects.create(name="Context B")
+
+        role_a = PermafrostRole(name="Shared Role Name", category="user")
+        role_a.set_context(context_a)
+        role_a.save()
+
+        role_b = PermafrostRole(name="Shared Role Name", category="user")
+        role_b.set_context(context_b)
+        role_b.save()
+
+        self.assertEqual(role_a.context, context_a)
+        self.assertEqual(role_b.context, context_b)
+        self.assertNotEqual(role_a.get_group_name(), role_b.get_group_name())
+
     # Test that deleting a PermafrostRole deletes the matching group
 
     def test_delete_role_deletes_group(self):
@@ -392,18 +430,20 @@ class PermafrostRoleModelTest(TestCase):
             group = Group.objects.get(name=group_name)
 
     def test_get_all_perms_for_all_categories(self):
-        all_perm_names = [perm.name for perm in get_all_perms_for_all_categories()]
+        all_perm_keys = [
+            perm.natural_key() for perm in get_all_perms_for_all_categories()
+        ]
 
-        # grab all the names from CATEGORIES in settings
-        category_perm_names = []
+        # grab all the permission natural keys from CATEGORIES in settings
+        category_perm_keys = []
         for category, category_data in CATEGORIES.items():
             for optional_perm_data in category_data["optional"]:
-                category_perm_names.append(optional_perm_data["label"])
+                category_perm_keys.append(optional_perm_data["permission"])
 
             for optional_perm_data in category_data["required"]:
-                category_perm_names.append(optional_perm_data["label"])
+                category_perm_keys.append(optional_perm_data["permission"])
 
-        self.assertListEqual(sorted(all_perm_names), sorted(category_perm_names))
+        self.assertListEqual(sorted(all_perm_keys), sorted(category_perm_keys))
 
     def test_unable_to_delete_default_roles(self):
         role = PermafrostRole.objects.get(pk=3)
@@ -668,6 +708,12 @@ class PermafrostViewTests(TestCase):
 
     def test_update_form_has_selected_optional_permission(self):
         ## add optional permissions
+        add_permission = Permission.objects.get_by_natural_key(
+            *("add_permafrostrole", "permafrost", "permafrostrole")
+        )
+        change_permission = Permission.objects.get_by_natural_key(
+            *("change_permafrostrole", "permafrost", "permafrostrole")
+        )
         self.pf_role.permissions_set(
             Permission.objects.filter(
                 codename__in=["add_permafrostrole", "change_permafrostrole"]
@@ -691,30 +737,30 @@ class PermafrostViewTests(TestCase):
                 response.context["permission_categories"]["permafrostrole"]["optional"][
                     0
                 ].id,
-                37,
+                add_permission.id,
             )
             self.assertEqual(
                 response.context["permission_categories"]["permafrostrole"]["optional"][
                     1
                 ].id,
-                38,
+                change_permission.id,
             )
             self.assertEqual(
                 response.context["permission_categories"]["permafrostrole"]["optional"][
                     0
-                ].name,
-                "Can add Role",
+                ].codename,
+                "add_permafrostrole",
             )
             self.assertEqual(
                 response.context["permission_categories"]["permafrostrole"]["optional"][
                     1
-                ].name,
-                "Can change Role",
+                ].codename,
+                "change_permafrostrole",
             )
-            self.assertContains(response, 'value="37"')
-            self.assertContains(response, 'value="38"')
-            self.assertContains(response, 'id="permission-37"')
-            self.assertContains(response, 'id="permission-38"')
+            self.assertContains(response, f'value="{add_permission.id}"')
+            self.assertContains(response, f'value="{change_permission.id}"')
+            self.assertContains(response, f'id="permission-{add_permission.id}"')
+            self.assertContains(response, f'id="permission-{change_permission.id}"')
             self.assertContains(response, "checked")
 
         except Exception as e:
@@ -770,7 +816,15 @@ class PermafrostViewTests(TestCase):
 
         uri = reverse("permafrost:role-update", kwargs={"slug": "test-role"})
         data = model_to_dict(self.pf_role)
-        data.update({"permissions": ["37", "38"]})
+        add_permission = Permission.objects.get_by_natural_key(
+            *("add_permafrostrole", "permafrost", "permafrostrole")
+        )
+        change_permission = Permission.objects.get_by_natural_key(
+            *("change_permafrostrole", "permafrost", "permafrostrole")
+        )
+        data.update(
+            {"permissions": [str(add_permission.id), str(change_permission.id)]}
+        )
         ## listcomp below used to remove 'description': None
         post_data = {k: v for k, v in data.items() if v is not None}
         self.client.post(uri, data=post_data, follow=True)
@@ -781,11 +835,14 @@ class PermafrostViewTests(TestCase):
             if permission.id in allowed_optional_permission_ids
         ]
 
-        self.assertEqual(updated_permission_ids_1, [37, 38])
+        self.assertEqual(
+            sorted(updated_permission_ids_1),
+            sorted([add_permission.id, change_permission.id]),
+        )
 
         ## remove one permission
 
-        data.update({"permissions": ["37"]})
+        data.update({"permissions": [str(add_permission.id)]})
         ## listcomp below used to remove 'description': None
         post_data = {k: v for k, v in data.items() if v is not None}
         self.client.post(uri, data=post_data, follow=True)
@@ -796,7 +853,7 @@ class PermafrostViewTests(TestCase):
             if permission.id in allowed_optional_permission_ids
         ]
 
-        self.assertEqual(updated_permission_ids_2, [37])
+        self.assertEqual(updated_permission_ids_2, [add_permission.id])
 
     def test_optional_permissions_are_removed_when_empty_array_submitted_to_POST(self):
         ## arrange: add optional permissions
@@ -946,6 +1003,35 @@ class PermafrostViewTests(TestCase):
             print("")
             raise
 
+    def test_modal_POST_only_adds_permissions_allowed_for_role_category(self):
+        allowed_permission = Permission.objects.get_by_natural_key(
+            *("add_permafrostrole", "permafrost", "permafrostrole")
+        )
+        disallowed_permission = Permission.objects.get_by_natural_key(
+            *("add_logentry", "admin", "logentry")
+        )
+        uri = reverse(
+            "permafrost:custom-role-add-permissions",
+            kwargs={"slug": self.pf_role.slug},
+        )
+
+        self.client.post(
+            uri,
+            data={
+                "permissions": [
+                    str(allowed_permission.id),
+                    str(disallowed_permission.id),
+                ]
+            },
+            follow=True,
+        )
+
+        role_permission_ids = set(
+            self.pf_role.permissions().values_list("id", flat=True)
+        )
+        self.assertIn(allowed_permission.id, role_permission_ids)
+        self.assertNotIn(disallowed_permission.id, role_permission_ids)
+
 
 # @tag('admin_tests')
 class PermafrostFormClassTests(TestCase):
@@ -968,21 +1054,33 @@ class PermafrostFormClassTests(TestCase):
         self.assertIn("permissions", form.fields)
 
         self.assertEqual(
-            list(form.fields["permissions"].queryset),
-            list(Permission.objects.filter(id__in=[37, 38])),
+            set(form.fields["permissions"].queryset),
+            set(
+                Permission.objects.filter(
+                    codename__in=["add_permafrostrole", "change_permafrostrole"]
+                )
+            ),
         )
 
         form_2 = PermafrostRoleCreateForm(initial={"category": "administration"})
 
         self.assertEqual(
-            list(form_2.fields["permissions"].queryset),
-            list(Permission.objects.filter(id__in=[39])),
+            set(form_2.fields["permissions"].queryset),
+            {
+                Permission.objects.get_by_natural_key(
+                    *("delete_permafrostrole", "permafrost", "permafrostrole")
+                )
+            },
         )
         form_3 = PermafrostRoleCreateForm(initial={"category": "user"})
 
         self.assertEqual(
-            list(form_3.fields["permissions"].queryset),
-            list(Permission.objects.filter(id__in=[40])),
+            set(form_3.fields["permissions"].queryset),
+            {
+                Permission.objects.get_by_natural_key(
+                    *("view_permafrostrole", "permafrost", "permafrostrole")
+                )
+            },
         )
 
     def test_update_form_category_is_read_only_and_disabled(self):
