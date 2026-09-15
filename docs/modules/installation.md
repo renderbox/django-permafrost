@@ -23,6 +23,12 @@ For local development, install the package in editable mode with the test extras
 python -m pip install -e ".[test]"
 ```
 
+To use the optional Django REST Framework HTTP API:
+
+```shell
+python -m pip install "django-permafrost[api]"
+```
+
 The project no longer uses a root `requirements.txt`. Runtime dependencies live in `pyproject.toml`, and optional groups are used for development, tests, and docs.
 
 ## Django Apps

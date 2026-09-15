@@ -152,3 +152,40 @@ Permlist formatted for your PermafrostRoles configuration
 ```
 
 Each line can be copied into the PERMAFROST_CATEGORIES config in the correct format.
+
+## Python and HTTP APIs
+
+Permafrost includes a DRF-independent service API:
+
+```python
+from permafrost.api import services
+
+role = services.create_role(
+    name="Account Manager",
+    category="staff",
+    context_object=organization,
+)
+services.set_role_permissions(role, permissions)
+services.add_role_users(role, [user])
+```
+
+The HTTP API is built with Django REST Framework and remains optional. Install the API extra to use it:
+
+```shell
+python -m pip install "django-permafrost[api]"
+```
+
+Then include the API URLs:
+
+```python
+from django.urls import include, path
+
+urlpatterns = [
+    path("api/permafrost/", include("permafrost.api.urls")),
+]
+```
+
+## Authors and contributors
+
+- Grant Viklund, principal author and maintainer
+- Devon Jackson, contributor

@@ -13,6 +13,8 @@ The main pieces are:
 - Django `Permission`: the underlying permissions assigned to the group.
 - `PERMAFROST_CATEGORIES`: developer-owned configuration that defines required and optional permissions.
 - Context helpers: utilities that resolve the current `Site`, `Organization`, `Team`, or other configured context model.
+- Service API: DRF-independent functions in `permafrost.api.services` for app-level integrations.
+- Optional DRF API: serializers, viewsets, permissions, and URLs for HTTP integrations.
 - Views and forms: UI helpers for creating, updating, listing, and managing roles.
 
 ## Permission Model

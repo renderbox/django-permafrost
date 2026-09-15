@@ -23,4 +23,5 @@ The default tenant context is Django's `Site` model. New projects can configure 
 - `modules/installation.md`: installation, settings, and upgrade notes
 - `modules/models.md`: role model behavior, permission mapping, and context scoping
 - `modules/views.md`: included views and mixins
+- `modules/api.md`: Python service API and optional DRF HTTP API
 - `modules/about.md`: architecture and maintenance notes
