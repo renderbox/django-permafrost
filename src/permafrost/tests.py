@@ -20,6 +20,7 @@ from .forms import (
     PermafrostRoleUpdateForm,
     SelectPermafrostRoleTypeForm,
 )
+from .api import services
 
 try:
     from rest_framework.test import APIClient
@@ -452,6 +453,69 @@ class PermafrostRoleModelTest(TestCase):
         self.assertFalse(role.deleted)
 
 
+class PermafrostServiceAPITest(TestCase):
+    fixtures = ["unit_test"]
+
+    def setUp(self):
+        User = get_user_model()
+        self.user = User.objects.create_user(
+            username="service-user",
+            email="service-user@example.com",
+            password="Passw0rd!",
+        )
+        self.site_1 = Site.objects.get(pk=1)
+        self.site_2 = Site.objects.get(pk=2)
+        self.allowed_permission = Permission.objects.get_by_natural_key(
+            *("view_permafrostrole", "permafrost", "permafrostrole")
+        )
+        self.disallowed_permission = Permission.objects.get_by_natural_key(
+            *("add_logentry", "admin", "logentry")
+        )
+
+    def test_create_role_anchors_to_context(self):
+        role = services.create_role(
+            name="Service Role",
+            category="user",
+            context_object=self.site_2,
+        )
+
+        self.assertEqual(role.context, self.site_2)
+        self.assertEqual(role.site, self.site_2)
+        self.assertIn(role, services.list_roles(context_object=self.site_2))
+        self.assertNotIn(role, services.list_roles(context_object=self.site_1))
+
+    def test_set_role_permissions_uses_role_permission_rules(self):
+        role = services.create_role(
+            name="Service Permission Role",
+            category="user",
+            context_object=self.site_1,
+        )
+
+        services.set_role_permissions(
+            role,
+            Permission.objects.filter(
+                id__in=[self.allowed_permission.id, self.disallowed_permission.id]
+            ),
+        )
+
+        role_permission_ids = set(role.permissions().values_list("id", flat=True))
+        self.assertIn(self.allowed_permission.id, role_permission_ids)
+        self.assertNotIn(self.disallowed_permission.id, role_permission_ids)
+
+    def test_add_and_remove_role_users(self):
+        role = services.create_role(
+            name="Service User Role",
+            category="user",
+            context_object=self.site_1,
+        )
+
+        services.add_role_users(role, [self.user])
+        self.assertIn(self.user, role.user_set())
+
+        services.remove_role_users(role, [self.user])
+        self.assertNotIn(self.user, role.user_set())
+
+
 # Don't run the following tests if DRF is not loaded
 @skipIf(SKIP_DRF_TESTS, "Django Rest Framework not installed, skipping tests")
 class PermafrostAPITest(TestCase):
@@ -499,6 +563,78 @@ class PermafrostAPITest(TestCase):
         self.client.force_authenticate(user=self.user)
         response = self.client.get("/permissions/", format="json")
         assert response.status_code == 403
+
+    def test_superuser_can_list_permafrost_roles_api(self):
+        self.client.force_authenticate(user=self.adminuser)
+        response = self.client.get("/api/permafrost/roles/", format="json")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.data)
+
+    def test_superuser_can_create_permafrost_role_api(self):
+        self.client.force_authenticate(user=self.adminuser)
+        response = self.client.post(
+            "/api/permafrost/roles/",
+            data={"name": "API Role", "description": "", "category": "user"},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(response.data["name"], "API Role")
+        self.assertEqual(response.data["slug"], "api-role")
+        role = PermafrostRole.objects.get(slug="api-role")
+        self.assertEqual(role.context, Site.objects.get_current())
+
+    def test_api_permission_update_uses_role_permission_rules(self):
+        self.client.force_authenticate(user=self.adminuser)
+        role = PermafrostRole.objects.create(
+            category="user", name="API Permission Role", site=Site.objects.get_current()
+        )
+        allowed_permission = Permission.objects.get_by_natural_key(
+            *("view_permafrostrole", "permafrost", "permafrostrole")
+        )
+        disallowed_permission = Permission.objects.get_by_natural_key(
+            *("add_logentry", "admin", "logentry")
+        )
+
+        response = self.client.put(
+            f"/api/permafrost/roles/{role.slug}/permissions/",
+            data={
+                "permission_ids": [
+                    allowed_permission.id,
+                    disallowed_permission.id,
+                ]
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        role_permission_ids = set(role.permissions().values_list("id", flat=True))
+        self.assertIn(allowed_permission.id, role_permission_ids)
+        self.assertNotIn(disallowed_permission.id, role_permission_ids)
+
+    def test_api_can_add_and_remove_role_users(self):
+        self.client.force_authenticate(user=self.adminuser)
+        role = PermafrostRole.objects.create(
+            category="user", name="API User Role", site=Site.objects.get_current()
+        )
+
+        response = self.client.post(
+            f"/api/permafrost/roles/{role.slug}/users/",
+            data={"user_ids": [self.user.id]},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(self.user, role.user_set())
+
+        response = self.client.delete(
+            f"/api/permafrost/roles/{role.slug}/users/{self.user.id}/",
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 204)
+        self.assertNotIn(self.user, role.user_set())
 
 
 # @tag('admin_tests')

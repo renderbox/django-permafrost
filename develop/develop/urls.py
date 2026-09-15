@@ -26,5 +26,6 @@ urlpatterns = [
         name="permafrost-permissions-test-endpoint",
     ),
     path("permafrost/", include("permafrost.urls")),
+    path("api/permafrost/", include("permafrost.api.urls")),
     path("admin/", admin.site.urls),
 ]

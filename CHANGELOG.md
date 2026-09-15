@@ -1,5 +1,17 @@
 # Changelog
 
+## Unreleased
+
+### Changed
+
+- Clarified package author/contributor metadata and project README attribution.
+
+### Added
+
+- Added a DRF-independent Python service API under `permafrost.api.services`.
+- Added optional Django REST Framework serializers, views, permissions, and URLs under `permafrost.api`.
+- Added a `django-permafrost[api]` optional dependency extra for HTTP API users.
+
 ## 0.4.0
 
 ### Changed
