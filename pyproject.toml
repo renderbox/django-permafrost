@@ -7,8 +7,11 @@ name = "django-permafrost"
 version = "0.4.1"
 
 authors = [
+  { name="Grant Viklund" },
+  { name="Devon Jackson" },
+]
+maintainers = [
   { name="Grant Viklund", email="renderbox@gmail.com" },
-  { name="Devon Jackson"}
 ]
 description = "A Django app that adds Client Definable Permissions to Django."
 readme = "README.md"
@@ -33,6 +36,9 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+api = [
+    "djangorestframework",
+]
 dev = [
     "black",
     "flake8",
