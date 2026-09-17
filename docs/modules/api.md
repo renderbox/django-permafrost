@@ -84,6 +84,7 @@ The included routes expose:
 - `PUT /roles/{slug}/permissions/`
 - `GET /roles/{slug}/users/`
 - `POST /roles/{slug}/users/`
+- `DELETE /roles/{slug}/users/`
 - `DELETE /roles/{slug}/users/{user_id}/`
 
 ## Collection Queries
@@ -134,6 +135,48 @@ The role-user collection supports:
 Membership ordering uses the custom user model's `USERNAME_FIELD` internally;
 the public query parameter remains `username`.
 
+## Membership Identifiers
+
+Membership mutations use primary keys by default. Projects may opt into one
+additional stable identifier by configuring a field on their custom user
+model:
+
+```python
+PERMAFROST_API_USER_LOOKUP_FIELD = "username"
+```
+
+The configured field can be `username`, a unique email field, or a
+project-defined field such as `external_id`. It must be a concrete model field
+declared with `unique=True`. Permafrost reports missing, non-concrete, and
+non-unique fields through Django system checks. Email lookup should only be
+enabled when the user model enforces unique email addresses.
+
+After configuration, add or remove memberships using exact identifier values:
+
+```http
+POST /api/permafrost/roles/account-manager/users/
+Content-Type: application/json
+
+{
+  "user_identifiers": ["grant", "devon"]
+}
+```
+
+```http
+DELETE /api/permafrost/roles/account-manager/users/
+Content-Type: application/json
+
+{
+  "user_identifiers": ["grant"]
+}
+```
+
+The collection `POST` and `DELETE` endpoints accept exactly one of
+`user_ids` or `user_identifiers`. Every submitted user must exist before any
+membership is changed. The original
+`DELETE /roles/{slug}/users/{user_id}/` endpoint remains available for
+single-user primary-key removal.
+
 ## HTTP API Behavior
 
 Role `category` is set when a role is created and cannot be changed through the update endpoints. This matches the built-in forms, where category controls the required and optional permission set.
@@ -142,7 +185,10 @@ Deleting a role through the HTTP API soft-deletes it by setting `deleted=True`. 
 
 Permission updates require known permission IDs. Permissions that exist but are outside the role category's optional/required permission set return `400 Bad Request`; the update is not partially applied.
 
-User membership updates require known user IDs. Removing a user ID that does not exist returns `404`.
+User membership updates require every submitted ID or configured identifier to
+resolve. Bulk additions and removals return `400 Bad Request` without making a
+partial change when a value is unknown. Removing a single user through the
+primary-key URL returns `404` when that user does not exist.
 
 ## Example Requests
 

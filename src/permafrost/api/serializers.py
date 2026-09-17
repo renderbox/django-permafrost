@@ -1,3 +1,4 @@
+from django.core.exceptions import ImproperlyConfigured
 from django.core.exceptions import ValidationError as DjangoValidationError
 
 from permafrost.api import services
@@ -137,12 +138,32 @@ class RolePermissionsWriteSerializer(serializers.Serializer):
 
 class RoleUsersWriteSerializer(serializers.Serializer):
     user_ids = serializers.ListField(
-        child=serializers.IntegerField(), required=True, allow_empty=False
+        child=serializers.IntegerField(), required=False, allow_empty=False
+    )
+    user_identifiers = serializers.ListField(
+        child=serializers.CharField(), required=False, allow_empty=False
     )
 
-    def validate_user_ids(self, value):
+    def validate(self, attrs):
+        supplied_fields = {
+            field_name
+            for field_name in ("user_ids", "user_identifiers")
+            if field_name in attrs
+        }
+        if len(supplied_fields) != 1:
+            raise serializers.ValidationError(
+                "Supply exactly one of user_ids or user_identifiers."
+            )
+
         try:
-            services.get_users_from_ids(value)
-        except DjangoValidationError as exc:
-            raise serializers.ValidationError(exc.message_dict["user_ids"][0]) from exc
-        return value
+            if "user_ids" in attrs:
+                services.get_users_from_ids(attrs["user_ids"])
+            else:
+                services.get_users_from_identifiers(attrs["user_identifiers"])
+        except (DjangoValidationError, ImproperlyConfigured) as exc:
+            if isinstance(exc, DjangoValidationError):
+                detail = exc.message_dict
+            else:
+                detail = {"user_identifiers": str(exc)}
+            raise serializers.ValidationError(detail) from exc
+        return attrs

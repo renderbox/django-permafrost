@@ -21,6 +21,7 @@
 - Added a system-check warning for Django's global `ModelBackend` and a complete Team-context setup guide.
 - Added page-number pagination, search, exact filters, and controlled ordering for HTTP API role and membership collections.
 - Added configurable `PERMAFROST_API_PAGE_SIZE` and `PERMAFROST_API_MAX_PAGE_SIZE` settings with system checks.
+- Added opt-in membership lookup by a configured unique custom-user field, with bulk add/remove support and system checks.
 
 ### Fixed
 
