@@ -1,6 +1,11 @@
+from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Permission
-from django.core.exceptions import ValidationError
+from django.core.exceptions import (
+    FieldDoesNotExist,
+    ImproperlyConfigured,
+    ValidationError,
+)
 from django.db import transaction
 
 from permafrost.context import (
@@ -220,6 +225,50 @@ def get_users_from_ids(user_ids):
     missing_ids = sorted(set(user_ids) - found_ids)
     if missing_ids:
         raise ValidationError({"user_ids": f"Unknown user IDs: {missing_ids}"})
+    return users
+
+
+def get_user_lookup_field():
+    field_name = getattr(settings, "PERMAFROST_API_USER_LOOKUP_FIELD", None)
+    if not field_name:
+        raise ImproperlyConfigured(
+            "PERMAFROST_API_USER_LOOKUP_FIELD must be configured to use "
+            "user identifiers."
+        )
+
+    try:
+        field = get_user_model()._meta.get_field(field_name)
+    except FieldDoesNotExist as exc:
+        raise ImproperlyConfigured(
+            "PERMAFROST_API_USER_LOOKUP_FIELD does not name a user model field."
+        ) from exc
+
+    if not field.concrete or not field.unique:
+        raise ImproperlyConfigured(
+            "PERMAFROST_API_USER_LOOKUP_FIELD must name a concrete unique user "
+            "model field."
+        )
+    return field
+
+
+def get_users_from_identifiers(user_identifiers):
+    user_identifiers = user_identifiers or []
+    field = get_user_lookup_field()
+    users = get_user_model().objects.filter(**{f"{field.name}__in": user_identifiers})
+    found_identifiers = {
+        str(value) for value in users.values_list(field.name, flat=True)
+    }
+    missing_identifiers = sorted(
+        {
+            str(identifier)
+            for identifier in user_identifiers
+            if str(identifier) not in found_identifiers
+        }
+    )
+    if missing_identifiers:
+        raise ValidationError(
+            {"user_identifiers": (f"Unknown user identifiers: {missing_identifiers}")}
+        )
     return users
 
 

@@ -175,9 +175,24 @@ class PermafrostRoleViewSet(viewsets.ModelViewSet):
         role = self.get_object()
         serializer = RoleUsersWriteSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        users = services.get_users_from_ids(serializer.validated_data["user_ids"])
+        users = self._get_membership_users(serializer.validated_data)
         services.add_role_users(role, users)
         return Response(PermafrostRoleSerializer(role).data)
+
+    @users.mapping.delete
+    def remove_users(self, request, slug=None):
+        role = self.get_object()
+        serializer = RoleUsersWriteSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        users = self._get_membership_users(serializer.validated_data)
+        services.remove_role_users(role, users)
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+    @staticmethod
+    def _get_membership_users(validated_data):
+        if "user_ids" in validated_data:
+            return services.get_users_from_ids(validated_data["user_ids"])
+        return services.get_users_from_identifiers(validated_data["user_identifiers"])
 
     @action(detail=True, methods=["delete"], url_path=r"users/(?P<user_id>[^/.]+)")
     def remove_user(self, request, slug=None, user_id=None):

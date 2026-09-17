@@ -24,6 +24,7 @@ class PermafrostAPIPermission(BasePermission):
         "set_permissions": ["permafrost.change_permafrostrole"],
         "users": ["permafrost.view_permafrostrole"],
         "add_users": ["permafrost.add_user_to_role"],
+        "remove_users": ["permafrost.add_user_to_role"],
         "remove_user": ["permafrost.add_user_to_role"],
     }
 

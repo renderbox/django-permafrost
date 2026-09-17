@@ -1,7 +1,9 @@
 from django.conf import settings
 from django.apps import apps
+from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Permission
 from django.core.checks import Error, Warning, register
+from django.core.exceptions import FieldDoesNotExist
 from django.db import OperationalError, ProgrammingError
 
 
@@ -68,6 +70,34 @@ def check_permafrost_settings(app_configs, **kwargs):
                 id="permafrost.E013",
             )
         )
+
+    user_lookup_field = getattr(settings, "PERMAFROST_API_USER_LOOKUP_FIELD", None)
+    if user_lookup_field is not None:
+        if not isinstance(user_lookup_field, str) or not user_lookup_field.strip():
+            messages.append(
+                Error(
+                    "PERMAFROST_API_USER_LOOKUP_FIELD must be a non-empty field name or None.",
+                    id="permafrost.E014",
+                )
+            )
+        else:
+            try:
+                lookup_field = get_user_model()._meta.get_field(user_lookup_field)
+            except FieldDoesNotExist:
+                messages.append(
+                    Error(
+                        "PERMAFROST_API_USER_LOOKUP_FIELD does not name a user model field.",
+                        id="permafrost.E015",
+                    )
+                )
+            else:
+                if not lookup_field.concrete or not lookup_field.unique:
+                    messages.append(
+                        Error(
+                            "PERMAFROST_API_USER_LOOKUP_FIELD must name a concrete unique user model field.",
+                            id="permafrost.E016",
+                        )
+                    )
 
     categories = getattr(settings, "PERMAFROST_CATEGORIES", None)
 

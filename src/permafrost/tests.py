@@ -687,6 +687,21 @@ class PermafrostServiceAPITest(TestCase):
         with self.assertRaises(ValidationError):
             services.get_users_from_ids([999999])
 
+    @override_settings(PERMAFROST_API_USER_LOOKUP_FIELD="username")
+    def test_users_can_be_resolved_by_configured_unique_identifier(self):
+        users = services.get_users_from_identifiers([self.user.username])
+
+        self.assertEqual(list(users), [self.user])
+
+    @override_settings(PERMAFROST_API_USER_LOOKUP_FIELD="username")
+    def test_unknown_user_identifiers_raise_validation_error(self):
+        with self.assertRaises(ValidationError):
+            services.get_users_from_identifiers(["not-a-user"])
+
+    def test_user_identifier_lookup_requires_configuration(self):
+        with self.assertRaises(ImproperlyConfigured):
+            services.get_users_from_identifiers([self.user.username])
+
     def test_services_do_not_require_drf_imports(self):
         def guarded_import(name, *args, **kwargs):
             if name.startswith("rest_framework"):
@@ -1035,6 +1050,110 @@ class PermafrostAPITest(TestCase):
 
         self.assertEqual(response.status_code, 400)
         self.assertIn("user_ids", response.data)
+
+    @override_settings(PERMAFROST_API_USER_LOOKUP_FIELD="username")
+    def test_api_can_add_and_remove_role_users_by_configured_identifier(self):
+        self.client.force_authenticate(user=self.adminuser)
+        role = PermafrostRole.objects.create(
+            category="user",
+            name="API Identifier User",
+            site=Site.objects.get_current(),
+        )
+
+        response = self.client.post(
+            f"/api/permafrost/roles/{role.slug}/users/",
+            data={"user_identifiers": [self.user.username]},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(self.user, role.user_set())
+
+        response = self.client.delete(
+            f"/api/permafrost/roles/{role.slug}/users/",
+            data={"user_identifiers": [self.user.username]},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 204)
+        self.assertNotIn(self.user, role.user_set())
+
+    def test_api_rejects_user_identifiers_when_lookup_is_not_configured(self):
+        self.client.force_authenticate(user=self.adminuser)
+        role = PermafrostRole.objects.create(
+            category="user",
+            name="API Disabled Identifier",
+            site=Site.objects.get_current(),
+        )
+
+        response = self.client.post(
+            f"/api/permafrost/roles/{role.slug}/users/",
+            data={"user_identifiers": [self.user.username]},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("user_identifiers", response.data)
+
+    @override_settings(PERMAFROST_API_USER_LOOKUP_FIELD="username")
+    def test_api_rejects_mixed_user_ids_and_identifiers(self):
+        self.client.force_authenticate(user=self.adminuser)
+        role = PermafrostRole.objects.create(
+            category="user",
+            name="API Mixed Identifier",
+            site=Site.objects.get_current(),
+        )
+
+        response = self.client.post(
+            f"/api/permafrost/roles/{role.slug}/users/",
+            data={
+                "user_ids": [self.user.pk],
+                "user_identifiers": [self.user.username],
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertNotIn(self.user, role.user_set())
+
+    @override_settings(PERMAFROST_API_USER_LOOKUP_FIELD="username")
+    def test_api_unknown_user_identifier_does_not_partially_add_memberships(self):
+        self.client.force_authenticate(user=self.adminuser)
+        role = PermafrostRole.objects.create(
+            category="user",
+            name="API Unknown Identifier",
+            site=Site.objects.get_current(),
+        )
+
+        response = self.client.post(
+            f"/api/permafrost/roles/{role.slug}/users/",
+            data={
+                "user_identifiers": [self.user.username, "not-a-user"],
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("user_identifiers", response.data)
+        self.assertNotIn(self.user, role.user_set())
+
+    def test_api_bulk_user_removal_requires_membership_permission(self):
+        role = PermafrostRole.objects.create(
+            category="user",
+            name="API Protected Bulk Removal",
+            site=Site.objects.get_current(),
+        )
+        role.users_add(self.staffuser)
+        self.client.force_authenticate(user=self.user)
+
+        response = self.client.delete(
+            f"/api/permafrost/roles/{role.slug}/users/",
+            data={"user_ids": [self.staffuser.pk]},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 403)
+        self.assertIn(self.staffuser, role.user_set())
 
     def test_api_remove_unknown_user_returns_404(self):
         self.client.force_authenticate(user=self.adminuser)
@@ -2001,6 +2120,22 @@ class PermafrostSystemCheckTests(TestCase):
         }
 
         self.assertIn("permafrost.E013", message_ids)
+
+    @override_settings(PERMAFROST_API_USER_LOOKUP_FIELD="missing_field")
+    def test_unknown_api_user_lookup_field_is_reported(self):
+        message_ids = {
+            message.id for message in check_permafrost_settings(app_configs=None)
+        }
+
+        self.assertIn("permafrost.E015", message_ids)
+
+    @override_settings(PERMAFROST_API_USER_LOOKUP_FIELD="email")
+    def test_non_unique_api_user_lookup_field_is_reported(self):
+        message_ids = {
+            message.id for message in check_permafrost_settings(app_configs=None)
+        }
+
+        self.assertIn("permafrost.E016", message_ids)
 
 
 @override_settings(
