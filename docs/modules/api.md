@@ -86,6 +86,54 @@ The included routes expose:
 - `POST /roles/{slug}/users/`
 - `DELETE /roles/{slug}/users/{user_id}/`
 
+## Collection Queries
+
+Role and membership collections use page-number pagination. The response shape
+is:
+
+```json
+{
+  "count": 125,
+  "next": "https://example.test/api/permafrost/roles/?page=2",
+  "previous": null,
+  "results": []
+}
+```
+
+Configure the defaults in Django settings:
+
+```python
+PERMAFROST_API_PAGE_SIZE = 50
+PERMAFROST_API_MAX_PAGE_SIZE = 200
+```
+
+Clients may request a smaller page using `page_size`; requests above the
+configured maximum are capped. Invalid pagination settings are reported by
+Django system checks.
+
+The role collection supports:
+
+- `search`: case-insensitive search across name, slug, and description
+- `category`: exact category key
+- `locked`: `true`, `false`, `1`, or `0`
+- `ordering`: comma-separated `name`, `slug`, `category`, `locked`, or `id`
+- `page` and `page_size`: pagination controls
+
+Prefix an ordering field with `-` for descending order:
+
+```http
+GET /api/permafrost/roles/?search=manager&category=staff&ordering=-name
+```
+
+The role-user collection supports:
+
+- `search`: case-insensitive username and email search when those user-model fields exist
+- `ordering`: comma-separated `id`, `username`, or `email`
+- `page` and `page_size`: pagination controls
+
+Membership ordering uses the custom user model's `USERNAME_FIELD` internally;
+the public query parameter remains `username`.
+
 ## HTTP API Behavior
 
 Role `category` is set when a role is created and cannot be changed through the update endpoints. This matches the built-in forms, where category controls the required and optional permission set.

@@ -770,11 +770,67 @@ class PermafrostAPITest(TestCase):
         )
 
         response = self.client.get("/api/permafrost/roles/", format="json")
-        returned_slugs = {role["slug"] for role in response.data}
+        returned_slugs = {role["slug"] for role in response.data["results"]}
 
         self.assertEqual(response.status_code, 200)
         self.assertIn(site_1_role.slug, returned_slugs)
         self.assertNotIn(site_2_role.slug, returned_slugs)
+
+    def test_api_role_list_is_paginated(self):
+        self.client.force_authenticate(user=self.adminuser)
+
+        response = self.client.get(
+            "/api/permafrost/roles/?page_size=2",
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            set(response.data),
+            {"count", "next", "previous", "results"},
+        )
+        self.assertEqual(len(response.data["results"]), 2)
+        self.assertGreaterEqual(response.data["count"], 2)
+
+    def test_api_role_list_supports_search_filters_and_ordering(self):
+        self.client.force_authenticate(user=self.adminuser)
+        matching_role = PermafrostRole.objects.create(
+            category="user",
+            name="Zulu Query Target",
+            site=self.site_1,
+        )
+        PermafrostRole.objects.create(
+            category="staff",
+            name="Alpha Query Target",
+            site=self.site_1,
+        )
+        PermafrostRole.objects.create(
+            category="user",
+            name="Locked Query Target",
+            locked=True,
+            site=self.site_1,
+        )
+
+        response = self.client.get(
+            "/api/permafrost/roles/"
+            "?search=Query+Target&category=user&locked=false&ordering=-name",
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data["count"], 1)
+        self.assertEqual(response.data["results"][0]["slug"], matching_role.slug)
+
+    def test_api_role_list_rejects_invalid_locked_filter(self):
+        self.client.force_authenticate(user=self.adminuser)
+
+        response = self.client.get(
+            "/api/permafrost/roles/?locked=sometimes",
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("locked", response.data)
 
     def test_superuser_can_create_permafrost_role_api(self):
         self.client.force_authenticate(user=self.adminuser)
@@ -909,6 +965,61 @@ class PermafrostAPITest(TestCase):
 
         self.assertEqual(response.status_code, 204)
         self.assertNotIn(self.user, role.user_set())
+
+    def test_api_user_list_supports_pagination_search_and_ordering(self):
+        self.client.force_authenticate(user=self.adminuser)
+        role = PermafrostRole.objects.create(
+            category="user",
+            name="API User Query Role",
+            site=self.site_1,
+        )
+        alpha_user = get_user_model().objects.create_user(
+            username="alpha-member",
+            email="alpha-member@example.com",
+            password="Passw0rd!",
+        )
+        zulu_user = get_user_model().objects.create_user(
+            username="zulu-member",
+            email="zulu-member@example.com",
+            password="Passw0rd!",
+        )
+        role.users_add(alpha_user, zulu_user)
+
+        response = self.client.get(
+            f"/api/permafrost/roles/{role.slug}/users/"
+            "?ordering=-username&page_size=1",
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data["count"], 2)
+        self.assertEqual(len(response.data["results"]), 1)
+        self.assertEqual(response.data["results"][0]["username"], "zulu-member")
+
+        response = self.client.get(
+            f"/api/permafrost/roles/{role.slug}/users/?search=alpha-member",
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data["count"], 1)
+        self.assertEqual(response.data["results"][0]["id"], alpha_user.pk)
+
+    def test_api_user_list_rejects_invalid_ordering(self):
+        self.client.force_authenticate(user=self.adminuser)
+        role = PermafrostRole.objects.create(
+            category="user",
+            name="API Invalid User Ordering",
+            site=self.site_1,
+        )
+
+        response = self.client.get(
+            f"/api/permafrost/roles/{role.slug}/users/?ordering=is_superuser",
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("ordering", response.data)
 
     def test_api_add_users_returns_400_for_unknown_user_ids(self):
         self.client.force_authenticate(user=self.adminuser)
@@ -1880,6 +1991,17 @@ class PermafrostSystemCheckTests(TestCase):
 
         self.assertIn("permafrost.E010", message_ids)
 
+    @override_settings(
+        PERMAFROST_API_PAGE_SIZE=100,
+        PERMAFROST_API_MAX_PAGE_SIZE=50,
+    )
+    def test_invalid_api_page_size_settings_are_reported(self):
+        message_ids = {
+            message.id for message in check_permafrost_settings(app_configs=None)
+        }
+
+        self.assertIn("permafrost.E013", message_ids)
+
 
 @override_settings(
     PERMAFROST_CONTEXT_MODEL="example.Team",
@@ -1983,7 +2105,7 @@ class PermafrostTeamContextTests(TestCase):
         force_authenticate(request, user=self.user)
 
         response = view(request)
-        returned_slugs = {role["slug"] for role in response.data}
+        returned_slugs = {role["slug"] for role in response.data["results"]}
 
         self.assertEqual(response.status_code, 200)
         self.assertIn(self.team_a_role.slug, returned_slugs)

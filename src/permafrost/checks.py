@@ -35,6 +35,40 @@ def check_permafrost_settings(app_configs, **kwargs):
             )
         )
 
+    page_size = getattr(settings, "PERMAFROST_API_PAGE_SIZE", 50)
+    max_page_size = getattr(settings, "PERMAFROST_API_MAX_PAGE_SIZE", 200)
+    if isinstance(page_size, bool) or not isinstance(page_size, int) or page_size <= 0:
+        messages.append(
+            Error(
+                "PERMAFROST_API_PAGE_SIZE must be a positive integer.",
+                id="permafrost.E011",
+            )
+        )
+    if (
+        isinstance(max_page_size, bool)
+        or not isinstance(max_page_size, int)
+        or max_page_size <= 0
+    ):
+        messages.append(
+            Error(
+                "PERMAFROST_API_MAX_PAGE_SIZE must be a positive integer.",
+                id="permafrost.E012",
+            )
+        )
+    if (
+        isinstance(page_size, int)
+        and not isinstance(page_size, bool)
+        and isinstance(max_page_size, int)
+        and not isinstance(max_page_size, bool)
+        and page_size > max_page_size
+    ):
+        messages.append(
+            Error(
+                "PERMAFROST_API_PAGE_SIZE cannot exceed PERMAFROST_API_MAX_PAGE_SIZE.",
+                id="permafrost.E013",
+            )
+        )
+
     categories = getattr(settings, "PERMAFROST_CATEGORIES", None)
 
     if categories is None:
