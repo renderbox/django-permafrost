@@ -765,15 +765,28 @@ class PermafrostAPITest(TestCase):
 
     def test_superuser_can_list_permafrost_roles_api(self):
         self.client.force_authenticate(user=self.adminuser)
-        response = self.client.get("/api/permafrost/roles/", format="json")
+        response = self.client.get("/api/permafrost/v1/roles/", format="json")
 
         self.assertEqual(response.status_code, 200)
         self.assertTrue(response.data)
 
     def test_anonymous_user_can_not_list_permafrost_roles_api(self):
-        response = self.client.get("/api/permafrost/roles/", format="json")
+        response = self.client.get("/api/permafrost/v1/roles/", format="json")
 
         self.assertEqual(response.status_code, 403)
+
+    def test_api_v1_route_has_versioned_namespace(self):
+        url = reverse("permafrost_api:v1:role-list")
+
+        self.assertEqual(url, "/api/permafrost/v1/roles/")
+        self.assertEqual(resolve(url).view_name, "permafrost_api:v1:role-list")
+
+    def test_unversioned_api_route_is_not_exposed(self):
+        self.client.force_authenticate(user=self.adminuser)
+
+        response = self.client.get("/api/permafrost/roles/", format="json")
+
+        self.assertEqual(response.status_code, 404)
 
     def test_api_list_only_returns_current_context_roles(self):
         self.client.force_authenticate(user=self.adminuser)
@@ -784,7 +797,7 @@ class PermafrostAPITest(TestCase):
             category="user", name="API Site Two Role", site=self.site_2
         )
 
-        response = self.client.get("/api/permafrost/roles/", format="json")
+        response = self.client.get("/api/permafrost/v1/roles/", format="json")
         returned_slugs = {role["slug"] for role in response.data["results"]}
 
         self.assertEqual(response.status_code, 200)
@@ -795,7 +808,7 @@ class PermafrostAPITest(TestCase):
         self.client.force_authenticate(user=self.adminuser)
 
         response = self.client.get(
-            "/api/permafrost/roles/?page_size=2",
+            "/api/permafrost/v1/roles/?page_size=2",
             format="json",
         )
 
@@ -827,7 +840,7 @@ class PermafrostAPITest(TestCase):
         )
 
         response = self.client.get(
-            "/api/permafrost/roles/"
+            "/api/permafrost/v1/roles/"
             "?search=Query+Target&category=user&locked=false&ordering=-name",
             format="json",
         )
@@ -840,7 +853,7 @@ class PermafrostAPITest(TestCase):
         self.client.force_authenticate(user=self.adminuser)
 
         response = self.client.get(
-            "/api/permafrost/roles/?locked=sometimes",
+            "/api/permafrost/v1/roles/?locked=sometimes",
             format="json",
         )
 
@@ -850,7 +863,7 @@ class PermafrostAPITest(TestCase):
     def test_superuser_can_create_permafrost_role_api(self):
         self.client.force_authenticate(user=self.adminuser)
         response = self.client.post(
-            "/api/permafrost/roles/",
+            "/api/permafrost/v1/roles/",
             data={"name": "API Role", "description": "", "category": "user"},
             format="json",
         )
@@ -864,7 +877,7 @@ class PermafrostAPITest(TestCase):
     def test_api_returns_400_for_invalid_category(self):
         self.client.force_authenticate(user=self.adminuser)
         response = self.client.post(
-            "/api/permafrost/roles/",
+            "/api/permafrost/v1/roles/",
             data={"name": "Bad API Role", "description": "", "category": "missing"},
             format="json",
         )
@@ -881,7 +894,7 @@ class PermafrostAPITest(TestCase):
         )
 
         response = self.client.post(
-            "/api/permafrost/roles/",
+            "/api/permafrost/v1/roles/",
             data={
                 "name": "API-Support-Team",
                 "description": "",
@@ -902,7 +915,7 @@ class PermafrostAPITest(TestCase):
         )
 
         response = self.client.patch(
-            f"/api/permafrost/roles/{role.slug}/",
+            f"/api/permafrost/v1/roles/{role.slug}/",
             data={"category": "staff"},
             format="json",
         )
@@ -925,7 +938,7 @@ class PermafrostAPITest(TestCase):
         )
 
         response = self.client.put(
-            f"/api/permafrost/roles/{role.slug}/permissions/",
+            f"/api/permafrost/v1/roles/{role.slug}/permissions/",
             data={
                 "permission_ids": [
                     allowed_permission.id,
@@ -950,7 +963,7 @@ class PermafrostAPITest(TestCase):
         )
 
         response = self.client.put(
-            f"/api/permafrost/roles/{role.slug}/permissions/",
+            f"/api/permafrost/v1/roles/{role.slug}/permissions/",
             data={"permission_ids": [999999]},
             format="json",
         )
@@ -965,7 +978,7 @@ class PermafrostAPITest(TestCase):
         )
 
         response = self.client.post(
-            f"/api/permafrost/roles/{role.slug}/users/",
+            f"/api/permafrost/v1/roles/{role.slug}/users/",
             data={"user_ids": [self.user.id]},
             format="json",
         )
@@ -974,7 +987,7 @@ class PermafrostAPITest(TestCase):
         self.assertIn(self.user, role.user_set())
 
         response = self.client.delete(
-            f"/api/permafrost/roles/{role.slug}/users/{self.user.id}/",
+            f"/api/permafrost/v1/roles/{role.slug}/users/{self.user.id}/",
             format="json",
         )
 
@@ -1001,7 +1014,7 @@ class PermafrostAPITest(TestCase):
         role.users_add(alpha_user, zulu_user)
 
         response = self.client.get(
-            f"/api/permafrost/roles/{role.slug}/users/"
+            f"/api/permafrost/v1/roles/{role.slug}/users/"
             "?ordering=-username&page_size=1",
             format="json",
         )
@@ -1012,7 +1025,7 @@ class PermafrostAPITest(TestCase):
         self.assertEqual(response.data["results"][0]["username"], "zulu-member")
 
         response = self.client.get(
-            f"/api/permafrost/roles/{role.slug}/users/?search=alpha-member",
+            f"/api/permafrost/v1/roles/{role.slug}/users/?search=alpha-member",
             format="json",
         )
 
@@ -1029,7 +1042,7 @@ class PermafrostAPITest(TestCase):
         )
 
         response = self.client.get(
-            f"/api/permafrost/roles/{role.slug}/users/?ordering=is_superuser",
+            f"/api/permafrost/v1/roles/{role.slug}/users/?ordering=is_superuser",
             format="json",
         )
 
@@ -1043,7 +1056,7 @@ class PermafrostAPITest(TestCase):
         )
 
         response = self.client.post(
-            f"/api/permafrost/roles/{role.slug}/users/",
+            f"/api/permafrost/v1/roles/{role.slug}/users/",
             data={"user_ids": [999999]},
             format="json",
         )
@@ -1061,7 +1074,7 @@ class PermafrostAPITest(TestCase):
         )
 
         response = self.client.post(
-            f"/api/permafrost/roles/{role.slug}/users/",
+            f"/api/permafrost/v1/roles/{role.slug}/users/",
             data={"user_identifiers": [self.user.username]},
             format="json",
         )
@@ -1070,7 +1083,7 @@ class PermafrostAPITest(TestCase):
         self.assertIn(self.user, role.user_set())
 
         response = self.client.delete(
-            f"/api/permafrost/roles/{role.slug}/users/",
+            f"/api/permafrost/v1/roles/{role.slug}/users/",
             data={"user_identifiers": [self.user.username]},
             format="json",
         )
@@ -1087,7 +1100,7 @@ class PermafrostAPITest(TestCase):
         )
 
         response = self.client.post(
-            f"/api/permafrost/roles/{role.slug}/users/",
+            f"/api/permafrost/v1/roles/{role.slug}/users/",
             data={"user_identifiers": [self.user.username]},
             format="json",
         )
@@ -1105,7 +1118,7 @@ class PermafrostAPITest(TestCase):
         )
 
         response = self.client.post(
-            f"/api/permafrost/roles/{role.slug}/users/",
+            f"/api/permafrost/v1/roles/{role.slug}/users/",
             data={
                 "user_ids": [self.user.pk],
                 "user_identifiers": [self.user.username],
@@ -1126,7 +1139,7 @@ class PermafrostAPITest(TestCase):
         )
 
         response = self.client.post(
-            f"/api/permafrost/roles/{role.slug}/users/",
+            f"/api/permafrost/v1/roles/{role.slug}/users/",
             data={
                 "user_identifiers": [self.user.username, "not-a-user"],
             },
@@ -1147,7 +1160,7 @@ class PermafrostAPITest(TestCase):
         self.client.force_authenticate(user=self.user)
 
         response = self.client.delete(
-            f"/api/permafrost/roles/{role.slug}/users/",
+            f"/api/permafrost/v1/roles/{role.slug}/users/",
             data={"user_ids": [self.staffuser.pk]},
             format="json",
         )
@@ -1164,7 +1177,7 @@ class PermafrostAPITest(TestCase):
         )
 
         response = self.client.delete(
-            f"/api/permafrost/roles/{role.slug}/users/999999/",
+            f"/api/permafrost/v1/roles/{role.slug}/users/999999/",
             format="json",
         )
 
@@ -1177,7 +1190,7 @@ class PermafrostAPITest(TestCase):
         )
 
         response = self.client.delete(
-            f"/api/permafrost/roles/{role.slug}/",
+            f"/api/permafrost/v1/roles/{role.slug}/",
             format="json",
         )
 
@@ -1195,7 +1208,7 @@ class PermafrostAPITest(TestCase):
         )
 
         response = self.client.delete(
-            f"/api/permafrost/roles/{role.slug}/",
+            f"/api/permafrost/v1/roles/{role.slug}/",
             format="json",
         )
 
@@ -1215,36 +1228,36 @@ class PermafrostAPITest(TestCase):
         )
 
         requests = [
-            ("get", f"/api/permafrost/roles/{foreign_role.slug}/", None),
+            ("get", f"/api/permafrost/v1/roles/{foreign_role.slug}/", None),
             (
                 "patch",
-                f"/api/permafrost/roles/{foreign_role.slug}/",
+                f"/api/permafrost/v1/roles/{foreign_role.slug}/",
                 {"name": "Cross Context Rename"},
             ),
-            ("delete", f"/api/permafrost/roles/{foreign_role.slug}/", None),
+            ("delete", f"/api/permafrost/v1/roles/{foreign_role.slug}/", None),
             (
                 "get",
-                f"/api/permafrost/roles/{foreign_role.slug}/permissions/",
+                f"/api/permafrost/v1/roles/{foreign_role.slug}/permissions/",
                 None,
             ),
             (
                 "put",
-                f"/api/permafrost/roles/{foreign_role.slug}/permissions/",
+                f"/api/permafrost/v1/roles/{foreign_role.slug}/permissions/",
                 {"permission_ids": []},
             ),
             (
                 "get",
-                f"/api/permafrost/roles/{foreign_role.slug}/users/",
+                f"/api/permafrost/v1/roles/{foreign_role.slug}/users/",
                 None,
             ),
             (
                 "post",
-                f"/api/permafrost/roles/{foreign_role.slug}/users/",
+                f"/api/permafrost/v1/roles/{foreign_role.slug}/users/",
                 {"user_ids": [self.user.pk]},
             ),
             (
                 "delete",
-                f"/api/permafrost/roles/{foreign_role.slug}/users/{self.user.pk}/",
+                f"/api/permafrost/v1/roles/{foreign_role.slug}/users/{self.user.pk}/",
                 None,
             ),
         ]
@@ -2235,7 +2248,7 @@ class PermafrostTeamContextTests(TestCase):
         from .api.views import PermafrostRoleViewSet
 
         view = PermafrostRoleViewSet.as_view({"get": "list"})
-        request = APIRequestFactory().get("/api/permafrost/roles/")
+        request = APIRequestFactory().get("/api/permafrost/v1/roles/")
         request.team = self.team_a
         force_authenticate(request, user=self.user)
 
@@ -2246,7 +2259,7 @@ class PermafrostTeamContextTests(TestCase):
         self.assertIn(self.team_a_role.slug, returned_slugs)
         self.assertNotIn(self.team_b_role.slug, returned_slugs)
 
-        request = APIRequestFactory().get("/api/permafrost/roles/")
+        request = APIRequestFactory().get("/api/permafrost/v1/roles/")
         request.team = self.team_b
         force_authenticate(request, user=self.user)
         response = view(request)
