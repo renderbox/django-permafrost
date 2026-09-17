@@ -17,6 +17,10 @@
 
 - API payloads now return validation errors for unknown permission IDs or user IDs instead of silently ignoring them.
 - API role updates now keep `category` immutable after creation.
+- Prevented Django's user-wide permission caches from carrying Permafrost group permissions between tenant contexts.
+- Scoped service API role queries to the configured current context when callers do not pass a request or context explicitly.
+- Service and HTTP API permission updates now reject permissions outside the role category instead of silently dropping them.
+- Made role/group lifecycle and service-layer mutations transactional to prevent partially saved roles, groups, permissions, or memberships.
 
 ## 0.4.0
 

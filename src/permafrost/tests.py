@@ -23,6 +23,8 @@ from .forms import (
     SelectPermafrostRoleTypeForm,
 )
 from .api import services
+from .backends import PermafrostModelBackend
+from .permissions import has_all_permissions
 
 try:
     from rest_framework.test import APIClient
@@ -486,22 +488,40 @@ class PermafrostServiceAPITest(TestCase):
         self.assertIn(role, services.list_roles(context_object=self.site_2))
         self.assertNotIn(role, services.list_roles(context_object=self.site_1))
 
-    def test_set_role_permissions_uses_role_permission_rules(self):
+    def test_role_queries_default_to_current_context(self):
+        current_role = services.create_role(
+            name="Current Context Role",
+            category="user",
+            context_object=self.site_1,
+        )
+        foreign_role = services.create_role(
+            name="Foreign Context Role",
+            category="user",
+            context_object=self.site_2,
+        )
+
+        self.assertIn(current_role, services.list_roles())
+        self.assertNotIn(foreign_role, services.list_roles())
+        with self.assertRaises(PermafrostRole.DoesNotExist):
+            services.get_role(foreign_role.slug)
+
+    def test_set_role_permissions_rejects_disallowed_permissions(self):
         role = services.create_role(
             name="Service Permission Role",
             category="user",
             context_object=self.site_1,
         )
 
-        services.set_role_permissions(
-            role,
-            Permission.objects.filter(
-                id__in=[self.allowed_permission.id, self.disallowed_permission.id]
-            ),
-        )
+        with self.assertRaises(ValidationError):
+            services.set_role_permissions(
+                role,
+                Permission.objects.filter(
+                    id__in=[self.allowed_permission.id, self.disallowed_permission.id]
+                ),
+            )
 
         role_permission_ids = set(role.permissions().values_list("id", flat=True))
-        self.assertIn(self.allowed_permission.id, role_permission_ids)
+        self.assertNotIn(self.allowed_permission.id, role_permission_ids)
         self.assertNotIn(self.disallowed_permission.id, role_permission_ids)
 
     def test_add_and_remove_role_users(self):
@@ -520,6 +540,57 @@ class PermafrostServiceAPITest(TestCase):
     def test_unknown_permission_ids_raise_validation_error(self):
         with self.assertRaises(ValidationError):
             services.get_permissions_from_ids([999999])
+
+    def test_create_role_does_not_partially_apply_disallowed_permissions(self):
+        with self.assertRaises(ValidationError):
+            services.create_role(
+                name="Invalid Service Role",
+                category="user",
+                context_object=self.site_1,
+                permissions=[self.disallowed_permission],
+            )
+
+        self.assertFalse(
+            PermafrostRole.objects.filter(name="Invalid Service Role").exists()
+        )
+
+    def test_create_role_rolls_back_role_and_group_on_conform_failure(self):
+        group_name = "1_user_rollback-create"
+
+        with patch.object(
+            PermafrostRole,
+            "permissions_set",
+            side_effect=RuntimeError("conform failed"),
+        ):
+            with self.assertRaises(RuntimeError):
+                services.create_role(
+                    name="Rollback Create",
+                    category="user",
+                    context_object=self.site_1,
+                )
+
+        self.assertFalse(PermafrostRole.objects.filter(name="Rollback Create").exists())
+        self.assertFalse(Group.objects.filter(name=group_name).exists())
+
+    def test_update_role_rolls_back_fields_on_conform_failure(self):
+        role = services.create_role(
+            name="Rollback Update",
+            category="user",
+            context_object=self.site_1,
+        )
+
+        with patch.object(
+            role,
+            "permissions_set",
+            side_effect=RuntimeError("conform failed"),
+        ):
+            with self.assertRaises(RuntimeError):
+                services.update_role(role, name="Partially Updated")
+
+        role.refresh_from_db()
+        role.group.refresh_from_db()
+        self.assertEqual(role.name, "Rollback Update")
+        self.assertEqual(role.group.name, "1_user_rollback-update")
 
     def test_unknown_user_ids_raise_validation_error(self):
         with self.assertRaises(ValidationError):
@@ -658,7 +729,7 @@ class PermafrostAPITest(TestCase):
         self.assertEqual(role.category, "user")
         self.assertIn("category", response.data)
 
-    def test_api_permission_update_uses_role_permission_rules(self):
+    def test_api_permission_update_rejects_disallowed_permissions(self):
         self.client.force_authenticate(user=self.adminuser)
         role = PermafrostRole.objects.create(
             category="user", name="API Permission Role", site=Site.objects.get_current()
@@ -681,9 +752,10 @@ class PermafrostAPITest(TestCase):
             format="json",
         )
 
-        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("permission_ids", response.data)
         role_permission_ids = set(role.permissions().values_list("id", flat=True))
-        self.assertIn(allowed_permission.id, role_permission_ids)
+        self.assertNotIn(allowed_permission.id, role_permission_ids)
         self.assertNotIn(disallowed_permission.id, role_permission_ids)
 
     def test_api_permission_update_returns_400_for_unknown_permission_ids(self):
@@ -788,6 +860,66 @@ class PermafrostAPITest(TestCase):
         role.refresh_from_db()
         self.assertEqual(response.status_code, 204)
         self.assertFalse(role.deleted)
+
+    def test_api_object_routes_reject_foreign_context_slug(self):
+        self.client.force_authenticate(user=self.adminuser)
+        foreign_role = PermafrostRole.objects.create(
+            category="user",
+            name="Foreign API Role",
+            site=self.site_2,
+        )
+        original_permission_ids = set(
+            foreign_role.permissions().values_list("id", flat=True)
+        )
+
+        requests = [
+            ("get", f"/api/permafrost/roles/{foreign_role.slug}/", None),
+            (
+                "patch",
+                f"/api/permafrost/roles/{foreign_role.slug}/",
+                {"name": "Cross Context Rename"},
+            ),
+            ("delete", f"/api/permafrost/roles/{foreign_role.slug}/", None),
+            (
+                "get",
+                f"/api/permafrost/roles/{foreign_role.slug}/permissions/",
+                None,
+            ),
+            (
+                "put",
+                f"/api/permafrost/roles/{foreign_role.slug}/permissions/",
+                {"permission_ids": []},
+            ),
+            (
+                "get",
+                f"/api/permafrost/roles/{foreign_role.slug}/users/",
+                None,
+            ),
+            (
+                "post",
+                f"/api/permafrost/roles/{foreign_role.slug}/users/",
+                {"user_ids": [self.user.pk]},
+            ),
+            (
+                "delete",
+                f"/api/permafrost/roles/{foreign_role.slug}/users/{self.user.pk}/",
+                None,
+            ),
+        ]
+
+        for method, url, data in requests:
+            with self.subTest(method=method, url=url):
+                response = getattr(self.client, method)(url, data=data, format="json")
+                self.assertEqual(response.status_code, 404)
+
+        foreign_role.refresh_from_db()
+        self.assertEqual(foreign_role.name, "Foreign API Role")
+        self.assertFalse(foreign_role.deleted)
+        self.assertNotIn(self.user, foreign_role.user_set())
+        self.assertEqual(
+            set(foreign_role.permissions().values_list("id", flat=True)),
+            original_permission_ids,
+        )
 
 
 # @tag('admin_tests')
@@ -1321,6 +1453,45 @@ class PermafrostViewTests(TestCase):
         self.assertIn(allowed_permission.id, role_permission_ids)
         self.assertNotIn(disallowed_permission.id, role_permission_ids)
 
+    def test_html_object_routes_do_not_mutate_foreign_context_role(self):
+        foreign_role = PermafrostRole.objects.get(pk=3)
+        original_permission_ids = set(
+            foreign_role.permissions().values_list("id", flat=True)
+        )
+
+        scoped_routes = [
+            ("get", "permafrost:role-detail", None),
+            ("get", "permafrost:role-update", None),
+            ("post", "permafrost:role-update", {"name": "Cross Context Rename"}),
+            ("get", "permafrost:role-delete", None),
+            ("post", "permafrost:role-delete", {}),
+            ("get", "permafrost:custom-role-add-permissions", None),
+        ]
+
+        for method, route_name, data in scoped_routes:
+            with self.subTest(method=method, route_name=route_name):
+                url = reverse(route_name, kwargs={"slug": foreign_role.slug})
+                response = getattr(self.client, method)(url, data=data)
+                self.assertEqual(response.status_code, 404)
+
+        modal_url = reverse(
+            "permafrost:custom-role-add-permissions",
+            kwargs={"slug": foreign_role.slug},
+        )
+        response = self.client.post(
+            modal_url,
+            data={"permissions": [str(self.pf_role.optional_permissions()[0].pk)]},
+        )
+        self.assertEqual(response.status_code, 302)
+
+        foreign_role.refresh_from_db()
+        self.assertEqual(foreign_role.name, "Administrator")
+        self.assertFalse(foreign_role.deleted)
+        self.assertEqual(
+            set(foreign_role.permissions().values_list("id", flat=True)),
+            original_permission_ids,
+        )
+
 
 # @tag('admin_tests')
 class PermafrostFormClassTests(TestCase):
@@ -1440,3 +1611,54 @@ class PermafrostSiteMixinTests(TestCase):
         response = PermafrostRoleListView.as_view()(request)
 
         self.assertEqual(response.status_code, 200)
+
+
+class PermafrostBackendTests(TestCase):
+
+    fixtures = ["unit_test"]
+
+    def setUp(self):
+        self.factory = RequestFactory()
+        self.user = get_user_model().objects.create_user(
+            username="context-user",
+            email="context-user@example.com",
+            password="top_secret",
+        )
+        self.site_1 = Site.objects.get(pk=1)
+        self.site_2 = Site.objects.get(pk=2)
+        self.permission_name = "permafrost.view_permafrostrole"
+        self.site_1_role = PermafrostRole.objects.get(pk=4)
+        self.site_1_role.users_add(self.user)
+
+    def test_backend_permission_cache_does_not_leak_between_contexts(self):
+        backend = PermafrostModelBackend()
+
+        with override_settings(SITE_ID=self.site_1.pk):
+            Site.objects.clear_cache()
+            self.assertTrue(backend.has_perm(self.user, self.permission_name))
+
+        with override_settings(SITE_ID=self.site_2.pk):
+            Site.objects.clear_cache()
+            self.assertFalse(backend.has_perm(self.user, self.permission_name))
+
+    def test_backend_accepts_explicit_context_without_cache_leakage(self):
+        backend = PermafrostModelBackend()
+
+        self.assertIn(
+            self.permission_name,
+            backend.get_all_permissions(self.user, context=self.site_1),
+        )
+        self.assertNotIn(
+            self.permission_name,
+            backend.get_all_permissions(self.user, context=self.site_2),
+        )
+
+    def test_request_aware_permission_check_uses_request_context(self):
+        request = self.factory.get("/")
+        request.user = self.user
+        request.site = self.site_1
+
+        self.assertTrue(has_all_permissions(request, [self.permission_name]))
+
+        request.site = self.site_2
+        self.assertFalse(has_all_permissions(request, [self.permission_name]))
