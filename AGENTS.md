@@ -52,6 +52,7 @@ When changing setup, settings, permissions, tenant context behavior, packaging, 
 - `docs/modules/installation.md` for setup and upgrade guidance
 - `docs/modules/models.md` for model/context/permission behavior
 - `docs/modules/views.md` for view and mixin behavior
+- `docs/modules/team-context.md` for custom tenant setup and isolation behavior
 - `docs/modules/about.md` for architecture and maintenance notes
 - `CHANGELOG.md` for release-facing change history
 

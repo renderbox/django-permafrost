@@ -10,7 +10,7 @@ from django.contrib.auth.models import Group, Permission
 from django.utils.translation import gettext_lazy as _
 from django.utils.text import slugify
 from django.contrib.sites.managers import CurrentSiteManager
-from django.db.models.signals import post_delete
+from django.db.models.signals import post_delete, pre_delete
 from django.dispatch import receiver
 from django.urls import reverse
 from .context import (
@@ -144,9 +144,10 @@ class PermafrostRole(models.Model):
     site = models.ForeignKey(
         Site,
         on_delete=models.CASCADE,
-        default=get_current_site,
         related_name="permafrost_role",
-    )  # This uses a callable so it will not trigger a migration with the projects it's included in
+        blank=True,
+        null=True,
+    )
     locked = models.BooleanField(
         _("Locked"), default=False
     )  # If this is locked, it can not be edited by the Client, used for System Default Roles
@@ -416,3 +417,18 @@ class PermafrostRole(models.Model):
 def delete_matching_group(sender, instance, using, **kwargs):
     if instance.group_id:
         instance.group.delete()
+
+
+@receiver(
+    pre_delete,
+    dispatch_uid="delete_permafrost_roles_for_context_object",
+)
+def delete_roles_for_context_object(sender, instance, using, **kwargs):
+    if sender._meta.label_lower != get_context_model_label().lower():
+        return
+
+    context_content_type = ContentType.objects.db_manager(using).get_for_model(instance)
+    PermafrostRole.objects.using(using).filter(
+        context_content_type=context_content_type,
+        context_object_id=instance.pk,
+    ).delete()

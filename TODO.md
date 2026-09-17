@@ -7,20 +7,20 @@ This is the running source of truth for planned django-permafrost work.
 - Keep release notes in `CHANGELOG.md`; this file tracks work before and after releases.
 - Review priorities when opening a release branch or beginning a new feature.
 
-Last reviewed: 2026-09-17 on `new/drf-api` after `215c4c6`.
+Last reviewed: 2026-09-17 on `new/context-model-hardening`, based on `GitHub/develop` at `66412fe`.
 
 ## Current Release State
 
 - Published PyPI release: `0.4.1`
 - In-development release: `0.5.0`, introducing the service and optional DRF APIs
-- Development baseline: `develop` at `faa2041`
-- Local API hardening commit: `new/drf-api` at `215c4c6`
-- Local test baseline: 85 passing tests on Python 3.14
+- Remote development baseline: `GitHub/develop` at `66412fe` after pull request #97
+- Latest permission hardening commit: `b5328eb`, merged into `develop`
+- Local test baseline: 97 passing tests on Python 3.14
 - Package baseline: wheel and source distribution build successfully and pass `twine check`
 
 ## P0 - Integrate Current Work
 
-- [ ] Push `215c4c6` and merge the API hardening changes into `develop` through a pull request.
+- [x] Merge the API and permission hardening changes into `develop` through pull requests #96 and #97.
 - [ ] Confirm the develop pull-request workflow passes at both supported compatibility endpoints.
 - [ ] Promote the accumulated unreleased changes through the master compatibility matrix.
 - [ ] Publish `0.5.0` after the API hardening changes and contributor metadata reach `master`.
@@ -39,19 +39,19 @@ Completion criteria: tests demonstrate that one context cannot observe or reuse 
 
 ## P1 - Context Model Completion
 
-- [ ] Design the migration path that makes the legacy `site` field optional for projects using a custom context model while preserving existing Site-based installations.
-- [ ] Decide whether `django.contrib.sites` remains a mandatory dependency or becomes conditional when a custom context model is configured.
-- [ ] Define deletion behavior for a context object. Generic foreign keys do not provide database-enforced cascading, so orphaned roles need an explicit policy.
-- [ ] Update Django admin list columns and filters to present the configured context rather than always displaying `site`.
-- [ ] Add a realistic example project and tests using an `Organization` or `Team` model, including migrations, forms, views, services, and the HTTP API.
-- [ ] Add end-to-end Team A versus Team B authorization tests covering request middleware, role permissions, API/HTML access, and application objects scoped by `team=request.team`.
-- [ ] Add a system-check warning when Django's global `ModelBackend` is configured in a way that can bypass Permafrost context scoping for role-backed Group permissions.
-- [ ] Document that middleware must resolve a trusted request context and that application querysets must independently constrain business objects to that context.
-- [ ] Preserve and explicitly test the superuser invariant: authenticated superusers have all permissions in every configured context, regardless of role membership.
-- [ ] Add a complete Team-context setup guide covering settings, the Team model contract, middleware, authentication backends, role creation and assignment, request-aware permission checks, and context-scoped querysets.
-- [ ] Document the authorization flow from `request.team` through `PermafrostRole`, Django Group membership, permission evaluation, and object lookup, including Team A/Team B and superuser examples.
-- [ ] Document common unsafe configurations and failure modes, especially the default `ModelBackend`, unscoped `user.has_perm()` calls, untrusted context selection, and business-object queries that omit the current Team.
-- [ ] Keep the README quick start and the detailed installation, models, views, and API documentation aligned with the tested Team example.
+- [x] Make the legacy `site` field nullable for custom context models while preserving existing Site-based installations through migration `0021`.
+- [x] Keep `django.contrib.sites` mandatory for `0.5.0` migration compatibility while allowing custom-context roles to store no Site value.
+- [x] Delete roles and matching Groups when their configured context object is deleted.
+- [x] Update Django admin list columns and filters to display the configured context instead of assuming Site.
+- [x] Add realistic Team and TeamResource example models covering forms, views, services, and the HTTP API.
+- [x] Add end-to-end Team A versus Team B authorization tests covering role permissions, API/HTML access, and application objects scoped by `team=request.team`.
+- [x] Add system-check warning `permafrost.W002` when Django's global `ModelBackend` can bypass Permafrost context scoping for role-backed Group permissions.
+- [x] Document trusted request-context resolution and independent business-object queryset scoping.
+- [x] Preserve and explicitly test that authenticated superusers have all permissions in every configured context, regardless of role membership.
+- [x] Add a complete Team-context setup guide covering settings, the Team model contract, middleware, authentication backends, role creation and assignment, request-aware permission checks, and context-scoped querysets.
+- [x] Document the authorization flow from `request.team` through `PermafrostRole`, Django Group membership, permission evaluation, and object lookup, including Team A/Team B and superuser examples.
+- [x] Document common unsafe configurations and failure modes, especially the default `ModelBackend`, unscoped `user.has_perm()` calls, untrusted context selection, and business-object queries that omit the current Team.
+- [x] Align the README and detailed installation, models, views, and API documentation with the tested Team example.
 
 Completion criteria: a developer can configure and understand a non-Site context using repository documentation alone; the project works without placeholder Site relationships; Team permissions and business objects cannot cross contexts; superusers retain unrestricted access; and the upgrade path for existing projects is documented and tested.
 

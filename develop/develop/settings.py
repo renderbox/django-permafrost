@@ -32,6 +32,10 @@ SITE_ID = 1
 
 LOGIN_REDIRECT_URL = "/"
 
+AUTHENTICATION_BACKENDS = [
+    "permafrost.backends.PermafrostModelBackend",
+]
+
 # Application definition
 
 INSTALLED_APPS = [

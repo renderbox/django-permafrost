@@ -109,6 +109,10 @@ Internally, Permafrost stores the context through Django's content type framewor
 
 For more detail, see the files in `docs/modules/`, especially `installation.md` and `models.md`.
 
+The complete Team setup guide covers middleware, authentication backends,
+role assignment, request-aware checks, queryset scoping, cross-Team isolation,
+and superuser behavior: [`docs/modules/team-context.md`](docs/modules/team-context.md).
+
 ## Recommendations
 
 It is recommended that you update your code to use `PermafrostRole`'s built-in functions to add users and permissions. They add an extra level of checking to make sure the permissions passed in are allowed by the `PERMAFROST_CATEGORIES` configuration.

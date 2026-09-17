@@ -5,7 +5,11 @@ from django.forms.models import model_to_dict
 from django.test import TestCase, RequestFactory, override_settings
 from django.contrib.sites.models import Site
 from django.contrib.auth import get_user_model
-from django.core.exceptions import PermissionDenied, ValidationError
+from django.core.exceptions import (
+    ImproperlyConfigured,
+    PermissionDenied,
+    ValidationError,
+)
 from django.db.utils import IntegrityError
 from django.db import transaction
 from django.contrib.auth.models import Group, Permission
@@ -25,6 +29,7 @@ from .forms import (
 from .api import services
 from .backends import PermafrostModelBackend
 from .permissions import has_all_permissions
+from .checks import check_permafrost_settings
 
 try:
     from rest_framework.test import APIClient
@@ -1662,3 +1667,206 @@ class PermafrostBackendTests(TestCase):
 
         request.site = self.site_2
         self.assertFalse(has_all_permissions(request, [self.permission_name]))
+
+
+class PermafrostSystemCheckTests(TestCase):
+
+    fixtures = ["unit_test"]
+
+    @override_settings(
+        AUTHENTICATION_BACKENDS=["django.contrib.auth.backends.ModelBackend"]
+    )
+    def test_global_model_backend_emits_context_scope_warning(self):
+        message_ids = {
+            message.id for message in check_permafrost_settings(app_configs=None)
+        }
+
+        self.assertIn("permafrost.W002", message_ids)
+
+    @override_settings(
+        AUTHENTICATION_BACKENDS=["permafrost.backends.PermafrostModelBackend"]
+    )
+    def test_permafrost_backend_does_not_emit_context_scope_warning(self):
+        message_ids = {
+            message.id for message in check_permafrost_settings(app_configs=None)
+        }
+
+        self.assertNotIn("permafrost.W002", message_ids)
+
+
+@override_settings(
+    PERMAFROST_CONTEXT_MODEL="example.Team",
+    PERMAFROST_CONTEXT_REQUEST_ATTR="team",
+)
+class PermafrostTeamContextTests(TestCase):
+
+    fixtures = ["unit_test"]
+
+    def setUp(self):
+        from example.models import Team, TeamResource
+
+        self.Team = Team
+        self.TeamResource = TeamResource
+        self.factory = RequestFactory()
+        self.team_a = Team.objects.create(name="Team A", slug="team-a")
+        self.team_b = Team.objects.create(name="Team B", slug="team-b")
+        self.user = get_user_model().objects.create_user(
+            username="team-user",
+            email="team-user@example.com",
+            password="top_secret",
+        )
+        self.superuser = get_user_model().objects.create_superuser(
+            username="team-superuser",
+            email="team-superuser@example.com",
+            password="top_secret",
+        )
+        self.permission_name = "permafrost.view_permafrostrole"
+        self.team_a_role = services.create_role(
+            name="Team A Staff",
+            category="staff",
+            context_object=self.team_a,
+        )
+        self.team_b_role = services.create_role(
+            name="Team B Staff",
+            category="staff",
+            context_object=self.team_b,
+        )
+        services.add_role_users(self.team_a_role, [self.user])
+
+    def request_for(self, team, user=None):
+        request = self.factory.get("/permafrost/")
+        request.user = user or self.user
+        request.team = team
+        return request
+
+    def test_team_roles_do_not_require_placeholder_site(self):
+        self.assertIsNone(self.team_a_role.site_id)
+        self.assertEqual(self.team_a_role.context, self.team_a)
+        self.assertEqual(self.team_b_role.context, self.team_b)
+
+    def test_role_form_creates_team_role_without_placeholder_site(self):
+        form = PermafrostRoleCreateForm(
+            data={
+                "name": "Team Form Role",
+                "description": "",
+                "category": "staff",
+                "permissions": [],
+            },
+            context_object=self.team_a,
+        )
+
+        self.assertTrue(form.is_valid(), form.errors)
+        role = form.save()
+        self.assertEqual(role.context, self.team_a)
+        self.assertIsNone(role.site_id)
+
+    def test_request_permission_is_limited_to_active_team(self):
+        self.assertTrue(
+            has_all_permissions(
+                self.request_for(self.team_a),
+                [self.permission_name],
+            )
+        )
+        self.assertFalse(
+            has_all_permissions(
+                self.request_for(self.team_b),
+                [self.permission_name],
+            )
+        )
+
+    def test_html_view_permission_and_queryset_are_limited_to_active_team(self):
+        response = PermafrostRoleListView.as_view()(self.request_for(self.team_a))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(self.team_a_role, response.context_data["object_list"])
+        self.assertNotIn(self.team_b_role, response.context_data["object_list"])
+
+        with self.assertRaises(PermissionDenied):
+            PermafrostRoleListView.as_view()(self.request_for(self.team_b))
+
+    @skipIf(SKIP_DRF_TESTS, "Django Rest Framework not installed, skipping tests")
+    def test_http_api_permission_and_queryset_are_limited_to_active_team(self):
+        from rest_framework.test import APIRequestFactory, force_authenticate
+
+        from .api.views import PermafrostRoleViewSet
+
+        view = PermafrostRoleViewSet.as_view({"get": "list"})
+        request = APIRequestFactory().get("/api/permafrost/roles/")
+        request.team = self.team_a
+        force_authenticate(request, user=self.user)
+
+        response = view(request)
+        returned_slugs = {role["slug"] for role in response.data}
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(self.team_a_role.slug, returned_slugs)
+        self.assertNotIn(self.team_b_role.slug, returned_slugs)
+
+        request = APIRequestFactory().get("/api/permafrost/roles/")
+        request.team = self.team_b
+        force_authenticate(request, user=self.user)
+        response = view(request)
+        self.assertEqual(response.status_code, 403)
+
+    def test_service_default_context_uses_team_manager(self):
+        with override_settings(CURRENT_TEAM_ID=self.team_a.pk):
+            roles = services.list_roles()
+
+        self.assertIn(self.team_a_role, roles)
+        self.assertNotIn(self.team_b_role, roles)
+
+    def test_business_objects_must_be_filtered_by_request_team(self):
+        resource_a = self.TeamResource.objects.create(
+            team=self.team_a,
+            name="Team A Resource",
+        )
+        resource_b = self.TeamResource.objects.create(
+            team=self.team_b,
+            name="Team B Resource",
+        )
+        request = self.request_for(self.team_a)
+        resources = self.TeamResource.objects.filter(team=request.team)
+
+        self.assertIn(resource_a, resources)
+        self.assertNotIn(resource_b, resources)
+
+    def test_wrong_context_model_is_rejected(self):
+        request = self.request_for(Site.objects.get(pk=1))
+
+        with self.assertRaises(ImproperlyConfigured):
+            has_all_permissions(request, [self.permission_name])
+
+        with self.assertRaises(ImproperlyConfigured):
+            services.create_role(
+                name="Wrong Context",
+                category="staff",
+                context_object=Site.objects.get(pk=1),
+            )
+
+    def test_deleting_team_deletes_its_roles_and_groups_only(self):
+        team_a_role_id = self.team_a_role.pk
+        team_a_group_id = self.team_a_role.group_id
+        team_b_role_id = self.team_b_role.pk
+
+        self.team_a.delete()
+
+        self.assertFalse(PermafrostRole.objects.filter(pk=team_a_role_id).exists())
+        self.assertFalse(Group.objects.filter(pk=team_a_group_id).exists())
+        self.assertTrue(PermafrostRole.objects.filter(pk=team_b_role_id).exists())
+
+    def test_superuser_has_all_permissions_in_every_team(self):
+        team_a_request = self.request_for(self.team_a, user=self.superuser)
+        team_b_request = self.request_for(self.team_b, user=self.superuser)
+
+        self.assertTrue(has_all_permissions(team_a_request, [self.permission_name]))
+        self.assertTrue(has_all_permissions(team_b_request, [self.permission_name]))
+
+        backend = PermafrostModelBackend()
+        self.assertIn(
+            self.permission_name,
+            backend.get_all_permissions(self.superuser, context=self.team_a),
+        )
+        self.assertIn(
+            self.permission_name,
+            backend.get_all_permissions(self.superuser, context=self.team_b),
+        )
