@@ -150,3 +150,17 @@ global Django permissions and retain Django's normal behavior.
 Existing projects that used the original Site-based behavior can keep the default settings. The migration backfills the new context fields from each role's `site`.
 
 Projects moving to an organization or team context should plan a data migration that maps existing Site-scoped roles to the new context objects. Do not change `PERMAFROST_CONTEXT_MODEL` in a production project without a deliberate migration plan.
+
+### Role integrity migration
+
+Migration `0022_role_slug_and_group_integrity` enforces one role per Django
+Group and one normalized role slug per context. Before adding those database
+constraints, it checks existing data for:
+
+- two roles in the same context with the same slug
+- two roles referencing the same Django Group
+
+If either condition exists, migration stops with the conflicting records in
+the error message. Rename or consolidate those roles and assign each remaining
+role its own Group before running migrations again. The migration does not
+silently rename roles, change URLs, or split Group memberships.

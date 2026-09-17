@@ -1,5 +1,8 @@
-# import sys
+import hashlib
+import logging
+
 from django.conf import settings
+from django.core.exceptions import ValidationError
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.sites.models import Site
@@ -19,8 +22,6 @@ from .context import (
     get_context_model_label,
     get_default_context_object,
 )
-
-import logging
 
 logger = logging.getLogger(__name__)
 
@@ -46,29 +47,42 @@ def get_current_site(*args, **kwargs):
 def get_permission_objects(natural_keys_list):
     permissions = []
     for item in natural_keys_list:
+        if not isinstance(item, dict) or "permission" not in item:
+            logger.warning(
+                "Invalid permission entry in PERMAFROST_CATEGORIES: %r", item
+            )
+            continue
         try:
             permission = Permission.objects.get_by_natural_key(*item["permission"])
             permissions.append(permission)
-        except Permission.DoesNotExist:
+        except (Permission.DoesNotExist, TypeError, ValueError):
             logger.warning(
-                f'Permission not found in PERMAFROST_CATEGORIES: {item["permission"]}'
+                "Permission not found in PERMAFROST_CATEGORIES: %r",
+                item["permission"],
             )
-            pass
 
     return permissions
 
 
 def get_required_by_category(category):
-    return get_permission_objects(CATEGORIES.get(category, {}).get("required", []))
+    category_data = CATEGORIES.get(category, {})
+    if not isinstance(category_data, dict):
+        return []
+    return get_permission_objects(category_data.get("required", []))
 
 
 def get_optional_by_category(category):
-    return get_permission_objects(CATEGORIES.get(category, {}).get("optional", []))
+    category_data = CATEGORIES.get(category, {})
+    if not isinstance(category_data, dict):
+        return []
+    return get_permission_objects(category_data.get("optional", []))
 
 
 def get_all_perms_for_all_categories():
     perms = []
     for category, category_data in CATEGORIES.items():
+        if not isinstance(category_data, dict):
+            continue
         optional_perms = category_data.get("optional", [])
         required_perms = category_data.get("required", [])
         optional_and_required_perms = set(
@@ -120,7 +134,28 @@ def get_choices():
     """
     Creates a choice list based on the PERMAFROST_CATEGORIES settings.
     """
-    return [(cat_key, CATEGORIES[cat_key]["label"]) for cat_key in CATEGORIES.keys()]
+    return [
+        (
+            category_key,
+            (
+                category_data.get("label", category_key)
+                if isinstance(category_data, dict)
+                else category_key
+            ),
+        )
+        for category_key, category_data in CATEGORIES.items()
+    ]
+
+
+def bounded_group_name(name):
+    """Fit a generated role Group name within Django's configured limit."""
+    max_length = Group._meta.get_field("name").max_length
+    if len(name) <= max_length:
+        return name
+
+    digest = hashlib.sha256(name.encode("utf-8")).hexdigest()[:12]
+    prefix_length = max_length - len(digest) - 1
+    return f"{name[:prefix_length]}_{digest}"
 
 
 class PermafrostRole(models.Model):
@@ -154,7 +189,7 @@ class PermafrostRole(models.Model):
     deleted = models.BooleanField(
         _("Deleted"), default=False, help_text="Soft Delete the Role"
     )
-    group = models.ForeignKey(
+    group = models.OneToOneField(
         Group,
         verbose_name=_("Group"),
         on_delete=models.CASCADE,
@@ -185,7 +220,11 @@ class PermafrostRole(models.Model):
             models.UniqueConstraint(
                 fields=["name", "context_content_type", "context_object_id"],
                 name="unique_permafrost_role_name_per_context",
-            )
+            ),
+            models.UniqueConstraint(
+                fields=["slug", "context_content_type", "context_object_id"],
+                name="unique_role_slug_per_context",
+            ),
         ]
 
         permissions = (
@@ -254,15 +293,59 @@ class PermafrostRole(models.Model):
         if get_context_model_label() == DEFAULT_CONTEXT_MODEL and isinstance(
             context_object, Site
         ):
-            return "{0}_{1}_{2}".format(context_object.pk, self.category, self.slug)
+            return bounded_group_name(
+                "{0}_{1}_{2}".format(context_object.pk, self.category, self.slug)
+            )
 
         context_label = context_object._meta.label_lower.replace(".", "_")
-        return "{0}_{1}_{2}_{3}".format(
-            context_label,
-            context_object.pk,
-            self.category,
-            self.slug,
+        return bounded_group_name(
+            "{0}_{1}_{2}_{3}".format(
+                context_label,
+                context_object.pk,
+                self.category,
+                self.slug,
+            )
         )
+
+    def validate_role_identity(self):
+        if not self.slug:
+            raise ValidationError(
+                {"name": "Role name must contain characters that produce a URL slug."}
+            )
+
+        conflict = PermafrostRole.objects.filter(
+            slug=self.slug,
+            context_content_type=self.context_content_type,
+            context_object_id=self.context_object_id,
+        ).exclude(pk=self.pk)
+        if conflict.exists():
+            raise ValidationError(
+                {"name": ("Role name conflicts with another role URL in this context.")}
+            )
+
+    def validate_group_name(self, group_name):
+        if (
+            self.group_id
+            and PermafrostRole.objects.filter(group_id=self.group_id)
+            .exclude(pk=self.pk)
+            .exists()
+        ):
+            raise ValidationError(
+                {"group": "This Django Group already belongs to another role."}
+            )
+
+        conflict = Group.objects.filter(name=group_name)
+        if self.group_id:
+            conflict = conflict.exclude(pk=self.group_id)
+        if conflict.exists():
+            raise ValidationError(
+                {
+                    "name": (
+                        "The generated Django Group name is already in use. "
+                        "Choose another role name."
+                    )
+                }
+            )
 
     def get_context_object(self):
         if self.context is not None:
@@ -357,14 +440,16 @@ class PermafrostRole(models.Model):
         """
         self.group.user_set.clear()
 
+    @transaction.atomic
     def ensure_group(self):
         """
         Ensure this role has the matching Django Group and that it is conformed
         to the role's allowed permissions.
         """
         group_name = self.get_group_name()
+        self.validate_group_name(group_name)
         if not self.group_id:
-            self.group, created = Group.objects.get_or_create(name=group_name)
+            self.group = Group.objects.create(name=group_name)
             self.save(update_fields=["group"])
         elif self.group.name != group_name:
             self.group.name = group_name
@@ -381,12 +466,13 @@ class PermafrostRole(models.Model):
         self.slug = slugify(self.name)
         if not self.context_content_type_id or not self.context_object_id:
             self.set_context(self.get_context_object())
+        self.validate_role_identity()
         group_name = self.get_group_name()
+        self.validate_group_name(group_name)
 
         if not self.pk:  # if this is a new role, create the matching group
-            self.group, created = Group.objects.get_or_create(
-                name=group_name
-            )  # Add the group if one named correctly alreay exists, otherwise create a new one.
+            if not self.group_id:
+                self.group = Group.objects.create(name=group_name)
 
         result = super().save(*args, **kwargs)
 
@@ -415,8 +501,13 @@ class PermafrostRole(models.Model):
     dispatch_uid="delete_matching_permafrost_role_group",
 )
 def delete_matching_group(sender, instance, using, **kwargs):
-    if instance.group_id:
-        instance.group.delete()
+    if (
+        instance.group_id
+        and not PermafrostRole.objects.using(using)
+        .filter(group_id=instance.group_id)
+        .exists()
+    ):
+        Group.objects.using(using).filter(pk=instance.group_id).delete()
 
 
 @receiver(

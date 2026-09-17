@@ -75,6 +75,14 @@ def check_permafrost_settings(app_configs, **kwargs):
             )
             continue
 
+        if not category_data.get("label"):
+            messages.append(
+                Error(
+                    f"PERMAFROST_CATEGORIES['{category_key}'] must define a label.",
+                    id="permafrost.E009",
+                )
+            )
+
         for permission_type in ("required", "optional"):
             permission_items = category_data.get(permission_type, [])
             if not isinstance(permission_items, (list, tuple)):
@@ -87,12 +95,35 @@ def check_permafrost_settings(app_configs, **kwargs):
                 continue
 
             for permission_item in permission_items:
+                if not isinstance(permission_item, dict):
+                    messages.append(
+                        Error(
+                            f"PERMAFROST_CATEGORIES['{category_key}']['{permission_type}'] contains a permission entry that is not a dictionary.",
+                            id="permafrost.E008",
+                        )
+                    )
+                    continue
+
                 permission_key = permission_item.get("permission")
                 if not permission_key:
                     messages.append(
                         Error(
                             f"PERMAFROST_CATEGORIES['{category_key}'] contains a {permission_type} permission without a permission natural key.",
                             id="permafrost.E005",
+                        )
+                    )
+                    continue
+
+                if (
+                    not isinstance(permission_key, (list, tuple))
+                    or len(permission_key) != 3
+                    or not all(isinstance(value, str) for value in permission_key)
+                ):
+                    messages.append(
+                        Error(
+                            f"Permission {permission_key!r} in PERMAFROST_CATEGORIES['{category_key}']['{permission_type}'] is not a valid natural key.",
+                            hint="Use (codename, app_label, model).",
+                            id="permafrost.E010",
                         )
                     )
                     continue

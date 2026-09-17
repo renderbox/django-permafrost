@@ -7,12 +7,12 @@
 Important fields:
 
 - `name`: display name for the role
-- `slug`: generated from `name`
+- `slug`: generated from `name` and unique within the configured context
 - `description`: optional short description
 - `category`: one of the keys configured in `PERMAFROST_CATEGORIES`
 - `site`: nullable legacy/default Site relationship retained for compatibility
 - `context_content_type` and `context_object_id`: configured role context
-- `group`: the Django `Group` used for users and permissions
+- `group`: the exclusively owned Django `Group` used for users and permissions
 - `locked`: prevents client deletion for protected roles
 - `deleted`: soft-delete flag used by the role views
 
@@ -70,6 +70,27 @@ For custom context models, group names include the model label:
 ```
 
 This keeps group names distinct across different context models and tenant records.
+
+Generated Group names are limited to Django's configured `Group.name` length.
+Names that exceed the limit retain a readable prefix and receive a stable hash
+suffix, preventing silent truncation and avoiding collisions between long
+context labels.
+
+Permafrost never adopts an unrelated existing Group merely because its name
+matches the generated role Group name. Such a collision raises a validation
+error and must be resolved explicitly. A Group can belong to only one
+`PermafrostRole`; this relationship is enforced by the database.
+
+## Slugs And Renames
+
+Role slugs continue to follow role names. Renaming a role therefore changes its
+slug, built-in URL, and generated Group name while retaining the same role and
+Group primary keys.
+
+Names such as `Support Team` and `Support-Team` normalize to the same slug.
+Permafrost rejects the second name within the same context, even though the
+display strings differ. The same slug may be used in another Team, Site, or
+Organization because context is part of the uniqueness constraint.
 
 ## Permission Helpers
 

@@ -8,6 +8,7 @@ from django.forms.fields import CharField, ChoiceField, BooleanField
 from django.forms.models import ModelMultipleChoiceField
 from django.forms.widgets import CheckboxInput
 from django.utils.translation import gettext_lazy as _
+from django.utils.text import slugify
 from .context import get_default_context_object
 from .models import PermafrostRole, get_optional_by_category, get_choices
 
@@ -122,34 +123,21 @@ class PermafrostRoleCreateForm(ModelForm):
 
     def clean_name(self):
         name = self.cleaned_data["name"]
-        name_exists = False
+        role_slug = slugify(name)
+        if not role_slug:
+            raise ValidationError(
+                "Role name must contain characters that produce a URL slug."
+            )
 
-        if self.instance:  # on update check if name change exists
-
-            if "name" in self.changed_data:
-                name_exists = (
-                    PermafrostRole.objects.filter(
-                        name=name,
-                        context_content_type=self.instance.context_content_type,
-                        context_object_id=self.instance.context_object_id,
-                    )
-                    .exclude(pk=self.instance.pk)
-                    .first()
-                )
-
-        else:
-
-            try:
-                name_exists = PermafrostRole.objects.get(
-                    name=name,
-                    context_content_type=self.instance.context_content_type,
-                    context_object_id=self.instance.context_object_id,
-                )
-            except PermafrostRole.DoesNotExist:
-                pass
-
-        if name_exists:
-            raise ValidationError("Role with this name already exists")
+        conflict = PermafrostRole.objects.filter(
+            slug=role_slug,
+            context_content_type=self.instance.context_content_type,
+            context_object_id=self.instance.context_object_id,
+        ).exclude(pk=self.instance.pk)
+        if conflict.exists():
+            raise ValidationError(
+                "Role name conflicts with another role URL in this context."
+            )
 
         # Always return field
         return name
