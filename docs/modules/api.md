@@ -40,6 +40,15 @@ Useful service functions include:
 
 The service API uses the same context helpers as the built-in views. Pass `context_object` explicitly, pass a `request`, or let the configured context model resolve the current object.
 
+For Team-based projects, HTTP requests must have the trusted current Team on
+the attribute configured by `PERMAFROST_CONTEXT_REQUEST_ATTR`. Role querysets,
+permission changes, and membership changes are then limited to that Team.
+Service calls should pass `context_object=team` when a request is unavailable.
+Authenticated superusers retain access in every context.
+
+See [Team Context Setup](team-context.md) for the complete middleware,
+authorization-backend, and application-queryset pattern.
+
 Permission changes go through `PermafrostRole` helper methods so required permissions are preserved. Service API calls reject permissions that are not allowed by the role category.
 
 Unknown permission IDs and user IDs raise validation errors. This helps callers distinguish "not allowed for this role category" from "does not exist".

@@ -10,7 +10,7 @@ Important fields:
 - `slug`: generated from `name`
 - `description`: optional short description
 - `category`: one of the keys configured in `PERMAFROST_CATEGORIES`
-- `site`: legacy/default Site relationship retained for compatibility
+- `site`: nullable legacy/default Site relationship retained for compatibility
 - `context_content_type` and `context_object_id`: configured role context
 - `group`: the Django `Group` used for users and permissions
 - `locked`: prevents client deletion for protected roles
@@ -46,6 +46,14 @@ request.site
 ```
 
 If no request context is available, Permafrost calls `get_current()` on the configured context model's default manager.
+
+The context object must be an instance of `PERMAFROST_CONTEXT_MODEL`. Passing a
+Site while the project is configured for `teams.Team`, for example, raises a
+configuration error instead of creating a role under the wrong model.
+
+Custom-context roles do not require a placeholder Site. Their legacy `site`
+field remains `NULL` while `context_content_type` and `context_object_id` point
+to the configured Team, Organization, or other context object.
 
 ## Group Names
 
@@ -104,4 +112,10 @@ On save, `PermafrostRole`:
 3. creates or renames the matching Django group
 4. conforms the group permissions to the configured category
 
-On delete, the matching group is deleted by signal after the role is deleted. Locked and default roles are protected from deletion by the model delete method.
+On delete, the matching group is deleted by signal after the role is deleted.
+Deleting a configured context object also deletes its Permafrost roles and
+their matching Groups. Locked and default roles are protected from direct role
+deletion by the model delete method.
+
+See [Team Context Setup](team-context.md) for the complete authorization and
+application-object scoping pattern.

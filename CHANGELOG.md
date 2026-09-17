@@ -5,6 +5,8 @@
 ### Changed
 
 - Clarified package author/contributor metadata and project README attribution.
+- Made the legacy `PermafrostRole.site` relationship nullable so custom context models do not require placeholder Site records.
+- Updated Django admin role lists to display the configured context object instead of assuming Site.
 
 ### Added
 
@@ -12,6 +14,8 @@
 - Added optional Django REST Framework serializers, views, permissions, and URLs under `permafrost.api`.
 - Added a `django-permafrost[api]` optional dependency extra for HTTP API users.
 - Added API hardening tests for optional DRF behavior, context scoping, invalid payloads, soft deletion, and role membership changes.
+- Added a real Team context example and end-to-end Team A/Team B isolation tests for services, HTML views, the HTTP API, business objects, context deletion, and superusers.
+- Added a system-check warning for Django's global `ModelBackend` and a complete Team-context setup guide.
 
 ### Fixed
 
@@ -21,6 +25,8 @@
 - Scoped service API role queries to the configured current context when callers do not pass a request or context explicitly.
 - Service and HTTP API permission updates now reject permissions outside the role category instead of silently dropping them.
 - Made role/group lifecycle and service-layer mutations transactional to prevent partially saved roles, groups, permissions, or memberships.
+- Reject context objects that do not match `PERMAFROST_CONTEXT_MODEL`.
+- Delete context-scoped roles and their Groups when the configured context object is deleted.
 
 ## 0.4.0
 

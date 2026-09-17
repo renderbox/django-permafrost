@@ -110,6 +110,14 @@ If a request object is not available, the configured context model must have a d
 
 Treat `PERMAFROST_CONTEXT_MODEL` like `AUTH_USER_MODEL`: set it before production data exists and avoid changing it later.
 
+In `0.5.0`, `django.contrib.sites` remains an installed-app requirement for
+backwards-compatible migrations. The legacy role `site` field is nullable, so
+roles anchored to an Organization or Team do not require placeholder Site
+records.
+
+For a complete model, middleware, backend, role-assignment, authorization, and
+queryset example, see [Team Context Setup](team-context.md).
+
 ## Authentication And Permission Checks
 
 Permafrost authorization is context-sensitive. In request handling, use

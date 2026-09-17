@@ -20,6 +20,21 @@ def check_permafrost_settings(app_configs, **kwargs):
             )
         )
 
+    authentication_backends = getattr(settings, "AUTHENTICATION_BACKENDS", ())
+    if "django.contrib.auth.backends.ModelBackend" in authentication_backends:
+        messages.append(
+            Warning(
+                "Django's ModelBackend grants Group permissions without a Permafrost context.",
+                hint=(
+                    "Use a Permafrost authentication backend and request-aware "
+                    "permission checks for context-scoped roles. Do not configure "
+                    "ModelBackend alongside Permafrost unless its global Group "
+                    "permission behavior is intentional."
+                ),
+                id="permafrost.W002",
+            )
+        )
+
     categories = getattr(settings, "PERMAFROST_CATEGORIES", None)
 
     if categories is None:
