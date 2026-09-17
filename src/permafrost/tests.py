@@ -10,8 +10,6 @@ from django.core.exceptions import (
     PermissionDenied,
     ValidationError,
 )
-from django.db.utils import IntegrityError
-from django.db import transaction
 from django.contrib.auth.models import Group, Permission
 from django.test.client import Client
 from django.urls.base import resolve, reverse
@@ -40,6 +38,7 @@ except ImportError:
 
 from permafrost.models import (
     PermafrostRole,
+    bounded_group_name,
     get_current_site,
     CATEGORIES,
     get_all_perms_for_all_categories,
@@ -176,7 +175,7 @@ class PermafrostRoleModelTest(TestCase):
     # Staff Roles
 
     def test_create_staff_role(self):
-        role = PermafrostRole(name="Bobs Staff Group", category="staff")
+        role = PermafrostRole(name="Created Staff Group", category="staff")
         role.save()
         role.users_add(self.staffuser)  # Add user to the Group
         perms = list(self.staffuser.get_all_permissions())
@@ -186,7 +185,7 @@ class PermafrostRoleModelTest(TestCase):
             ["view_permafrostrole"],
         )  # Make sure the required permission is present in the group
         self.assertEqual(
-            role.group.name, "1_staff_bobs-staff-group"
+            role.group.name, "1_staff_created-staff-group"
         )  # Checks that the user is created
         self.assertListEqual(perms, ["permafrost.view_permafrostrole"])
 
@@ -194,7 +193,7 @@ class PermafrostRoleModelTest(TestCase):
         """
         Test that the optional role can be added
         """
-        role = PermafrostRole(name="Bobs Staff Group", category="staff")
+        role = PermafrostRole(name="Optional Staff Group", category="staff")
         role.save()
         role.permissions_add(self.perm_change_permafrostrole)
         role.users_add(self.staffuser)  # Add user to the Group
@@ -206,7 +205,7 @@ class PermafrostRoleModelTest(TestCase):
             [self.perm_change_permafrostrole, self.perm_view_permafrostrole],
         )  # Check the permissions on the group
         self.assertEqual(
-            role.group.name, "1_staff_bobs-staff-group"
+            role.group.name, "1_staff_optional-staff-group"
         )  # Checks that the user is created
         self.assertListEqual(
             perms,
@@ -217,7 +216,7 @@ class PermafrostRoleModelTest(TestCase):
         """
         Test that a permission that is not optional or required can be added
         """
-        role = PermafrostRole(name="Bobs Staff Group", category="staff")
+        role = PermafrostRole(name="Disallowed Staff Group", category="staff")
         role.save()
         role.permissions_add(self.perm_delete_permafrostrole)
         role.users_add(self.staffuser)
@@ -228,12 +227,12 @@ class PermafrostRoleModelTest(TestCase):
             ["view_permafrostrole"],
         )  # Make sure the required permission is present in the group
         self.assertEqual(
-            role.group.name, "1_staff_bobs-staff-group"
+            role.group.name, "1_staff_disallowed-staff-group"
         )  # Checks that the user is created
         self.assertListEqual(perms, ["permafrost.view_permafrostrole"])
 
     def test_clear_permissions_on_staff_role(self):
-        role = PermafrostRole(name="Bobs Staff Group", category="staff")
+        role = PermafrostRole(name="Cleared Staff Group", category="staff")
         role.save()
         role.permissions_add(self.perm_view_permafrostrole)
         role.permissions_clear()
@@ -245,7 +244,7 @@ class PermafrostRoleModelTest(TestCase):
             ["view_permafrostrole"],
         )  # Make sure the required permission is present in the group
         self.assertEqual(
-            role.group.name, "1_staff_bobs-staff-group"
+            role.group.name, "1_staff_cleared-staff-group"
         )  # Checks that the user is created
         self.assertListEqual(perms, ["permafrost.view_permafrostrole"])
 
@@ -384,19 +383,106 @@ class PermafrostRoleModelTest(TestCase):
         )
         role_c.save()
 
-        with self.assertRaises(IntegrityError):
+        with self.assertRaises(ValidationError):
+            role_b = PermafrostRole(
+                name="Bobs Super Group", site=self.site_2, category="user"
+            )
+            role_b.save()
 
-            with transaction.atomic():
-                role_b = PermafrostRole(
-                    name="Bobs Super Group", site=self.site_2, category="user"
-                )
-                role_b.save()
+        with self.assertRaises(ValidationError):
+            role_d = PermafrostRole(
+                name="Bobs Super Group", site=self.site_2, category="staff"
+            )
+            role_d.save()
 
-            with transaction.atomic():
-                role_d = PermafrostRole(
-                    name="Bobs Super Group", site=self.site_2, category="staff"
-                )
-                role_d.save()
+    def test_normalized_slug_collision_is_rejected_in_same_context(self):
+        role = PermafrostRole(name="Support Team", category="user")
+        role.save()
+        group_count = Group.objects.count()
+
+        with self.assertRaises(ValidationError):
+            PermafrostRole(name="Support-Team", category="user").save()
+
+        self.assertEqual(Group.objects.count(), group_count)
+
+    def test_normalized_slug_is_allowed_in_different_contexts(self):
+        role_a = PermafrostRole(
+            name="Support Team",
+            category="user",
+            site=self.site_1,
+        )
+        role_a.save()
+        role_b = PermafrostRole(
+            name="Support-Team",
+            category="user",
+            site=self.site_2,
+        )
+        role_b.save()
+
+        self.assertEqual(role_a.slug, role_b.slug)
+        self.assertNotEqual(role_a.context_object_id, role_b.context_object_id)
+
+    def test_role_rename_changes_slug_url_and_group_name(self):
+        role = PermafrostRole(name="Original Role", category="user")
+        role.save()
+        original_url = role.get_absolute_url()
+
+        role.name = "Renamed Role"
+        role.save()
+
+        self.assertEqual(role.slug, "renamed-role")
+        self.assertNotEqual(role.get_absolute_url(), original_url)
+        self.assertEqual(role.group.name, "1_user_renamed-role")
+
+    def test_role_rename_collision_does_not_partially_apply(self):
+        PermafrostRole(name="Support Team", category="user").save()
+        role = PermafrostRole(name="Billing Team", category="user")
+        role.save()
+        original_group_name = role.group.name
+
+        role.name = "Support-Team"
+        with self.assertRaises(ValidationError):
+            role.save()
+
+        role.refresh_from_db()
+        role.group.refresh_from_db()
+        self.assertEqual(role.name, "Billing Team")
+        self.assertEqual(role.slug, "billing-team")
+        self.assertEqual(role.group.name, original_group_name)
+
+    def test_role_name_must_produce_nonempty_slug(self):
+        with self.assertRaises(ValidationError):
+            PermafrostRole(name="!!!", category="user").save()
+
+    def test_role_does_not_adopt_unrelated_group_with_generated_name(self):
+        group = Group.objects.create(name="1_user_reserved-role")
+        group.permissions.add(self.perm_add_logentry)
+
+        with self.assertRaises(ValidationError):
+            PermafrostRole(name="Reserved Role", category="user").save()
+
+        group.refresh_from_db()
+        self.assertIn(self.perm_add_logentry, group.permissions.all())
+        self.assertFalse(PermafrostRole.objects.filter(name="Reserved Role").exists())
+
+    def test_group_can_only_belong_to_one_role(self):
+        role = PermafrostRole(name="Owned Group", category="user")
+        role.save()
+
+        with self.assertRaises(ValidationError):
+            PermafrostRole(
+                name="Second Group Owner",
+                category="user",
+                group=role.group,
+            ).save()
+
+    def test_bounded_group_names_are_stable_and_collision_resistant(self):
+        long_name = "context_" + ("x" * 200)
+        bounded_name = bounded_group_name(long_name)
+
+        self.assertEqual(len(bounded_name), Group._meta.get_field("name").max_length)
+        self.assertEqual(bounded_name, bounded_group_name(long_name))
+        self.assertNotEqual(bounded_name, bounded_group_name(long_name + "y"))
 
     def test_role_defaults_to_site_context(self):
         role = PermafrostRole(name="Context Default Role", category="user")
@@ -714,6 +800,27 @@ class PermafrostAPITest(TestCase):
 
         self.assertEqual(response.status_code, 400)
         self.assertIn("category", response.data)
+
+    def test_api_returns_400_for_normalized_slug_collision(self):
+        self.client.force_authenticate(user=self.adminuser)
+        PermafrostRole.objects.create(
+            category="user",
+            name="API Support Team",
+            site=self.site_1,
+        )
+
+        response = self.client.post(
+            "/api/permafrost/roles/",
+            data={
+                "name": "API-Support-Team",
+                "description": "",
+                "category": "user",
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("name", response.data)
 
     def test_api_role_category_can_not_be_changed_after_create(self):
         self.client.force_authenticate(user=self.adminuser)
@@ -1562,6 +1669,37 @@ class PermafrostFormClassTests(TestCase):
         self.assertEqual(form["description"].value(), self.pf_role.description)
         self.assertEqual(form["deleted"].value(), self.pf_role.deleted)
 
+    def test_create_form_rejects_normalized_slug_collision(self):
+        form = PermafrostRoleCreateForm(
+            data={
+                "name": "Councilor!",
+                "description": "",
+                "category": "staff",
+                "permissions": [],
+            }
+        )
+
+        self.assertFalse(form.is_valid())
+        self.assertIn("name", form.errors)
+
+    def test_update_form_rejects_normalized_slug_collision(self):
+        other_role = PermafrostRole.objects.create(
+            name="Billing Team",
+            category="staff",
+        )
+        form = PermafrostRoleUpdateForm(
+            data={
+                "name": "Councilor!",
+                "description": other_role.description or "",
+                "category": other_role.category,
+                "permissions": [],
+            },
+            instance=other_role,
+        )
+
+        self.assertFalse(form.is_valid())
+        self.assertIn("name", form.errors)
+
 
 class PermafrostSiteMixinTests(TestCase):
 
@@ -1692,6 +1830,55 @@ class PermafrostSystemCheckTests(TestCase):
         }
 
         self.assertNotIn("permafrost.W002", message_ids)
+
+    @override_settings(
+        PERMAFROST_CATEGORIES={
+            "broken": {
+                "label": "Broken",
+                "required": ["not-a-dictionary"],
+                "optional": [],
+            }
+        }
+    )
+    def test_non_dictionary_permission_entry_is_reported(self):
+        message_ids = {
+            message.id for message in check_permafrost_settings(app_configs=None)
+        }
+
+        self.assertIn("permafrost.E008", message_ids)
+
+    @override_settings(
+        PERMAFROST_CATEGORIES={
+            "broken": {
+                "required": [],
+                "optional": [],
+            }
+        }
+    )
+    def test_missing_category_label_is_reported(self):
+        message_ids = {
+            message.id for message in check_permafrost_settings(app_configs=None)
+        }
+
+        self.assertIn("permafrost.E009", message_ids)
+
+    @override_settings(
+        PERMAFROST_CATEGORIES={
+            "broken": {
+                "label": "Broken",
+                "required": [
+                    {"label": "Broken permission", "permission": ("too", "short")}
+                ],
+                "optional": [],
+            }
+        }
+    )
+    def test_malformed_permission_natural_key_is_reported(self):
+        message_ids = {
+            message.id for message in check_permafrost_settings(app_configs=None)
+        }
+
+        self.assertIn("permafrost.E010", message_ids)
 
 
 @override_settings(

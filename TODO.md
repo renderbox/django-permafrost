@@ -7,20 +7,21 @@ This is the running source of truth for planned django-permafrost work.
 - Keep release notes in `CHANGELOG.md`; this file tracks work before and after releases.
 - Review priorities when opening a release branch or beginning a new feature.
 
-Last reviewed: 2026-09-17 on `new/context-model-hardening`, based on `GitHub/develop` at `66412fe`.
+Last reviewed: 2026-09-17 on `new/role-integrity`, based on `develop` at `e061950`.
 
 ## Current Release State
 
 - Published PyPI release: `0.4.1`
 - In-development release: `0.5.0`, introducing the service and optional DRF APIs
-- Remote development baseline: `GitHub/develop` at `66412fe` after pull request #97
+- Remote development baseline: `GitHub/develop` at `e061950` after pull request #98
 - Latest permission hardening commit: `b5328eb`, merged into `develop`
-- Local test baseline: 97 passing tests on Python 3.14
+- Local test baseline: 111 passing tests on Python 3.14
 - Package baseline: wheel and source distribution build successfully and pass `twine check`
 
 ## P0 - Integrate Current Work
 
 - [x] Merge the API and permission hardening changes into `develop` through pull requests #96 and #97.
+- [x] Merge custom-context hardening and Team isolation documentation into `develop` through pull request #98.
 - [ ] Confirm the develop pull-request workflow passes at both supported compatibility endpoints.
 - [ ] Promote the accumulated unreleased changes through the master compatibility matrix.
 - [ ] Publish `0.5.0` after the API hardening changes and contributor metadata reach `master`.
@@ -57,11 +58,11 @@ Completion criteria: a developer can configure and understand a non-Site context
 
 ## P1 - Role Integrity
 
-- [ ] Prevent slug collisions within a context. Different names such as `Support Team` and `Support-Team` currently produce the same slug even though uniqueness is enforced on `name`.
-- [ ] Define stable slug behavior when a role is renamed and document whether URLs should change.
-- [ ] Review Django Group naming for length limits and collisions across context models, context IDs, categories, and role slugs.
-- [ ] Ensure deleting a role cannot delete a Django Group that is referenced elsewhere.
-- [ ] Validate malformed category entries without raising unexpected exceptions, including non-dictionary permission items and missing labels.
+- [x] Reject normalized slug collisions within a context and enforce context-scoped slug uniqueness in the database.
+- [x] Preserve and document existing rename behavior: changing a role name changes its slug, URL, and Group name while retaining primary keys.
+- [x] Bound generated Django Group names to the field limit and add stable hash suffixes for long names.
+- [x] Enforce exclusive one-to-one Group ownership and delete only the Group owned by the deleted role.
+- [x] Validate malformed category entries through Django system checks, including non-dictionary permission items, missing labels, and malformed natural keys.
 
 Completion criteria: database constraints and model validation protect all role identifiers and group relationships, with migration and regression coverage.
 

@@ -7,6 +7,9 @@
 - Clarified package author/contributor metadata and project README attribution.
 - Made the legacy `PermafrostRole.site` relationship nullable so custom context models do not require placeholder Site records.
 - Updated Django admin role lists to display the configured context object instead of assuming Site.
+- Enforced exclusive one-to-one ownership between each Permafrost role and its Django Group.
+- Kept role slugs tied to role names while enforcing slug uniqueness within each context.
+- Bounded generated Group names to Django's field limit with deterministic hash suffixes for long names.
 
 ### Added
 
@@ -27,6 +30,9 @@
 - Made role/group lifecycle and service-layer mutations transactional to prevent partially saved roles, groups, permissions, or memberships.
 - Reject context objects that do not match `PERMAFROST_CONTEXT_MODEL`.
 - Delete context-scoped roles and their Groups when the configured context object is deleted.
+- Reject role names that normalize to an existing context slug or an empty slug.
+- Prevent new roles from adopting unrelated existing Django Groups with matching generated names.
+- Report malformed category labels, permission entries, and permission natural keys through Django system checks instead of raising unexpected exceptions.
 
 ## 0.4.0
 
