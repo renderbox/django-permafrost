@@ -189,6 +189,11 @@ urlpatterns = [
 ]
 ```
 
+The version 1 endpoints are then available below `/api/permafrost/v1/`.
+Unversioned HTTP routes are not exposed. See the
+[API documentation](docs/modules/api.md) and
+[versioning policy](docs/modules/api-versioning.md) for the supported contract.
+
 ## Authors and contributors
 
 - Grant Viklund, principal author and maintainer

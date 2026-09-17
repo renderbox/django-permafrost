@@ -71,7 +71,12 @@ urlpatterns = [
 ]
 ```
 
-The included routes expose:
+The HTTP API requires an explicit URL version. With the mounting point above,
+version 1 begins at `/api/permafrost/v1/`; unversioned routes are not exposed.
+See [API Versioning](api-versioning.md) for the compatibility and deprecation
+policy.
+
+Version 1 exposes:
 
 - `GET /roles/`
 - `POST /roles/`
@@ -95,7 +100,7 @@ is:
 ```json
 {
   "count": 125,
-  "next": "https://example.test/api/permafrost/roles/?page=2",
+  "next": "https://example.test/api/permafrost/v1/roles/?page=2",
   "previous": null,
   "results": []
 }
@@ -123,7 +128,7 @@ The role collection supports:
 Prefix an ordering field with `-` for descending order:
 
 ```http
-GET /api/permafrost/roles/?search=manager&category=staff&ordering=-name
+GET /api/permafrost/v1/roles/?search=manager&category=staff&ordering=-name
 ```
 
 The role-user collection supports:
@@ -154,7 +159,7 @@ enabled when the user model enforces unique email addresses.
 After configuration, add or remove memberships using exact identifier values:
 
 ```http
-POST /api/permafrost/roles/account-manager/users/
+POST /api/permafrost/v1/roles/account-manager/users/
 Content-Type: application/json
 
 {
@@ -163,7 +168,7 @@ Content-Type: application/json
 ```
 
 ```http
-DELETE /api/permafrost/roles/account-manager/users/
+DELETE /api/permafrost/v1/roles/account-manager/users/
 Content-Type: application/json
 
 {
@@ -195,7 +200,7 @@ primary-key URL returns `404` when that user does not exist.
 Create a role:
 
 ```http
-POST /api/permafrost/roles/
+POST /api/permafrost/v1/roles/
 Content-Type: application/json
 
 {
@@ -209,7 +214,7 @@ Content-Type: application/json
 Replace optional permissions:
 
 ```http
-PUT /api/permafrost/roles/account-manager/permissions/
+PUT /api/permafrost/v1/roles/account-manager/permissions/
 Content-Type: application/json
 
 {
@@ -220,7 +225,7 @@ Content-Type: application/json
 Add users to a role:
 
 ```http
-POST /api/permafrost/roles/account-manager/users/
+POST /api/permafrost/v1/roles/account-manager/users/
 Content-Type: application/json
 
 {

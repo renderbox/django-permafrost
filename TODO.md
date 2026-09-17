@@ -7,15 +7,15 @@ This is the running source of truth for planned django-permafrost work.
 - Keep release notes in `CHANGELOG.md`; this file tracks work before and after releases.
 - Review priorities when opening a release branch or beginning a new feature.
 
-Last reviewed: 2026-09-17 on `new/api-user-identifiers`, based on `develop` at `1c64689`.
+Last reviewed: 2026-09-17 on `new/api-versioning`, based on `develop` at `d7f595a`.
 
 ## Current Release State
 
 - Published PyPI release: `0.4.1`
 - In-development release: `0.5.0`, introducing the service and optional DRF APIs
-- Remote development baseline: `GitHub/develop` at `1c64689` after pull request #100
+- Remote development baseline: `GitHub/develop` at `d7f595a` after pull request #101
 - Latest permission hardening commit: `b5328eb`, merged into `develop`
-- Local test baseline: 127 passing tests on Python 3.14
+- Local test baseline: 129 passing tests on Python 3.14
 - Package baseline: wheel and source distribution build successfully and pass `twine check`
 
 ## P0 - Integrate Current Work
@@ -70,7 +70,7 @@ Completion criteria: database constraints and model validation protect all role 
 
 - [x] Add configurable pagination, controlled ordering, and documented filtering/search behavior for role and membership lists.
 - [x] Support opt-in membership lookup by one configured unique custom-user field in addition to primary keys.
-- [ ] Add an explicit API versioning policy before downstream projects depend on the current URL and response shapes.
+- [x] Add an explicit `/v1/` HTTP API boundary with compatibility and deprecation policies before downstream adoption.
 - [ ] Add OpenAPI schema support and response examples without making DRF mandatory for service-layer users.
 - [ ] Add a CI job that installs the base package without DRF and verifies imports, checks, migrations, and service usage.
 - [ ] Define supported DRF versions and add bounds or compatibility jobs if the HTTP API is treated as a stable public feature.
