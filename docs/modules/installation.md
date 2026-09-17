@@ -110,6 +110,33 @@ If a request object is not available, the configured context model must have a d
 
 Treat `PERMAFROST_CONTEXT_MODEL` like `AUTH_USER_MODEL`: set it before production data exists and avoid changing it later.
 
+## Authentication And Permission Checks
+
+Permafrost authorization is context-sensitive. In request handling, use
+`PermafrostSiteMixin`, the optional DRF permission class, or
+`permafrost.permissions.has_all_permissions(request, permissions)`. These APIs
+resolve the context object attached to the current request.
+
+The Permafrost authentication backends may be configured when application code
+also needs Django's normal `user.has_perm()` interface:
+
+```python
+AUTHENTICATION_BACKENDS = [
+    "permafrost.backends.PermafrostModelBackend",
+]
+```
+
+`user.has_perm()` does not receive a request, so the backend resolves the
+configured context model's current object. For the default Site integration,
+that is `Site.objects.get_current()` and `SITE_ID`. Do not use `user.has_perm()`
+for request-scoped tenant authorization when the current tenant can differ from
+that default; use the request-aware APIs instead.
+
+Permafrost deliberately does not retain Django's user-wide group permission
+cache. A cache without the context identity could carry a permission from one
+tenant into a later check for another tenant. Direct user permissions remain
+global Django permissions and retain Django's normal behavior.
+
 ## Upgrade Notes
 
 Existing projects that used the original Site-based behavior can keep the default settings. The migration backfills the new context fields from each role's `site`.

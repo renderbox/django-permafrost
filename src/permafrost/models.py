@@ -3,7 +3,7 @@ from django.conf import settings
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.sites.models import Site
-from django.db import models
+from django.db import models, transaction
 from django.contrib.auth.models import Group, Permission
 
 # from django.contrib.sites.shortcuts import get_current_site
@@ -375,6 +375,7 @@ class PermafrostRole(models.Model):
     # -------------
     # Save
 
+    @transaction.atomic
     def save(self, *args, **kwargs):
         self.slug = slugify(self.name)
         if not self.context_content_type_id or not self.context_object_id:
@@ -401,6 +402,7 @@ class PermafrostRole(models.Model):
     # -------------
     # Delete
 
+    @transaction.atomic
     def delete(self, using=None, keep_parents=False):
         if not self.locked and not self.is_default_role():
             return super().delete()

@@ -1,11 +1,11 @@
 from django.contrib.auth import get_user_model
-from django.core.exceptions import ImproperlyConfigured
+from django.core.exceptions import ImproperlyConfigured, ValidationError
 from django.shortcuts import get_object_or_404
 
 from permafrost.api import services
 
 try:
-    from rest_framework import status, viewsets
+    from rest_framework import serializers, status, viewsets
     from rest_framework.decorators import action
     from rest_framework.response import Response
 except ImportError as exc:
@@ -84,7 +84,10 @@ class PermafrostRoleViewSet(viewsets.ModelViewSet):
         permissions = services.get_permissions_from_ids(
             serializer.validated_data["permission_ids"]
         )
-        services.set_role_permissions(role, permissions)
+        try:
+            services.set_role_permissions(role, permissions)
+        except ValidationError as exc:
+            raise serializers.ValidationError(exc.message_dict) from exc
         return Response(PermafrostRoleSerializer(role).data)
 
     @action(detail=True, methods=["get"])

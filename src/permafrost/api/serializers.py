@@ -98,18 +98,26 @@ class PermafrostRoleWriteSerializer(serializers.Serializer):
         permissions = None
         if permission_ids is not None:
             permissions = services.get_permissions_from_ids(permission_ids)
-        return services.create_role(
-            permissions=permissions,
-            request=self.context.get("request"),
-            **validated_data,
-        )
+        try:
+            return services.create_role(
+                permissions=permissions,
+                request=self.context.get("request"),
+                **validated_data,
+            )
+        except DjangoValidationError as exc:
+            raise serializers.ValidationError(exc.message_dict) from exc
 
     def update(self, instance, validated_data):
         permission_ids = validated_data.pop("permission_ids", None)
         permissions = None
         if permission_ids is not None:
             permissions = services.get_permissions_from_ids(permission_ids)
-        return services.update_role(instance, permissions=permissions, **validated_data)
+        try:
+            return services.update_role(
+                instance, permissions=permissions, **validated_data
+            )
+        except DjangoValidationError as exc:
+            raise serializers.ValidationError(exc.message_dict) from exc
 
 
 class RolePermissionsWriteSerializer(serializers.Serializer):

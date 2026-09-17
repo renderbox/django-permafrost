@@ -7,7 +7,7 @@ This is the running source of truth for planned django-permafrost work.
 - Keep release notes in `CHANGELOG.md`; this file tracks work before and after releases.
 - Review priorities when opening a release branch or beginning a new feature.
 
-Last reviewed: 2026-09-16 on `new/drf-api` at `215c4c6`.
+Last reviewed: 2026-09-17 on `new/drf-api` after `215c4c6`.
 
 ## Current Release State
 
@@ -15,7 +15,7 @@ Last reviewed: 2026-09-16 on `new/drf-api` at `215c4c6`.
 - In-development release: `0.5.0`, introducing the service and optional DRF APIs
 - Development baseline: `develop` at `faa2041`
 - Local API hardening commit: `new/drf-api` at `215c4c6`
-- Local test baseline: 76 passing tests on Python 3.14
+- Local test baseline: 85 passing tests on Python 3.14
 - Package baseline: wheel and source distribution build successfully and pass `twine check`
 
 ## P0 - Integrate Current Work
@@ -29,11 +29,11 @@ Completion criteria: the hardening commit is on `master`, all required GitHub Ac
 
 ## P1 - Authorization And Tenant Safety
 
-- [ ] Audit the custom authentication backends for permission-cache leakage between contexts. Django's normal `_group_perm_cache` is user-wide, while Permafrost permissions are context-specific; add regression tests that switch contexts using the same user instance.
-- [ ] Define and test the supported authorization path for normal Django `user.has_perm()` calls versus request-aware `has_all_permissions()` checks.
-- [ ] Test every built-in HTML and HTTP API read/write path for cross-context object access, including guessed slugs and role membership changes.
-- [ ] Decide whether existing but disallowed permission IDs should be rejected by the service and HTTP APIs instead of silently ignored. Document the contract and test the chosen behavior.
-- [ ] Make role, group, permission, and membership mutations atomic so partial failures cannot leave orphaned or unconformed Django groups.
+- [x] Audit the custom authentication backends for permission-cache leakage between contexts. Permafrost now bypasses Django's user-wide group/all-permission caches and has regression tests that switch contexts using the same user instance.
+- [x] Define and test the supported authorization path for normal Django `user.has_perm()` calls versus request-aware `has_all_permissions()` checks.
+- [x] Test every built-in HTML and HTTP API read/write path for cross-context object access, including guessed slugs and role membership changes. Service queries also default to the configured current context when no context is passed.
+- [x] Reject existing but disallowed permission IDs in the service and HTTP APIs, without partially applying the submitted update. Lower-level model helpers retain defensive filtering.
+- [x] Make role, group, permission, and membership mutations atomic so partial failures cannot leave orphaned or unconformed Django groups.
 
 Completion criteria: tests demonstrate that one context cannot observe or reuse permissions, roles, or memberships from another context, including after Django permission caching.
 
@@ -44,8 +44,16 @@ Completion criteria: tests demonstrate that one context cannot observe or reuse 
 - [ ] Define deletion behavior for a context object. Generic foreign keys do not provide database-enforced cascading, so orphaned roles need an explicit policy.
 - [ ] Update Django admin list columns and filters to present the configured context rather than always displaying `site`.
 - [ ] Add a realistic example project and tests using an `Organization` or `Team` model, including migrations, forms, views, services, and the HTTP API.
+- [ ] Add end-to-end Team A versus Team B authorization tests covering request middleware, role permissions, API/HTML access, and application objects scoped by `team=request.team`.
+- [ ] Add a system-check warning when Django's global `ModelBackend` is configured in a way that can bypass Permafrost context scoping for role-backed Group permissions.
+- [ ] Document that middleware must resolve a trusted request context and that application querysets must independently constrain business objects to that context.
+- [ ] Preserve and explicitly test the superuser invariant: authenticated superusers have all permissions in every configured context, regardless of role membership.
+- [ ] Add a complete Team-context setup guide covering settings, the Team model contract, middleware, authentication backends, role creation and assignment, request-aware permission checks, and context-scoped querysets.
+- [ ] Document the authorization flow from `request.team` through `PermafrostRole`, Django Group membership, permission evaluation, and object lookup, including Team A/Team B and superuser examples.
+- [ ] Document common unsafe configurations and failure modes, especially the default `ModelBackend`, unscoped `user.has_perm()` calls, untrusted context selection, and business-object queries that omit the current Team.
+- [ ] Keep the README quick start and the detailed installation, models, views, and API documentation aligned with the tested Team example.
 
-Completion criteria: a new project can use a non-Site context without creating placeholder Site relationships, and the upgrade path for existing projects is documented and tested.
+Completion criteria: a developer can configure and understand a non-Site context using repository documentation alone; the project works without placeholder Site relationships; Team permissions and business objects cannot cross contexts; superusers retain unrestricted access; and the upgrade path for existing projects is documented and tested.
 
 ## P1 - Role Integrity
 

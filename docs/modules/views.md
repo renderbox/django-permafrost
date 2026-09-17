@@ -20,6 +20,10 @@ For a `POST` request, Permafrost combines `permission_required` and `permission_
 
 `PermafrostSiteMixin` checks permissions against the configured Permafrost context. Historically this meant `request.site`; with configurable context support it can also use a request-attached organization, team, or other context object.
 
+Use this request-aware mixin for tenant-scoped view authorization. Django's
+plain `user.has_perm()` call does not receive the request and therefore cannot
+discover a request-attached organization or team.
+
 ### PermafrostLogMixin
 
 `PermafrostLogMixin` logs failed permission checks to a configured logger:

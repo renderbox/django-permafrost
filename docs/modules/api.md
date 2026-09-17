@@ -40,7 +40,7 @@ Useful service functions include:
 
 The service API uses the same context helpers as the built-in views. Pass `context_object` explicitly, pass a `request`, or let the configured context model resolve the current object.
 
-Permission changes go through `PermafrostRole` helper methods so required permissions are preserved and disallowed permissions are ignored.
+Permission changes go through `PermafrostRole` helper methods so required permissions are preserved. Service API calls reject permissions that are not allowed by the role category.
 
 Unknown permission IDs and user IDs raise validation errors. This helps callers distinguish "not allowed for this role category" from "does not exist".
 
@@ -83,7 +83,7 @@ Role `category` is set when a role is created and cannot be changed through the 
 
 Deleting a role through the HTTP API soft-deletes it by setting `deleted=True`. Locked roles and configured default roles are protected by the model/service behavior and are not marked deleted.
 
-Permission updates require known permission IDs. Permissions that exist but are outside the role category's optional/required permission set are ignored by the role permission helpers.
+Permission updates require known permission IDs. Permissions that exist but are outside the role category's optional/required permission set return `400 Bad Request`; the update is not partially applied.
 
 User membership updates require known user IDs. Removing a user ID that does not exist returns `404`.
 
