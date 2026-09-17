@@ -42,6 +42,8 @@ The service API uses the same context helpers as the built-in views. Pass `conte
 
 Permission changes go through `PermafrostRole` helper methods so required permissions are preserved and disallowed permissions are ignored.
 
+Unknown permission IDs and user IDs raise validation errors. This helps callers distinguish "not allowed for this role category" from "does not exist".
+
 ## Optional DRF HTTP API
 
 Install the optional API extra:
@@ -74,5 +76,53 @@ The included routes expose:
 - `GET /roles/{slug}/users/`
 - `POST /roles/{slug}/users/`
 - `DELETE /roles/{slug}/users/{user_id}/`
+
+## HTTP API Behavior
+
+Role `category` is set when a role is created and cannot be changed through the update endpoints. This matches the built-in forms, where category controls the required and optional permission set.
+
+Deleting a role through the HTTP API soft-deletes it by setting `deleted=True`. Locked roles and configured default roles are protected by the model/service behavior and are not marked deleted.
+
+Permission updates require known permission IDs. Permissions that exist but are outside the role category's optional/required permission set are ignored by the role permission helpers.
+
+User membership updates require known user IDs. Removing a user ID that does not exist returns `404`.
+
+## Example Requests
+
+Create a role:
+
+```http
+POST /api/permafrost/roles/
+Content-Type: application/json
+
+{
+  "name": "Account Manager",
+  "description": "Can help manage account-level tasks.",
+  "category": "staff",
+  "permission_ids": [12, 13]
+}
+```
+
+Replace optional permissions:
+
+```http
+PUT /api/permafrost/roles/account-manager/permissions/
+Content-Type: application/json
+
+{
+  "permission_ids": [12, 13]
+}
+```
+
+Add users to a role:
+
+```http
+POST /api/permafrost/roles/account-manager/users/
+Content-Type: application/json
+
+{
+  "user_ids": [42, 43]
+}
+```
 
 The HTTP API remains optional. Importing `permafrost`, running migrations, and using `permafrost.api.services` do not require DRF.

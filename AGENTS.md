@@ -32,6 +32,16 @@ Update it for:
 
 Add entries before a release is published. Prefer concise bullets under the current or next release version.
 
+## Roadmap
+
+Always maintain `TODO.md` as the running source of truth for planned work.
+
+- Add newly discovered bugs, hardening work, and feature decisions to the appropriate priority section.
+- Check off an item only after implementation, tests, and relevant documentation are complete.
+- Update the review date and release-state snapshot when performing a project-status review.
+- Keep completed foundation work for historical context, but move routine completed tasks to `CHANGELOG.md` instead of growing the roadmap indefinitely.
+- Do not use `TODO.md` as release notes; user-facing completed changes belong in `CHANGELOG.md`.
+
 ## Documentation
 
 Keep documentation changes close to behavior changes.

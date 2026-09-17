@@ -1,9 +1,11 @@
+import importlib
+from unittest.mock import patch
 from unittest import skipIf
 from django.forms.models import model_to_dict
 from django.test import TestCase, RequestFactory, override_settings
 from django.contrib.sites.models import Site
 from django.contrib.auth import get_user_model
-from django.core.exceptions import PermissionDenied
+from django.core.exceptions import PermissionDenied, ValidationError
 from django.db.utils import IntegrityError
 from django.db import transaction
 from django.contrib.auth.models import Group, Permission
@@ -515,6 +517,26 @@ class PermafrostServiceAPITest(TestCase):
         services.remove_role_users(role, [self.user])
         self.assertNotIn(self.user, role.user_set())
 
+    def test_unknown_permission_ids_raise_validation_error(self):
+        with self.assertRaises(ValidationError):
+            services.get_permissions_from_ids([999999])
+
+    def test_unknown_user_ids_raise_validation_error(self):
+        with self.assertRaises(ValidationError):
+            services.get_users_from_ids([999999])
+
+    def test_services_do_not_require_drf_imports(self):
+        def guarded_import(name, *args, **kwargs):
+            if name.startswith("rest_framework"):
+                raise AssertionError("permafrost.api.services imported DRF")
+            return original_import(name, *args, **kwargs)
+
+        original_import = __import__
+        with patch("builtins.__import__", guarded_import):
+            importlib.reload(services)
+
+        importlib.reload(services)
+
 
 # Don't run the following tests if DRF is not loaded
 @skipIf(SKIP_DRF_TESTS, "Django Rest Framework not installed, skipping tests")
@@ -571,6 +593,27 @@ class PermafrostAPITest(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertTrue(response.data)
 
+    def test_anonymous_user_can_not_list_permafrost_roles_api(self):
+        response = self.client.get("/api/permafrost/roles/", format="json")
+
+        self.assertEqual(response.status_code, 403)
+
+    def test_api_list_only_returns_current_context_roles(self):
+        self.client.force_authenticate(user=self.adminuser)
+        site_1_role = PermafrostRole.objects.create(
+            category="user", name="API Site One Role", site=self.site_1
+        )
+        site_2_role = PermafrostRole.objects.create(
+            category="user", name="API Site Two Role", site=self.site_2
+        )
+
+        response = self.client.get("/api/permafrost/roles/", format="json")
+        returned_slugs = {role["slug"] for role in response.data}
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(site_1_role.slug, returned_slugs)
+        self.assertNotIn(site_2_role.slug, returned_slugs)
+
     def test_superuser_can_create_permafrost_role_api(self):
         self.client.force_authenticate(user=self.adminuser)
         response = self.client.post(
@@ -584,6 +627,36 @@ class PermafrostAPITest(TestCase):
         self.assertEqual(response.data["slug"], "api-role")
         role = PermafrostRole.objects.get(slug="api-role")
         self.assertEqual(role.context, Site.objects.get_current())
+
+    def test_api_returns_400_for_invalid_category(self):
+        self.client.force_authenticate(user=self.adminuser)
+        response = self.client.post(
+            "/api/permafrost/roles/",
+            data={"name": "Bad API Role", "description": "", "category": "missing"},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("category", response.data)
+
+    def test_api_role_category_can_not_be_changed_after_create(self):
+        self.client.force_authenticate(user=self.adminuser)
+        role = PermafrostRole.objects.create(
+            category="user",
+            name="API Immutable Category",
+            site=Site.objects.get_current(),
+        )
+
+        response = self.client.patch(
+            f"/api/permafrost/roles/{role.slug}/",
+            data={"category": "staff"},
+            format="json",
+        )
+
+        role.refresh_from_db()
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(role.category, "user")
+        self.assertIn("category", response.data)
 
     def test_api_permission_update_uses_role_permission_rules(self):
         self.client.force_authenticate(user=self.adminuser)
@@ -613,6 +686,23 @@ class PermafrostAPITest(TestCase):
         self.assertIn(allowed_permission.id, role_permission_ids)
         self.assertNotIn(disallowed_permission.id, role_permission_ids)
 
+    def test_api_permission_update_returns_400_for_unknown_permission_ids(self):
+        self.client.force_authenticate(user=self.adminuser)
+        role = PermafrostRole.objects.create(
+            category="user",
+            name="API Unknown Permission",
+            site=Site.objects.get_current(),
+        )
+
+        response = self.client.put(
+            f"/api/permafrost/roles/{role.slug}/permissions/",
+            data={"permission_ids": [999999]},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("permission_ids", response.data)
+
     def test_api_can_add_and_remove_role_users(self):
         self.client.force_authenticate(user=self.adminuser)
         role = PermafrostRole.objects.create(
@@ -635,6 +725,69 @@ class PermafrostAPITest(TestCase):
 
         self.assertEqual(response.status_code, 204)
         self.assertNotIn(self.user, role.user_set())
+
+    def test_api_add_users_returns_400_for_unknown_user_ids(self):
+        self.client.force_authenticate(user=self.adminuser)
+        role = PermafrostRole.objects.create(
+            category="user", name="API Unknown User", site=Site.objects.get_current()
+        )
+
+        response = self.client.post(
+            f"/api/permafrost/roles/{role.slug}/users/",
+            data={"user_ids": [999999]},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("user_ids", response.data)
+
+    def test_api_remove_unknown_user_returns_404(self):
+        self.client.force_authenticate(user=self.adminuser)
+        role = PermafrostRole.objects.create(
+            category="user",
+            name="API Remove Unknown User",
+            site=Site.objects.get_current(),
+        )
+
+        response = self.client.delete(
+            f"/api/permafrost/roles/{role.slug}/users/999999/",
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 404)
+
+    def test_api_delete_soft_deletes_role(self):
+        self.client.force_authenticate(user=self.adminuser)
+        role = PermafrostRole.objects.create(
+            category="user", name="API Soft Delete", site=Site.objects.get_current()
+        )
+
+        response = self.client.delete(
+            f"/api/permafrost/roles/{role.slug}/",
+            format="json",
+        )
+
+        role.refresh_from_db()
+        self.assertEqual(response.status_code, 204)
+        self.assertTrue(role.deleted)
+
+    def test_api_delete_does_not_soft_delete_locked_role(self):
+        self.client.force_authenticate(user=self.adminuser)
+        role = PermafrostRole.objects.create(
+            category="user",
+            name="API Locked Delete",
+            locked=True,
+            site=Site.objects.get_current(),
+        )
+
+        response = self.client.delete(
+            f"/api/permafrost/roles/{role.slug}/",
+            format="json",
+        )
+
+        role.refresh_from_db()
+        self.assertEqual(response.status_code, 204)
+        self.assertFalse(role.deleted)
 
 
 # @tag('admin_tests')

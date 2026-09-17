@@ -93,7 +93,14 @@ def validate_category(category):
 
 def get_permissions_from_ids(permission_ids):
     permission_ids = permission_ids or []
-    return Permission.objects.filter(id__in=permission_ids)
+    permissions = Permission.objects.filter(id__in=permission_ids)
+    found_ids = set(permissions.values_list("id", flat=True))
+    missing_ids = sorted(set(permission_ids) - found_ids)
+    if missing_ids:
+        raise ValidationError(
+            {"permission_ids": f"Unknown permission IDs: {missing_ids}"}
+        )
+    return permissions
 
 
 def create_role(
@@ -173,7 +180,12 @@ def list_role_users(role):
 
 def get_users_from_ids(user_ids):
     user_ids = user_ids or []
-    return get_user_model().objects.filter(id__in=user_ids)
+    users = get_user_model().objects.filter(id__in=user_ids)
+    found_ids = set(users.values_list("id", flat=True))
+    missing_ids = sorted(set(user_ids) - found_ids)
+    if missing_ids:
+        raise ValidationError({"user_ids": f"Unknown user IDs: {missing_ids}"})
+    return users
 
 
 def add_role_users(role, users):

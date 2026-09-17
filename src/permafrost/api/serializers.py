@@ -71,6 +71,28 @@ class PermafrostRoleWriteSerializer(serializers.Serializer):
         except DjangoValidationError as exc:
             raise serializers.ValidationError(exc.message_dict["category"][0]) from exc
 
+    def validate_permission_ids(self, value):
+        try:
+            services.get_permissions_from_ids(value)
+        except DjangoValidationError as exc:
+            raise serializers.ValidationError(
+                exc.message_dict["permission_ids"][0]
+            ) from exc
+        return value
+
+    def validate(self, attrs):
+        if self.instance is not None:
+            requested_category = attrs.get("category")
+            if (
+                requested_category is not None
+                and requested_category != self.instance.category
+            ):
+                raise serializers.ValidationError(
+                    {"category": "Role category cannot be changed."}
+                )
+            attrs.pop("category", None)
+        return attrs
+
     def create(self, validated_data):
         permission_ids = validated_data.pop("permission_ids", None)
         permissions = None
@@ -95,8 +117,24 @@ class RolePermissionsWriteSerializer(serializers.Serializer):
         child=serializers.IntegerField(), required=True, allow_empty=True
     )
 
+    def validate_permission_ids(self, value):
+        try:
+            services.get_permissions_from_ids(value)
+        except DjangoValidationError as exc:
+            raise serializers.ValidationError(
+                exc.message_dict["permission_ids"][0]
+            ) from exc
+        return value
+
 
 class RoleUsersWriteSerializer(serializers.Serializer):
     user_ids = serializers.ListField(
         child=serializers.IntegerField(), required=True, allow_empty=False
     )
+
+    def validate_user_ids(self, value):
+        try:
+            services.get_users_from_ids(value)
+        except DjangoValidationError as exc:
+            raise serializers.ValidationError(exc.message_dict["user_ids"][0]) from exc
+        return value

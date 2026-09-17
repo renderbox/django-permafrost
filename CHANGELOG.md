@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.5.0 - Unreleased
 
 ### Changed
 
@@ -11,6 +11,12 @@
 - Added a DRF-independent Python service API under `permafrost.api.services`.
 - Added optional Django REST Framework serializers, views, permissions, and URLs under `permafrost.api`.
 - Added a `django-permafrost[api]` optional dependency extra for HTTP API users.
+- Added API hardening tests for optional DRF behavior, context scoping, invalid payloads, soft deletion, and role membership changes.
+
+### Fixed
+
+- API payloads now return validation errors for unknown permission IDs or user IDs instead of silently ignoring them.
+- API role updates now keep `category` immutable after creation.
 
 ## 0.4.0
 
