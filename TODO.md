@@ -7,15 +7,15 @@ This is the running source of truth for planned django-permafrost work.
 - Keep release notes in `CHANGELOG.md`; this file tracks work before and after releases.
 - Review priorities when opening a release branch or beginning a new feature.
 
-Last reviewed: 2026-09-17 on `new/role-integrity`, based on `develop` at `e061950`.
+Last reviewed: 2026-09-17 on `new/api-querying`, based on `develop` at `3428206`.
 
 ## Current Release State
 
 - Published PyPI release: `0.4.1`
 - In-development release: `0.5.0`, introducing the service and optional DRF APIs
-- Remote development baseline: `GitHub/develop` at `e061950` after pull request #98
+- Remote development baseline: `GitHub/develop` at `3428206` after pull request #99
 - Latest permission hardening commit: `b5328eb`, merged into `develop`
-- Local test baseline: 111 passing tests on Python 3.14
+- Local test baseline: 117 passing tests on Python 3.14
 - Package baseline: wheel and source distribution build successfully and pass `twine check`
 
 ## P0 - Integrate Current Work
@@ -68,7 +68,7 @@ Completion criteria: database constraints and model validation protect all role 
 
 ## P2 - API Productization
 
-- [ ] Add pagination, ordering, and documented filtering/search behavior for role and membership lists.
+- [x] Add configurable pagination, controlled ordering, and documented filtering/search behavior for role and membership lists.
 - [ ] Decide whether membership lookup should support username, email, or project-defined identifiers in addition to primary keys.
 - [ ] Add an explicit API versioning policy before downstream projects depend on the current URL and response shapes.
 - [ ] Add OpenAPI schema support and response examples without making DRF mandatory for service-layer users.

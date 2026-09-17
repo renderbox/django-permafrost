@@ -19,6 +19,8 @@
 - Added API hardening tests for optional DRF behavior, context scoping, invalid payloads, soft deletion, and role membership changes.
 - Added a real Team context example and end-to-end Team A/Team B isolation tests for services, HTML views, the HTTP API, business objects, context deletion, and superusers.
 - Added a system-check warning for Django's global `ModelBackend` and a complete Team-context setup guide.
+- Added page-number pagination, search, exact filters, and controlled ordering for HTTP API role and membership collections.
+- Added configurable `PERMAFROST_API_PAGE_SIZE` and `PERMAFROST_API_MAX_PAGE_SIZE` settings with system checks.
 
 ### Fixed
 
