@@ -179,6 +179,14 @@ The HTTP API is built with Django REST Framework and remains optional. Install t
 python -m pip install "django-permafrost[api]"
 ```
 
+Configure the schema backend in Django settings:
+
+```python
+REST_FRAMEWORK = {
+    "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
+}
+```
+
 Then include the API URLs:
 
 ```python
@@ -193,6 +201,7 @@ The version 1 endpoints are then available below `/api/permafrost/v1/`.
 Unversioned HTTP routes are not exposed. See the
 [API documentation](docs/modules/api.md) and
 [versioning policy](docs/modules/api-versioning.md) for the supported contract.
+The OpenAPI schema is available at `/api/permafrost/v1/schema/`.
 
 ## Authors and contributors
 

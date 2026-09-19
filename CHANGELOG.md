@@ -23,6 +23,7 @@
 - Added configurable `PERMAFROST_API_PAGE_SIZE` and `PERMAFROST_API_MAX_PAGE_SIZE` settings with system checks.
 - Added opt-in membership lookup by a configured unique custom-user field, with bulk add/remove support and system checks.
 - Added an explicit `/v1/` HTTP API boundary and documented compatibility and deprecation policies.
+- Added a public OpenAPI 3.0 schema with typed operations, stable operation IDs, and request/response examples.
 
 ### Fixed
 

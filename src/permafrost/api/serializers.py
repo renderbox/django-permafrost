@@ -4,13 +4,15 @@ from django.core.exceptions import ValidationError as DjangoValidationError
 from permafrost.api import services
 
 try:
+    from drf_spectacular.utils import extend_schema_field
     from rest_framework import serializers
 except ImportError as exc:
     from django.core.exceptions import ImproperlyConfigured
 
     raise ImproperlyConfigured(
-        "Django REST Framework is required to use permafrost.api.serializers. "
-        "Install djangorestframework to enable the Permafrost HTTP API."
+        "Django REST Framework and drf-spectacular are required to use "
+        "permafrost.api.serializers. Install django-permafrost[api] to enable "
+        "the Permafrost HTTP API."
     ) from exc
 
 
@@ -49,6 +51,7 @@ class PermafrostRoleSerializer(serializers.Serializer):
     deleted = serializers.BooleanField(read_only=True)
     permissions = serializers.SerializerMethodField()
 
+    @extend_schema_field(PermissionSerializer(many=True))
     def get_permissions(self, role):
         return [
             services.serialize_permission(permission)

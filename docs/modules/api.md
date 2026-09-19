@@ -3,7 +3,7 @@
 Permafrost exposes two API layers:
 
 - a Python service API that does not require Django REST Framework
-- an optional DRF HTTP API for projects that install DRF
+- an optional DRF HTTP API with an OpenAPI schema
 
 ## Python Service API
 
@@ -61,6 +61,15 @@ Install the optional API extra:
 python -m pip install "django-permafrost[api]"
 ```
 
+Configure drf-spectacular as DRF's schema class. Keep any existing REST
+framework settings alongside this entry:
+
+```python
+REST_FRAMEWORK = {
+    "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
+}
+```
+
 Then include the API URLconf:
 
 ```python
@@ -78,6 +87,7 @@ policy.
 
 Version 1 exposes:
 
+- `GET /schema/`
 - `GET /roles/`
 - `POST /roles/`
 - `GET /roles/{slug}/`
@@ -91,6 +101,33 @@ Version 1 exposes:
 - `POST /roles/{slug}/users/`
 - `DELETE /roles/{slug}/users/`
 - `DELETE /roles/{slug}/users/{user_id}/`
+
+## OpenAPI Schema
+
+The public OpenAPI 3.0 schema is available from the versioned API root:
+
+```http
+GET /api/permafrost/v1/schema/
+Accept: application/vnd.oai.openapi+json
+```
+
+The endpoint returns YAML by default. Request JSON through content negotiation
+or with `?format=json`:
+
+```http
+GET /api/permafrost/v1/schema/?format=json
+```
+
+The document includes request and response components, pagination and query
+parameters, stable operation IDs, validation responses, and examples for role,
+permission, category, and membership workflows. Schema paths are relative to a
+`servers` entry derived from the project's actual URL mounting point, so the
+document remains accurate when the package is included under a different
+prefix.
+
+The schema endpoint intentionally permits anonymous reads. Application data
+endpoints continue to use `PermafrostAPIPermission` and the project's DRF
+authentication configuration.
 
 ## Collection Queries
 
@@ -233,4 +270,5 @@ Content-Type: application/json
 }
 ```
 
-The HTTP API remains optional. Importing `permafrost`, running migrations, and using `permafrost.api.services` do not require DRF.
+The HTTP API remains optional. Importing `permafrost`, running migrations, and
+using `permafrost.api.services` do not require DRF or drf-spectacular.
