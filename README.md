@@ -179,6 +179,11 @@ The HTTP API is built with Django REST Framework and remains optional. Install t
 python -m pip install "django-permafrost[api]"
 ```
 
+The HTTP API supports Django REST Framework 3.16 through 3.18 and
+drf-spectacular 0.30.x. The base package and Python service API do not install
+or require either HTTP dependency. See the
+[API documentation](docs/modules/api.md) for the tested compatibility pairs.
+
 Configure the schema backend in Django settings:
 
 ```python

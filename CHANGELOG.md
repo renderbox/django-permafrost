@@ -10,6 +10,7 @@
 - Enforced exclusive one-to-one ownership between each Permafrost role and its Django Group.
 - Kept role slugs tied to role names while enforcing slug uniqueness within each context.
 - Bounded generated Group names to Django's field limit with deterministic hash suffixes for long names.
+- Defined the optional HTTP API dependency contract as Django REST Framework 3.16 through 3.18 and drf-spectacular 0.30.x.
 
 ### Added
 
@@ -25,6 +26,7 @@
 - Added an explicit `/v1/` HTTP API boundary and documented compatibility and deprecation policies.
 - Added a public OpenAPI 3.0 schema with typed operations, stable operation IDs, and request/response examples.
 - Added CI coverage that installs the base wheel without HTTP API extras and exercises checks, migrations, and service operations.
+- Added HTTP API compatibility jobs covering representative Django 5.2, 6.0, and 6.1 combinations across the supported DRF range.
 
 ### Fixed
 

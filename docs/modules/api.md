@@ -61,6 +61,31 @@ Install the optional API extra:
 python -m pip install "django-permafrost[api]"
 ```
 
+### Supported HTTP API versions
+
+The `0.5.x` HTTP API supports:
+
+- Django REST Framework 3.16 through 3.18 (`>=3.16,<3.19`)
+- drf-spectacular 0.30.x (`>=0.30,<0.31`)
+
+CI verifies representative combinations across the supported Django range:
+
+| Python | Django | Django REST Framework |
+| --- | --- | --- |
+| 3.11 | 5.2 | 3.16 |
+| 3.13 | 6.0 | 3.17 |
+| 3.14 | 6.1 | 3.18 |
+
+These are compatibility checkpoints, not exclusive pairings. Dependency
+resolution may select another supported combination within the declared
+ranges. In particular, Permafrost explicitly tests DRF 3.18 with
+drf-spectacular 0.30 even though drf-spectacular 0.30's published classifier
+list ends at DRF 3.17.
+
+The base package and `permafrost.api.services` remain independent of DRF and
+drf-spectacular. Install `django-permafrost` without the `api` extra when only
+the Python service layer is needed.
+
 Configure drf-spectacular as DRF's schema class. Keep any existing REST
 framework settings alongside this entry:
 
