@@ -1,0 +1,57 @@
+name: HTTP API Compatibility
+
+on:
+  pull_request:
+    branches: ["develop", "master"]
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Python ${{ matrix.python-version }}, Django ${{ matrix.django-series }}, DRF ${{ matrix.drf-series }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - python-version: "3.11"
+            django-series: "5.2"
+            django-version: ">=5.2,<5.3"
+            drf-series: "3.16"
+            drf-version: ">=3.16,<3.17"
+          - python-version: "3.13"
+            django-series: "6.0"
+            django-version: ">=6.0,<6.1"
+            drf-series: "3.17"
+            drf-version: ">=3.17,<3.18"
+          - python-version: "3.14"
+            django-series: "6.1"
+            django-version: ">=6.1,<6.2"
+            drf-series: "3.18"
+            drf-version: ">=3.18,<3.19"
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v7
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v7
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install API test dependencies
+        run: |
+          python -m pip install -U pip
+          python -m pip install -e ".[test]" \
+            "Django${{ matrix.django-version }}" \
+            "djangorestframework${{ matrix.drf-version }}"
+          python -m pip check
+
+      - name: Test HTTP API compatibility
+        run: |
+          cd develop
+          python manage.py makemigrations --check --dry-run
+          python manage.py test permafrost
+        env:
+          DJANGO_DEBUG: 1

@@ -6,13 +6,22 @@ from django.shortcuts import get_object_or_404
 from permafrost.api import services
 
 try:
+    from drf_spectacular.openapi import AutoSchema
+    from drf_spectacular.types import OpenApiTypes
+    from drf_spectacular.utils import (
+        OpenApiExample,
+        OpenApiParameter,
+        extend_schema,
+        extend_schema_view,
+    )
     from rest_framework import filters, serializers, status, viewsets
     from rest_framework.decorators import action
     from rest_framework.response import Response
 except ImportError as exc:
     raise ImproperlyConfigured(
-        "Django REST Framework is required to use permafrost.api.views. "
-        "Install djangorestframework to enable the Permafrost HTTP API."
+        "Django REST Framework and drf-spectacular are required to use "
+        "permafrost.api.views. Install django-permafrost[api] to enable the "
+        "Permafrost HTTP API."
     ) from exc
 
 from permafrost.api.permissions import PermafrostAPIPermission
@@ -27,8 +36,94 @@ from permafrost.api.serializers import (
     UserSerializer,
 )
 
+ROLE_EXAMPLE = OpenApiExample(
+    "Role response",
+    value={
+        "id": 7,
+        "name": "Account Manager",
+        "slug": "account-manager",
+        "description": "Can help manage account-level tasks.",
+        "category": "staff",
+        "locked": False,
+        "deleted": False,
+        "permissions": [
+            {
+                "id": 12,
+                "name": "Can view user",
+                "codename": "view_user",
+                "app_label": "auth",
+                "model": "user",
+                "natural_key": ["view_user", "auth", "user"],
+            }
+        ],
+    },
+    response_only=True,
+    status_codes=["200", "201"],
+)
 
+VALIDATION_ERROR_EXAMPLE = OpenApiExample(
+    "Validation error",
+    value={"permission_ids": ["Unknown permission IDs: [999999]"]},
+    response_only=True,
+    status_codes=["400"],
+)
+
+MEMBERSHIP_IDS_EXAMPLE = OpenApiExample(
+    "Users by primary key",
+    value={"user_ids": [42, 43]},
+    request_only=True,
+)
+
+MEMBERSHIP_IDENTIFIERS_EXAMPLE = OpenApiExample(
+    "Users by configured identifier",
+    value={"user_identifiers": ["grant", "devon"]},
+    request_only=True,
+)
+
+
+@extend_schema_view(
+    list=extend_schema(
+        summary="List roles in the current context",
+        responses={200: PermafrostRoleSerializer(many=True)},
+    ),
+    create=extend_schema(
+        summary="Create a role in the current context",
+        responses={
+            201: PermafrostRoleSerializer,
+            400: OpenApiTypes.OBJECT,
+        },
+        examples=[ROLE_EXAMPLE, VALIDATION_ERROR_EXAMPLE],
+    ),
+    retrieve=extend_schema(
+        summary="Retrieve a role from the current context",
+        responses={200: PermafrostRoleSerializer, 404: OpenApiTypes.OBJECT},
+        examples=[ROLE_EXAMPLE],
+    ),
+    update=extend_schema(
+        summary="Replace editable role fields",
+        responses={
+            200: PermafrostRoleSerializer,
+            400: OpenApiTypes.OBJECT,
+            404: OpenApiTypes.OBJECT,
+        },
+        examples=[ROLE_EXAMPLE, VALIDATION_ERROR_EXAMPLE],
+    ),
+    partial_update=extend_schema(
+        summary="Update editable role fields",
+        responses={
+            200: PermafrostRoleSerializer,
+            400: OpenApiTypes.OBJECT,
+            404: OpenApiTypes.OBJECT,
+        },
+        examples=[ROLE_EXAMPLE, VALIDATION_ERROR_EXAMPLE],
+    ),
+    destroy=extend_schema(
+        summary="Soft-delete a role",
+        responses={204: None, 404: OpenApiTypes.OBJECT},
+    ),
+)
 class PermafrostRoleViewSet(viewsets.ModelViewSet):
+    schema = AutoSchema()
     lookup_field = "slug"
     permission_classes = [PermafrostAPIPermission]
     pagination_class = PermafrostPageNumberPagination
@@ -91,12 +186,45 @@ class PermafrostRoleViewSet(viewsets.ModelViewSet):
         services.delete_role(role, soft=True)
         return Response(status=status.HTTP_204_NO_CONTENT)
 
-    @action(detail=False, methods=["get"])
+    @extend_schema(
+        summary="List configured role categories",
+        responses={200: CategorySerializer(many=True)},
+        examples=[
+            OpenApiExample(
+                "Category response",
+                value=[
+                    {
+                        "key": "staff",
+                        "label": "Staff",
+                        "access_level": 30,
+                        "required": [],
+                        "optional": [],
+                    }
+                ],
+                response_only=True,
+            )
+        ],
+    )
+    @action(
+        detail=False,
+        methods=["get"],
+        pagination_class=None,
+        filter_backends=[],
+    )
     def categories(self, request):
         serializer = CategorySerializer(services.list_categories(), many=True)
         return Response(serializer.data)
 
-    @action(detail=True, methods=["get"])
+    @extend_schema(
+        summary="List permissions assigned to a role",
+        responses={200: PermissionSerializer(many=True), 404: OpenApiTypes.OBJECT},
+    )
+    @action(
+        detail=True,
+        methods=["get"],
+        pagination_class=None,
+        filter_backends=[],
+    )
     def permissions(self, request, slug=None):
         role = self.get_object()
         serializer = PermissionSerializer(
@@ -108,6 +236,16 @@ class PermafrostRoleViewSet(viewsets.ModelViewSet):
         )
         return Response(serializer.data)
 
+    @extend_schema(
+        summary="Replace a role's optional permissions",
+        request=RolePermissionsWriteSerializer,
+        responses={
+            200: PermafrostRoleSerializer,
+            400: OpenApiTypes.OBJECT,
+            404: OpenApiTypes.OBJECT,
+        },
+        examples=[ROLE_EXAMPLE, VALIDATION_ERROR_EXAMPLE],
+    )
     @permissions.mapping.put
     def set_permissions(self, request, slug=None):
         role = self.get_object()
@@ -122,6 +260,10 @@ class PermafrostRoleViewSet(viewsets.ModelViewSet):
             raise serializers.ValidationError(exc.message_dict) from exc
         return Response(PermafrostRoleSerializer(role).data)
 
+    @extend_schema(
+        summary="List users assigned to a role",
+        responses={200: UserSerializer(many=True), 404: OpenApiTypes.OBJECT},
+    )
     @action(detail=True, methods=["get"])
     def users(self, request, slug=None):
         role = self.get_object()
@@ -170,6 +312,20 @@ class PermafrostRoleViewSet(viewsets.ModelViewSet):
         serializer = UserSerializer(serialized_users, many=True)
         return self.get_paginated_response(serializer.data)
 
+    @extend_schema(
+        summary="Add users to a role",
+        request=RoleUsersWriteSerializer,
+        responses={
+            200: PermafrostRoleSerializer,
+            400: OpenApiTypes.OBJECT,
+            404: OpenApiTypes.OBJECT,
+        },
+        examples=[
+            MEMBERSHIP_IDS_EXAMPLE,
+            MEMBERSHIP_IDENTIFIERS_EXAMPLE,
+            ROLE_EXAMPLE,
+        ],
+    )
     @users.mapping.post
     def add_users(self, request, slug=None):
         role = self.get_object()
@@ -179,6 +335,17 @@ class PermafrostRoleViewSet(viewsets.ModelViewSet):
         services.add_role_users(role, users)
         return Response(PermafrostRoleSerializer(role).data)
 
+    @extend_schema(
+        operation_id="roles_users_bulk_remove",
+        summary="Remove users from a role",
+        request=RoleUsersWriteSerializer,
+        responses={
+            204: None,
+            400: OpenApiTypes.OBJECT,
+            404: OpenApiTypes.OBJECT,
+        },
+        examples=[MEMBERSHIP_IDS_EXAMPLE, MEMBERSHIP_IDENTIFIERS_EXAMPLE],
+    )
     @users.mapping.delete
     def remove_users(self, request, slug=None):
         role = self.get_object()
@@ -194,6 +361,19 @@ class PermafrostRoleViewSet(viewsets.ModelViewSet):
             return services.get_users_from_ids(validated_data["user_ids"])
         return services.get_users_from_identifiers(validated_data["user_identifiers"])
 
+    @extend_schema(
+        operation_id="roles_users_remove",
+        summary="Remove one user from a role by primary key",
+        parameters=[
+            OpenApiParameter(
+                "user_id",
+                OpenApiTypes.INT,
+                OpenApiParameter.PATH,
+                description="User primary key.",
+            )
+        ],
+        responses={204: None, 404: OpenApiTypes.OBJECT},
+    )
     @action(detail=True, methods=["delete"], url_path=r"users/(?P<user_id>[^/.]+)")
     def remove_user(self, request, slug=None, user_id=None):
         role = self.get_object()
