@@ -24,6 +24,7 @@
 - Added opt-in membership lookup by a configured unique custom-user field, with bulk add/remove support and system checks.
 - Added an explicit `/v1/` HTTP API boundary and documented compatibility and deprecation policies.
 - Added a public OpenAPI 3.0 schema with typed operations, stable operation IDs, and request/response examples.
+- Added CI coverage that installs the base wheel without HTTP API extras and exercises checks, migrations, and service operations.
 
 ### Fixed
 

@@ -7,7 +7,7 @@ This is the running source of truth for planned django-permafrost work.
 - Keep release notes in `CHANGELOG.md`; this file tracks work before and after releases.
 - Review priorities when opening a release branch or beginning a new feature.
 
-Last reviewed: 2026-09-17 on `new/openapi-schema`, based on `develop` at `2084491`.
+Last reviewed: 2026-09-18 on `new/openapi-schema`, based on `develop` at `2084491`.
 
 ## Current Release State
 
@@ -16,6 +16,7 @@ Last reviewed: 2026-09-17 on `new/openapi-schema`, based on `develop` at `208449
 - Remote development baseline: `GitHub/develop` at `2084491` after pull request #102
 - Latest permission hardening commit: `b5328eb`, merged into `develop`
 - Local test baseline: 131 passing tests on Python 3.14
+- Base-install baseline: isolated wheel passes without DRF or drf-spectacular
 - Package baseline: wheel and source distribution build successfully and pass `twine check`
 
 ## P0 - Integrate Current Work
@@ -72,7 +73,7 @@ Completion criteria: database constraints and model validation protect all role 
 - [x] Support opt-in membership lookup by one configured unique custom-user field in addition to primary keys.
 - [x] Add an explicit `/v1/` HTTP API boundary with compatibility and deprecation policies before downstream adoption.
 - [x] Add a validated OpenAPI 3.0 schema with response examples while keeping HTTP dependencies optional for service-layer users.
-- [ ] Add a CI job that installs the base package without DRF and verifies imports, checks, migrations, and service usage.
+- [x] Add a CI job that installs the base wheel without DRF or drf-spectacular and verifies imports, checks, migrations, and service usage.
 - [ ] Define supported DRF versions and add bounds or compatibility jobs if the HTTP API is treated as a stable public feature.
 
 Completion criteria: the HTTP API has a documented stability contract and is independently tested both with and without the optional DRF dependency.
