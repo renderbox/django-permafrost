@@ -7,14 +7,15 @@ This is the running source of truth for planned django-permafrost work.
 - Keep release notes in `CHANGELOG.md`; this file tracks work before and after releases.
 - Review priorities when opening a release branch or beginning a new feature.
 
-Last reviewed: 2026-09-21 on `develop` at `4dca14e`.
+Last reviewed: 2026-09-21 on `develop` at `3f1e7a6`.
 
 ## Current Release State
 
-- Published PyPI release: `0.4.1`
-- In-development release: `0.5.0`, introducing the service and optional DRF APIs
-- Remote development baseline: `GitHub/develop` at `4dca14e` after pull request #103
-- Latest permission hardening commit: `b5328eb`, merged into `develop`
+- Published PyPI release: `0.5.0`, uploaded from `master` at `7740d4f`
+- Next planned feature release: `0.6.0`, focused on the built-in UI and admin workflows
+- Remote development baseline: `GitHub/develop` at `3f1e7a6` after pull request #103 and roadmap cleanup
+- Remote release baseline: `GitHub/master` at `7740d4f` after pull request #104
+- Latest permission hardening commit: `b5328eb`, merged into `master` through pull request #104
 - Local test baseline: 131 passing tests on Python 3.14
 - Base-install baseline: isolated wheel passes without DRF or drf-spectacular
 - HTTP API baseline: DRF 3.16 through 3.18 tested against representative Django 5.2 through 6.1 combinations
@@ -24,11 +25,12 @@ Last reviewed: 2026-09-21 on `develop` at `4dca14e`.
 
 - [x] Merge the API and permission hardening changes into `develop` through pull requests #96 and #97.
 - [x] Merge custom-context hardening and Team isolation documentation into `develop` through pull request #98.
-- [ ] Confirm the develop pull-request workflow passes at both supported compatibility endpoints.
-- [ ] Promote the accumulated unreleased changes through the master compatibility matrix.
-- [ ] Publish `0.5.0` after the API hardening changes and contributor metadata reach `master`.
+- [x] Confirm the develop pull-request workflow passes at both supported compatibility endpoints.
+- [x] Promote the accumulated changes through the master compatibility matrix in pull request #104.
+- [x] Publish `0.5.0` from `master` at `7740d4f` after the API hardening changes and contributor metadata reached `master`.
+- [ ] Reconcile the `v0.5.0` Git tag and GitHub Release with published source commit `7740d4f`; the existing tag points to the earlier version-bump commit `faa2041`.
 
-Completion criteria: the hardening commit is on `master`, all required GitHub Actions pass, the release is present on PyPI, and `CHANGELOG.md` names the released version.
+Completion criteria: the hardening commits are on `master`, all required GitHub Actions pass, the release is present on PyPI, `CHANGELOG.md` names the released version, and the release tag identifies the published source commit.
 
 ## P1 - Authorization And Tenant Safety
 
