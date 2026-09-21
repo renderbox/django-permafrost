@@ -29,6 +29,11 @@ To use the optional Django REST Framework HTTP API:
 python -m pip install "django-permafrost[api]"
 ```
 
+The HTTP extra supports Django REST Framework 3.16 through 3.18 and
+drf-spectacular 0.30.x. See the [API documentation](api.md) for the tested
+Django, Python, and DRF compatibility pairs. Neither dependency is required
+for the base package or Python service API.
+
 The project no longer uses a root `requirements.txt`. Runtime dependencies live in `pyproject.toml`, and optional groups are used for development, tests, and docs.
 
 ## Django Apps
@@ -110,8 +115,57 @@ If a request object is not available, the configured context model must have a d
 
 Treat `PERMAFROST_CONTEXT_MODEL` like `AUTH_USER_MODEL`: set it before production data exists and avoid changing it later.
 
+In `0.5.0`, `django.contrib.sites` remains an installed-app requirement for
+backwards-compatible migrations. The legacy role `site` field is nullable, so
+roles anchored to an Organization or Team do not require placeholder Site
+records.
+
+For a complete model, middleware, backend, role-assignment, authorization, and
+queryset example, see [Team Context Setup](team-context.md).
+
+## Authentication And Permission Checks
+
+Permafrost authorization is context-sensitive. In request handling, use
+`PermafrostSiteMixin`, the optional DRF permission class, or
+`permafrost.permissions.has_all_permissions(request, permissions)`. These APIs
+resolve the context object attached to the current request.
+
+The Permafrost authentication backends may be configured when application code
+also needs Django's normal `user.has_perm()` interface:
+
+```python
+AUTHENTICATION_BACKENDS = [
+    "permafrost.backends.PermafrostModelBackend",
+]
+```
+
+`user.has_perm()` does not receive a request, so the backend resolves the
+configured context model's current object. For the default Site integration,
+that is `Site.objects.get_current()` and `SITE_ID`. Do not use `user.has_perm()`
+for request-scoped tenant authorization when the current tenant can differ from
+that default; use the request-aware APIs instead.
+
+Permafrost deliberately does not retain Django's user-wide group permission
+cache. A cache without the context identity could carry a permission from one
+tenant into a later check for another tenant. Direct user permissions remain
+global Django permissions and retain Django's normal behavior.
+
 ## Upgrade Notes
 
 Existing projects that used the original Site-based behavior can keep the default settings. The migration backfills the new context fields from each role's `site`.
 
 Projects moving to an organization or team context should plan a data migration that maps existing Site-scoped roles to the new context objects. Do not change `PERMAFROST_CONTEXT_MODEL` in a production project without a deliberate migration plan.
+
+### Role integrity migration
+
+Migration `0022_role_slug_and_group_integrity` enforces one role per Django
+Group and one normalized role slug per context. Before adding those database
+constraints, it checks existing data for:
+
+- two roles in the same context with the same slug
+- two roles referencing the same Django Group
+
+If either condition exists, migration stops with the conflicting records in
+the error message. Rename or consolidate those roles and assign each remaining
+role its own Group before running migrations again. The migration does not
+silently rename roles, change URLs, or split Group memberships.

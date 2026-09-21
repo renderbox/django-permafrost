@@ -37,7 +37,8 @@ dependencies = [
 
 [project.optional-dependencies]
 api = [
-    "djangorestframework",
+    "djangorestframework>=3.16,<3.19",
+    "drf-spectacular>=0.30,<0.31",
 ]
 dev = [
     "black",
@@ -49,7 +50,8 @@ dev = [
     "django-crispy-forms",
     "django-allauth",
     "django-extensions",
-    "djangorestframework",
+    "djangorestframework>=3.16,<3.19",
+    "drf-spectacular>=0.30,<0.31",
     "toml",
 ]
 docs= [
@@ -64,7 +66,8 @@ test = [
     "isort",
     "coverage",
     "django-crispy-forms",
-    "djangorestframework",
+    "djangorestframework>=3.16,<3.19",
+    "drf-spectacular>=0.30,<0.31",
 ]
 
 [project.urls]

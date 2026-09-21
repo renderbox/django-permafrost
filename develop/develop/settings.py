@@ -32,6 +32,10 @@ SITE_ID = 1
 
 LOGIN_REDIRECT_URL = "/"
 
+AUTHENTICATION_BACKENDS = [
+    "permafrost.backends.PermafrostModelBackend",
+]
+
 # Application definition
 
 INSTALLED_APPS = [
@@ -131,7 +135,8 @@ STATIC_URL = "/static/"
 REST_FRAMEWORK = {
     "DEFAULT_PERMISSION_CLASSES": [
         "rest_framework.permissions.IsAuthenticated",
-    ]
+    ],
+    "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
 }
 
 CRISPY_TEMPLATE_PACK = "bootstrap4"

@@ -122,10 +122,14 @@ create_missing_groups.short_description = "Create a Django Group if missing"
 
 class PermafrostRoleAdmin(admin.ModelAdmin):
     readonly_fields = ("slug",)
-    list_display = ("name", "category", "group", "site")
+    list_display = ("name", "category", "group", "context_object", "deleted")
+    list_filter = ("category", "deleted", "locked")
     ordering = ("name",)
-    readonly_fields = ("slug",)
     actions = [create_missing_groups, perms_to_code]
+
+    @admin.display(description="Context")
+    def context_object(self, obj):
+        return obj.get_context_object()
 
 
 # class PermafrostCategoryAdmin(admin.ModelAdmin):

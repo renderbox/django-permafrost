@@ -1,8 +1,18 @@
+from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Permission
-from django.core.exceptions import ValidationError
+from django.core.exceptions import (
+    FieldDoesNotExist,
+    ImproperlyConfigured,
+    ValidationError,
+)
+from django.db import transaction
 
-from permafrost.context import get_context_filter, get_request_context_object
+from permafrost.context import (
+    get_context_filter,
+    get_default_context_object,
+    get_request_context_object,
+)
 from permafrost.models import (
     CATEGORIES,
     PERMAFROST_EXCLUDED_ROLES,
@@ -17,7 +27,7 @@ def get_context_object(request=None, context_object=None):
         return context_object
     if request is not None:
         return get_request_context_object(request)
-    return None
+    return get_default_context_object()
 
 
 def get_role_queryset(
@@ -93,9 +103,35 @@ def validate_category(category):
 
 def get_permissions_from_ids(permission_ids):
     permission_ids = permission_ids or []
-    return Permission.objects.filter(id__in=permission_ids)
+    permissions = Permission.objects.filter(id__in=permission_ids)
+    found_ids = set(permissions.values_list("id", flat=True))
+    missing_ids = sorted(set(permission_ids) - found_ids)
+    if missing_ids:
+        raise ValidationError(
+            {"permission_ids": f"Unknown permission IDs: {missing_ids}"}
+        )
+    return permissions
 
 
+def validate_role_permissions(role, permissions):
+    permissions = list(permissions)
+    allowed_ids = role.all_perm_ids()
+    disallowed_ids = sorted(
+        permission.pk for permission in permissions if permission.pk not in allowed_ids
+    )
+    if disallowed_ids:
+        raise ValidationError(
+            {
+                "permission_ids": (
+                    "Permissions are not allowed for this role category: "
+                    f"{disallowed_ids}"
+                )
+            }
+        )
+    return permissions
+
+
+@transaction.atomic
 def create_role(
     *,
     name,
@@ -117,14 +153,17 @@ def create_role(
     )
     if context_object is not None:
         role.set_context(context_object)
+    if permissions is not None:
+        permissions = validate_role_permissions(role, permissions)
     role.save()
 
     if permissions is not None:
-        role.permissions_set(permissions)
+        set_role_permissions(role, permissions)
 
     return role
 
 
+@transaction.atomic
 def update_role(
     role,
     *,
@@ -133,6 +172,9 @@ def update_role(
     permissions=None,
     deleted=None,
 ):
+    if permissions is not None:
+        permissions = validate_role_permissions(role, permissions)
+
     if name is not None:
         role.name = name
     if description is not None:
@@ -143,21 +185,26 @@ def update_role(
     role.save()
 
     if permissions is not None:
-        role.permissions_set(permissions)
+        set_role_permissions(role, permissions)
 
     return role
 
 
+@transaction.atomic
 def set_role_permissions(role, permissions):
+    permissions = validate_role_permissions(role, permissions)
     role.permissions_set(permissions)
     return role
 
 
+@transaction.atomic
 def add_role_permissions(role, permissions):
+    permissions = validate_role_permissions(role, permissions)
     role.permissions_add(*permissions)
     return role
 
 
+@transaction.atomic
 def remove_role_permissions(role, permissions):
     role.permissions_remove(*permissions)
     return role
@@ -173,19 +220,71 @@ def list_role_users(role):
 
 def get_users_from_ids(user_ids):
     user_ids = user_ids or []
-    return get_user_model().objects.filter(id__in=user_ids)
+    users = get_user_model().objects.filter(id__in=user_ids)
+    found_ids = set(users.values_list("id", flat=True))
+    missing_ids = sorted(set(user_ids) - found_ids)
+    if missing_ids:
+        raise ValidationError({"user_ids": f"Unknown user IDs: {missing_ids}"})
+    return users
 
 
+def get_user_lookup_field():
+    field_name = getattr(settings, "PERMAFROST_API_USER_LOOKUP_FIELD", None)
+    if not field_name:
+        raise ImproperlyConfigured(
+            "PERMAFROST_API_USER_LOOKUP_FIELD must be configured to use "
+            "user identifiers."
+        )
+
+    try:
+        field = get_user_model()._meta.get_field(field_name)
+    except FieldDoesNotExist as exc:
+        raise ImproperlyConfigured(
+            "PERMAFROST_API_USER_LOOKUP_FIELD does not name a user model field."
+        ) from exc
+
+    if not field.concrete or not field.unique:
+        raise ImproperlyConfigured(
+            "PERMAFROST_API_USER_LOOKUP_FIELD must name a concrete unique user "
+            "model field."
+        )
+    return field
+
+
+def get_users_from_identifiers(user_identifiers):
+    user_identifiers = user_identifiers or []
+    field = get_user_lookup_field()
+    users = get_user_model().objects.filter(**{f"{field.name}__in": user_identifiers})
+    found_identifiers = {
+        str(value) for value in users.values_list(field.name, flat=True)
+    }
+    missing_identifiers = sorted(
+        {
+            str(identifier)
+            for identifier in user_identifiers
+            if str(identifier) not in found_identifiers
+        }
+    )
+    if missing_identifiers:
+        raise ValidationError(
+            {"user_identifiers": (f"Unknown user identifiers: {missing_identifiers}")}
+        )
+    return users
+
+
+@transaction.atomic
 def add_role_users(role, users):
     role.users_add(*users)
     return role
 
 
+@transaction.atomic
 def remove_role_users(role, users):
     role.users_remove(*users)
     return role
 
 
+@transaction.atomic
 def delete_role(role, soft=True):
     if soft:
         return update_role(role, deleted=True)

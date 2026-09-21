@@ -24,6 +24,11 @@ def get_context_model():
 def get_context_content_type(context_object=None):
     context_model = get_context_model()
     if context_object is not None:
+        if not isinstance(context_object, context_model):
+            raise ImproperlyConfigured(
+                "Permafrost context objects must be instances of "
+                f"{context_model._meta.label}."
+            )
         context_model = context_object._meta.model
     return ContentType.objects.get_for_model(context_model)
 
@@ -49,6 +54,7 @@ def get_request_context_object(request):
     )
     context_object = getattr(request, request_attr, None)
     if context_object is not None:
+        get_context_content_type(context_object)
         return context_object
 
     if request_attr != "site":

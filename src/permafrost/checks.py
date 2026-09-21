@@ -1,7 +1,9 @@
 from django.conf import settings
 from django.apps import apps
+from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Permission
 from django.core.checks import Error, Warning, register
+from django.core.exceptions import FieldDoesNotExist
 from django.db import OperationalError, ProgrammingError
 
 
@@ -19,6 +21,83 @@ def check_permafrost_settings(app_configs, **kwargs):
                 id="permafrost.E007",
             )
         )
+
+    authentication_backends = getattr(settings, "AUTHENTICATION_BACKENDS", ())
+    if "django.contrib.auth.backends.ModelBackend" in authentication_backends:
+        messages.append(
+            Warning(
+                "Django's ModelBackend grants Group permissions without a Permafrost context.",
+                hint=(
+                    "Use a Permafrost authentication backend and request-aware "
+                    "permission checks for context-scoped roles. Do not configure "
+                    "ModelBackend alongside Permafrost unless its global Group "
+                    "permission behavior is intentional."
+                ),
+                id="permafrost.W002",
+            )
+        )
+
+    page_size = getattr(settings, "PERMAFROST_API_PAGE_SIZE", 50)
+    max_page_size = getattr(settings, "PERMAFROST_API_MAX_PAGE_SIZE", 200)
+    if isinstance(page_size, bool) or not isinstance(page_size, int) or page_size <= 0:
+        messages.append(
+            Error(
+                "PERMAFROST_API_PAGE_SIZE must be a positive integer.",
+                id="permafrost.E011",
+            )
+        )
+    if (
+        isinstance(max_page_size, bool)
+        or not isinstance(max_page_size, int)
+        or max_page_size <= 0
+    ):
+        messages.append(
+            Error(
+                "PERMAFROST_API_MAX_PAGE_SIZE must be a positive integer.",
+                id="permafrost.E012",
+            )
+        )
+    if (
+        isinstance(page_size, int)
+        and not isinstance(page_size, bool)
+        and isinstance(max_page_size, int)
+        and not isinstance(max_page_size, bool)
+        and page_size > max_page_size
+    ):
+        messages.append(
+            Error(
+                "PERMAFROST_API_PAGE_SIZE cannot exceed PERMAFROST_API_MAX_PAGE_SIZE.",
+                id="permafrost.E013",
+            )
+        )
+
+    user_lookup_field = getattr(settings, "PERMAFROST_API_USER_LOOKUP_FIELD", None)
+    if user_lookup_field is not None:
+        if not isinstance(user_lookup_field, str) or not user_lookup_field.strip():
+            messages.append(
+                Error(
+                    "PERMAFROST_API_USER_LOOKUP_FIELD must be a non-empty field name or None.",
+                    id="permafrost.E014",
+                )
+            )
+        else:
+            try:
+                lookup_field = get_user_model()._meta.get_field(user_lookup_field)
+            except FieldDoesNotExist:
+                messages.append(
+                    Error(
+                        "PERMAFROST_API_USER_LOOKUP_FIELD does not name a user model field.",
+                        id="permafrost.E015",
+                    )
+                )
+            else:
+                if not lookup_field.concrete or not lookup_field.unique:
+                    messages.append(
+                        Error(
+                            "PERMAFROST_API_USER_LOOKUP_FIELD must name a concrete unique user model field.",
+                            id="permafrost.E016",
+                        )
+                    )
 
     categories = getattr(settings, "PERMAFROST_CATEGORIES", None)
 
@@ -60,6 +139,14 @@ def check_permafrost_settings(app_configs, **kwargs):
             )
             continue
 
+        if not category_data.get("label"):
+            messages.append(
+                Error(
+                    f"PERMAFROST_CATEGORIES['{category_key}'] must define a label.",
+                    id="permafrost.E009",
+                )
+            )
+
         for permission_type in ("required", "optional"):
             permission_items = category_data.get(permission_type, [])
             if not isinstance(permission_items, (list, tuple)):
@@ -72,12 +159,35 @@ def check_permafrost_settings(app_configs, **kwargs):
                 continue
 
             for permission_item in permission_items:
+                if not isinstance(permission_item, dict):
+                    messages.append(
+                        Error(
+                            f"PERMAFROST_CATEGORIES['{category_key}']['{permission_type}'] contains a permission entry that is not a dictionary.",
+                            id="permafrost.E008",
+                        )
+                    )
+                    continue
+
                 permission_key = permission_item.get("permission")
                 if not permission_key:
                     messages.append(
                         Error(
                             f"PERMAFROST_CATEGORIES['{category_key}'] contains a {permission_type} permission without a permission natural key.",
                             id="permafrost.E005",
+                        )
+                    )
+                    continue
+
+                if (
+                    not isinstance(permission_key, (list, tuple))
+                    or len(permission_key) != 3
+                    or not all(isinstance(value, str) for value in permission_key)
+                ):
+                    messages.append(
+                        Error(
+                            f"Permission {permission_key!r} in PERMAFROST_CATEGORIES['{category_key}']['{permission_type}'] is not a valid natural key.",
+                            hint="Use (codename, app_label, model).",
+                            id="permafrost.E010",
                         )
                     )
                     continue

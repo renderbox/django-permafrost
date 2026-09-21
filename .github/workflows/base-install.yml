@@ -1,0 +1,36 @@
+name: Base Package (No HTTP API)
+
+on:
+  pull_request:
+    branches: ["develop", "master"]
+
+permissions:
+  contents: read
+
+jobs:
+  base-install:
+    name: Wheel without API extras
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v7
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.11"
+
+      - name: Build wheel
+        run: |
+          python -m pip install -U pip
+          python -m pip install build
+          python -m build --wheel
+
+      - name: Install base package only
+        run: python -m pip install dist/*.whl
+
+      - name: Verify base installation
+        run: |
+          python -m pip check
+          python ci/base_install_smoke.py

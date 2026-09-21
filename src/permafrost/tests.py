@@ -1,13 +1,18 @@
+import importlib
+from unittest.mock import patch
 from unittest import skipIf
 from django.forms.models import model_to_dict
 from django.test import TestCase, RequestFactory, override_settings
 from django.contrib.sites.models import Site
 from django.contrib.auth import get_user_model
-from django.core.exceptions import PermissionDenied
-from django.db.utils import IntegrityError
-from django.db import transaction
+from django.core.exceptions import (
+    ImproperlyConfigured,
+    PermissionDenied,
+    ValidationError,
+)
 from django.contrib.auth.models import Group, Permission
 from django.test.client import Client
+from django.test.utils import captured_stderr
 from django.urls.base import resolve, reverse
 from .views import (
     PermafrostRoleCreateView,
@@ -21,8 +26,12 @@ from .forms import (
     SelectPermafrostRoleTypeForm,
 )
 from .api import services
+from .backends import PermafrostModelBackend
+from .permissions import has_all_permissions
+from .checks import check_permafrost_settings
 
 try:
+    from drf_spectacular.validation import validate_schema
     from rest_framework.test import APIClient
 
     SKIP_DRF_TESTS = False
@@ -31,6 +40,7 @@ except ImportError:
 
 from permafrost.models import (
     PermafrostRole,
+    bounded_group_name,
     get_current_site,
     CATEGORIES,
     get_all_perms_for_all_categories,
@@ -167,7 +177,7 @@ class PermafrostRoleModelTest(TestCase):
     # Staff Roles
 
     def test_create_staff_role(self):
-        role = PermafrostRole(name="Bobs Staff Group", category="staff")
+        role = PermafrostRole(name="Created Staff Group", category="staff")
         role.save()
         role.users_add(self.staffuser)  # Add user to the Group
         perms = list(self.staffuser.get_all_permissions())
@@ -177,7 +187,7 @@ class PermafrostRoleModelTest(TestCase):
             ["view_permafrostrole"],
         )  # Make sure the required permission is present in the group
         self.assertEqual(
-            role.group.name, "1_staff_bobs-staff-group"
+            role.group.name, "1_staff_created-staff-group"
         )  # Checks that the user is created
         self.assertListEqual(perms, ["permafrost.view_permafrostrole"])
 
@@ -185,7 +195,7 @@ class PermafrostRoleModelTest(TestCase):
         """
         Test that the optional role can be added
         """
-        role = PermafrostRole(name="Bobs Staff Group", category="staff")
+        role = PermafrostRole(name="Optional Staff Group", category="staff")
         role.save()
         role.permissions_add(self.perm_change_permafrostrole)
         role.users_add(self.staffuser)  # Add user to the Group
@@ -197,7 +207,7 @@ class PermafrostRoleModelTest(TestCase):
             [self.perm_change_permafrostrole, self.perm_view_permafrostrole],
         )  # Check the permissions on the group
         self.assertEqual(
-            role.group.name, "1_staff_bobs-staff-group"
+            role.group.name, "1_staff_optional-staff-group"
         )  # Checks that the user is created
         self.assertListEqual(
             perms,
@@ -208,7 +218,7 @@ class PermafrostRoleModelTest(TestCase):
         """
         Test that a permission that is not optional or required can be added
         """
-        role = PermafrostRole(name="Bobs Staff Group", category="staff")
+        role = PermafrostRole(name="Disallowed Staff Group", category="staff")
         role.save()
         role.permissions_add(self.perm_delete_permafrostrole)
         role.users_add(self.staffuser)
@@ -219,12 +229,12 @@ class PermafrostRoleModelTest(TestCase):
             ["view_permafrostrole"],
         )  # Make sure the required permission is present in the group
         self.assertEqual(
-            role.group.name, "1_staff_bobs-staff-group"
+            role.group.name, "1_staff_disallowed-staff-group"
         )  # Checks that the user is created
         self.assertListEqual(perms, ["permafrost.view_permafrostrole"])
 
     def test_clear_permissions_on_staff_role(self):
-        role = PermafrostRole(name="Bobs Staff Group", category="staff")
+        role = PermafrostRole(name="Cleared Staff Group", category="staff")
         role.save()
         role.permissions_add(self.perm_view_permafrostrole)
         role.permissions_clear()
@@ -236,7 +246,7 @@ class PermafrostRoleModelTest(TestCase):
             ["view_permafrostrole"],
         )  # Make sure the required permission is present in the group
         self.assertEqual(
-            role.group.name, "1_staff_bobs-staff-group"
+            role.group.name, "1_staff_cleared-staff-group"
         )  # Checks that the user is created
         self.assertListEqual(perms, ["permafrost.view_permafrostrole"])
 
@@ -375,19 +385,106 @@ class PermafrostRoleModelTest(TestCase):
         )
         role_c.save()
 
-        with self.assertRaises(IntegrityError):
+        with self.assertRaises(ValidationError):
+            role_b = PermafrostRole(
+                name="Bobs Super Group", site=self.site_2, category="user"
+            )
+            role_b.save()
 
-            with transaction.atomic():
-                role_b = PermafrostRole(
-                    name="Bobs Super Group", site=self.site_2, category="user"
-                )
-                role_b.save()
+        with self.assertRaises(ValidationError):
+            role_d = PermafrostRole(
+                name="Bobs Super Group", site=self.site_2, category="staff"
+            )
+            role_d.save()
 
-            with transaction.atomic():
-                role_d = PermafrostRole(
-                    name="Bobs Super Group", site=self.site_2, category="staff"
-                )
-                role_d.save()
+    def test_normalized_slug_collision_is_rejected_in_same_context(self):
+        role = PermafrostRole(name="Support Team", category="user")
+        role.save()
+        group_count = Group.objects.count()
+
+        with self.assertRaises(ValidationError):
+            PermafrostRole(name="Support-Team", category="user").save()
+
+        self.assertEqual(Group.objects.count(), group_count)
+
+    def test_normalized_slug_is_allowed_in_different_contexts(self):
+        role_a = PermafrostRole(
+            name="Support Team",
+            category="user",
+            site=self.site_1,
+        )
+        role_a.save()
+        role_b = PermafrostRole(
+            name="Support-Team",
+            category="user",
+            site=self.site_2,
+        )
+        role_b.save()
+
+        self.assertEqual(role_a.slug, role_b.slug)
+        self.assertNotEqual(role_a.context_object_id, role_b.context_object_id)
+
+    def test_role_rename_changes_slug_url_and_group_name(self):
+        role = PermafrostRole(name="Original Role", category="user")
+        role.save()
+        original_url = role.get_absolute_url()
+
+        role.name = "Renamed Role"
+        role.save()
+
+        self.assertEqual(role.slug, "renamed-role")
+        self.assertNotEqual(role.get_absolute_url(), original_url)
+        self.assertEqual(role.group.name, "1_user_renamed-role")
+
+    def test_role_rename_collision_does_not_partially_apply(self):
+        PermafrostRole(name="Support Team", category="user").save()
+        role = PermafrostRole(name="Billing Team", category="user")
+        role.save()
+        original_group_name = role.group.name
+
+        role.name = "Support-Team"
+        with self.assertRaises(ValidationError):
+            role.save()
+
+        role.refresh_from_db()
+        role.group.refresh_from_db()
+        self.assertEqual(role.name, "Billing Team")
+        self.assertEqual(role.slug, "billing-team")
+        self.assertEqual(role.group.name, original_group_name)
+
+    def test_role_name_must_produce_nonempty_slug(self):
+        with self.assertRaises(ValidationError):
+            PermafrostRole(name="!!!", category="user").save()
+
+    def test_role_does_not_adopt_unrelated_group_with_generated_name(self):
+        group = Group.objects.create(name="1_user_reserved-role")
+        group.permissions.add(self.perm_add_logentry)
+
+        with self.assertRaises(ValidationError):
+            PermafrostRole(name="Reserved Role", category="user").save()
+
+        group.refresh_from_db()
+        self.assertIn(self.perm_add_logentry, group.permissions.all())
+        self.assertFalse(PermafrostRole.objects.filter(name="Reserved Role").exists())
+
+    def test_group_can_only_belong_to_one_role(self):
+        role = PermafrostRole(name="Owned Group", category="user")
+        role.save()
+
+        with self.assertRaises(ValidationError):
+            PermafrostRole(
+                name="Second Group Owner",
+                category="user",
+                group=role.group,
+            ).save()
+
+    def test_bounded_group_names_are_stable_and_collision_resistant(self):
+        long_name = "context_" + ("x" * 200)
+        bounded_name = bounded_group_name(long_name)
+
+        self.assertEqual(len(bounded_name), Group._meta.get_field("name").max_length)
+        self.assertEqual(bounded_name, bounded_group_name(long_name))
+        self.assertNotEqual(bounded_name, bounded_group_name(long_name + "y"))
 
     def test_role_defaults_to_site_context(self):
         role = PermafrostRole(name="Context Default Role", category="user")
@@ -484,22 +581,40 @@ class PermafrostServiceAPITest(TestCase):
         self.assertIn(role, services.list_roles(context_object=self.site_2))
         self.assertNotIn(role, services.list_roles(context_object=self.site_1))
 
-    def test_set_role_permissions_uses_role_permission_rules(self):
+    def test_role_queries_default_to_current_context(self):
+        current_role = services.create_role(
+            name="Current Context Role",
+            category="user",
+            context_object=self.site_1,
+        )
+        foreign_role = services.create_role(
+            name="Foreign Context Role",
+            category="user",
+            context_object=self.site_2,
+        )
+
+        self.assertIn(current_role, services.list_roles())
+        self.assertNotIn(foreign_role, services.list_roles())
+        with self.assertRaises(PermafrostRole.DoesNotExist):
+            services.get_role(foreign_role.slug)
+
+    def test_set_role_permissions_rejects_disallowed_permissions(self):
         role = services.create_role(
             name="Service Permission Role",
             category="user",
             context_object=self.site_1,
         )
 
-        services.set_role_permissions(
-            role,
-            Permission.objects.filter(
-                id__in=[self.allowed_permission.id, self.disallowed_permission.id]
-            ),
-        )
+        with self.assertRaises(ValidationError):
+            services.set_role_permissions(
+                role,
+                Permission.objects.filter(
+                    id__in=[self.allowed_permission.id, self.disallowed_permission.id]
+                ),
+            )
 
         role_permission_ids = set(role.permissions().values_list("id", flat=True))
-        self.assertIn(self.allowed_permission.id, role_permission_ids)
+        self.assertNotIn(self.allowed_permission.id, role_permission_ids)
         self.assertNotIn(self.disallowed_permission.id, role_permission_ids)
 
     def test_add_and_remove_role_users(self):
@@ -514,6 +629,94 @@ class PermafrostServiceAPITest(TestCase):
 
         services.remove_role_users(role, [self.user])
         self.assertNotIn(self.user, role.user_set())
+
+    def test_unknown_permission_ids_raise_validation_error(self):
+        with self.assertRaises(ValidationError):
+            services.get_permissions_from_ids([999999])
+
+    def test_create_role_does_not_partially_apply_disallowed_permissions(self):
+        with self.assertRaises(ValidationError):
+            services.create_role(
+                name="Invalid Service Role",
+                category="user",
+                context_object=self.site_1,
+                permissions=[self.disallowed_permission],
+            )
+
+        self.assertFalse(
+            PermafrostRole.objects.filter(name="Invalid Service Role").exists()
+        )
+
+    def test_create_role_rolls_back_role_and_group_on_conform_failure(self):
+        group_name = "1_user_rollback-create"
+
+        with patch.object(
+            PermafrostRole,
+            "permissions_set",
+            side_effect=RuntimeError("conform failed"),
+        ):
+            with self.assertRaises(RuntimeError):
+                services.create_role(
+                    name="Rollback Create",
+                    category="user",
+                    context_object=self.site_1,
+                )
+
+        self.assertFalse(PermafrostRole.objects.filter(name="Rollback Create").exists())
+        self.assertFalse(Group.objects.filter(name=group_name).exists())
+
+    def test_update_role_rolls_back_fields_on_conform_failure(self):
+        role = services.create_role(
+            name="Rollback Update",
+            category="user",
+            context_object=self.site_1,
+        )
+
+        with patch.object(
+            role,
+            "permissions_set",
+            side_effect=RuntimeError("conform failed"),
+        ):
+            with self.assertRaises(RuntimeError):
+                services.update_role(role, name="Partially Updated")
+
+        role.refresh_from_db()
+        role.group.refresh_from_db()
+        self.assertEqual(role.name, "Rollback Update")
+        self.assertEqual(role.group.name, "1_user_rollback-update")
+
+    def test_unknown_user_ids_raise_validation_error(self):
+        with self.assertRaises(ValidationError):
+            services.get_users_from_ids([999999])
+
+    @override_settings(PERMAFROST_API_USER_LOOKUP_FIELD="username")
+    def test_users_can_be_resolved_by_configured_unique_identifier(self):
+        users = services.get_users_from_identifiers([self.user.username])
+
+        self.assertEqual(list(users), [self.user])
+
+    @override_settings(PERMAFROST_API_USER_LOOKUP_FIELD="username")
+    def test_unknown_user_identifiers_raise_validation_error(self):
+        with self.assertRaises(ValidationError):
+            services.get_users_from_identifiers(["not-a-user"])
+
+    def test_user_identifier_lookup_requires_configuration(self):
+        with self.assertRaises(ImproperlyConfigured):
+            services.get_users_from_identifiers([self.user.username])
+
+    def test_services_do_not_require_drf_imports(self):
+        def guarded_import(name, *args, **kwargs):
+            if name.startswith(("rest_framework", "drf_spectacular")):
+                raise AssertionError(
+                    "permafrost.api.services imported an optional HTTP API dependency"
+                )
+            return original_import(name, *args, **kwargs)
+
+        original_import = __import__
+        with patch("builtins.__import__", guarded_import):
+            importlib.reload(services)
+
+        importlib.reload(services)
 
 
 # Don't run the following tests if DRF is not loaded
@@ -566,15 +769,162 @@ class PermafrostAPITest(TestCase):
 
     def test_superuser_can_list_permafrost_roles_api(self):
         self.client.force_authenticate(user=self.adminuser)
-        response = self.client.get("/api/permafrost/roles/", format="json")
+        response = self.client.get("/api/permafrost/v1/roles/", format="json")
 
         self.assertEqual(response.status_code, 200)
         self.assertTrue(response.data)
 
+    def test_anonymous_user_can_not_list_permafrost_roles_api(self):
+        response = self.client.get("/api/permafrost/v1/roles/", format="json")
+
+        self.assertEqual(response.status_code, 403)
+
+    def test_api_v1_route_has_versioned_namespace(self):
+        url = reverse("permafrost_api:v1:role-list")
+
+        self.assertEqual(url, "/api/permafrost/v1/roles/")
+        self.assertEqual(resolve(url).view_name, "permafrost_api:v1:role-list")
+
+    def test_unversioned_api_route_is_not_exposed(self):
+        self.client.force_authenticate(user=self.adminuser)
+
+        response = self.client.get("/api/permafrost/roles/", format="json")
+
+        self.assertEqual(response.status_code, 404)
+
+    def test_openapi_schema_is_public_versioned_and_warning_free(self):
+        schema_url = reverse("permafrost_api:v1:schema")
+
+        with captured_stderr() as stderr:
+            response = self.client.get(f"{schema_url}?format=json")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(stderr.getvalue(), "")
+        self.assertEqual(response.data["openapi"], "3.0.3")
+        self.assertEqual(response.data["info"]["version"], "1.0.0")
+        self.assertEqual(
+            response.data["servers"],
+            [
+                {
+                    "url": "/api/permafrost/v1/",
+                    "description": "Permafrost v1 API",
+                }
+            ],
+        )
+        self.assertNotIn("/schema/", response.data["paths"])
+        validate_schema(response.data)
+
+    def test_openapi_schema_describes_custom_actions_and_examples(self):
+        response = self.client.get(f'{reverse("permafrost_api:v1:schema")}?format=json')
+        schema = response.data
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            schema["paths"]["/roles/{slug}/users/"]["delete"]["operationId"],
+            "roles_users_bulk_remove",
+        )
+        self.assertEqual(
+            schema["paths"]["/roles/{slug}/users/{user_id}/"]["delete"]["operationId"],
+            "roles_users_remove",
+        )
+        self.assertIn(
+            "RoleResponse",
+            schema["paths"]["/roles/"]["post"]["responses"]["201"]["content"][
+                "application/json"
+            ]["examples"],
+        )
+        membership_examples = schema["paths"]["/roles/{slug}/users/"]["post"][
+            "requestBody"
+        ]["content"]["application/json"]["examples"]
+        self.assertEqual(
+            set(membership_examples),
+            {"UsersByPrimaryKey", "UsersByConfiguredIdentifier"},
+        )
+        self.assertNotIn(
+            "PaginatedCategoryList",
+            schema["components"]["schemas"],
+        )
+        self.assertNotIn(
+            "PaginatedPermissionList",
+            schema["components"]["schemas"],
+        )
+
+    def test_api_list_only_returns_current_context_roles(self):
+        self.client.force_authenticate(user=self.adminuser)
+        site_1_role = PermafrostRole.objects.create(
+            category="user", name="API Site One Role", site=self.site_1
+        )
+        site_2_role = PermafrostRole.objects.create(
+            category="user", name="API Site Two Role", site=self.site_2
+        )
+
+        response = self.client.get("/api/permafrost/v1/roles/", format="json")
+        returned_slugs = {role["slug"] for role in response.data["results"]}
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(site_1_role.slug, returned_slugs)
+        self.assertNotIn(site_2_role.slug, returned_slugs)
+
+    def test_api_role_list_is_paginated(self):
+        self.client.force_authenticate(user=self.adminuser)
+
+        response = self.client.get(
+            "/api/permafrost/v1/roles/?page_size=2",
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            set(response.data),
+            {"count", "next", "previous", "results"},
+        )
+        self.assertEqual(len(response.data["results"]), 2)
+        self.assertGreaterEqual(response.data["count"], 2)
+
+    def test_api_role_list_supports_search_filters_and_ordering(self):
+        self.client.force_authenticate(user=self.adminuser)
+        matching_role = PermafrostRole.objects.create(
+            category="user",
+            name="Zulu Query Target",
+            site=self.site_1,
+        )
+        PermafrostRole.objects.create(
+            category="staff",
+            name="Alpha Query Target",
+            site=self.site_1,
+        )
+        PermafrostRole.objects.create(
+            category="user",
+            name="Locked Query Target",
+            locked=True,
+            site=self.site_1,
+        )
+
+        response = self.client.get(
+            "/api/permafrost/v1/roles/"
+            "?search=Query+Target&category=user&locked=false&ordering=-name",
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data["count"], 1)
+        self.assertEqual(response.data["results"][0]["slug"], matching_role.slug)
+
+    def test_api_role_list_rejects_invalid_locked_filter(self):
+        self.client.force_authenticate(user=self.adminuser)
+
+        response = self.client.get(
+            "/api/permafrost/v1/roles/?locked=sometimes",
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("locked", response.data)
+
     def test_superuser_can_create_permafrost_role_api(self):
         self.client.force_authenticate(user=self.adminuser)
         response = self.client.post(
-            "/api/permafrost/roles/",
+            "/api/permafrost/v1/roles/",
             data={"name": "API Role", "description": "", "category": "user"},
             format="json",
         )
@@ -585,7 +935,58 @@ class PermafrostAPITest(TestCase):
         role = PermafrostRole.objects.get(slug="api-role")
         self.assertEqual(role.context, Site.objects.get_current())
 
-    def test_api_permission_update_uses_role_permission_rules(self):
+    def test_api_returns_400_for_invalid_category(self):
+        self.client.force_authenticate(user=self.adminuser)
+        response = self.client.post(
+            "/api/permafrost/v1/roles/",
+            data={"name": "Bad API Role", "description": "", "category": "missing"},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("category", response.data)
+
+    def test_api_returns_400_for_normalized_slug_collision(self):
+        self.client.force_authenticate(user=self.adminuser)
+        PermafrostRole.objects.create(
+            category="user",
+            name="API Support Team",
+            site=self.site_1,
+        )
+
+        response = self.client.post(
+            "/api/permafrost/v1/roles/",
+            data={
+                "name": "API-Support-Team",
+                "description": "",
+                "category": "user",
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("name", response.data)
+
+    def test_api_role_category_can_not_be_changed_after_create(self):
+        self.client.force_authenticate(user=self.adminuser)
+        role = PermafrostRole.objects.create(
+            category="user",
+            name="API Immutable Category",
+            site=Site.objects.get_current(),
+        )
+
+        response = self.client.patch(
+            f"/api/permafrost/v1/roles/{role.slug}/",
+            data={"category": "staff"},
+            format="json",
+        )
+
+        role.refresh_from_db()
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(role.category, "user")
+        self.assertIn("category", response.data)
+
+    def test_api_permission_update_rejects_disallowed_permissions(self):
         self.client.force_authenticate(user=self.adminuser)
         role = PermafrostRole.objects.create(
             category="user", name="API Permission Role", site=Site.objects.get_current()
@@ -598,7 +999,7 @@ class PermafrostAPITest(TestCase):
         )
 
         response = self.client.put(
-            f"/api/permafrost/roles/{role.slug}/permissions/",
+            f"/api/permafrost/v1/roles/{role.slug}/permissions/",
             data={
                 "permission_ids": [
                     allowed_permission.id,
@@ -608,10 +1009,28 @@ class PermafrostAPITest(TestCase):
             format="json",
         )
 
-        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("permission_ids", response.data)
         role_permission_ids = set(role.permissions().values_list("id", flat=True))
-        self.assertIn(allowed_permission.id, role_permission_ids)
+        self.assertNotIn(allowed_permission.id, role_permission_ids)
         self.assertNotIn(disallowed_permission.id, role_permission_ids)
+
+    def test_api_permission_update_returns_400_for_unknown_permission_ids(self):
+        self.client.force_authenticate(user=self.adminuser)
+        role = PermafrostRole.objects.create(
+            category="user",
+            name="API Unknown Permission",
+            site=Site.objects.get_current(),
+        )
+
+        response = self.client.put(
+            f"/api/permafrost/v1/roles/{role.slug}/permissions/",
+            data={"permission_ids": [999999]},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("permission_ids", response.data)
 
     def test_api_can_add_and_remove_role_users(self):
         self.client.force_authenticate(user=self.adminuser)
@@ -620,7 +1039,7 @@ class PermafrostAPITest(TestCase):
         )
 
         response = self.client.post(
-            f"/api/permafrost/roles/{role.slug}/users/",
+            f"/api/permafrost/v1/roles/{role.slug}/users/",
             data={"user_ids": [self.user.id]},
             format="json",
         )
@@ -629,12 +1048,294 @@ class PermafrostAPITest(TestCase):
         self.assertIn(self.user, role.user_set())
 
         response = self.client.delete(
-            f"/api/permafrost/roles/{role.slug}/users/{self.user.id}/",
+            f"/api/permafrost/v1/roles/{role.slug}/users/{self.user.id}/",
             format="json",
         )
 
         self.assertEqual(response.status_code, 204)
         self.assertNotIn(self.user, role.user_set())
+
+    def test_api_user_list_supports_pagination_search_and_ordering(self):
+        self.client.force_authenticate(user=self.adminuser)
+        role = PermafrostRole.objects.create(
+            category="user",
+            name="API User Query Role",
+            site=self.site_1,
+        )
+        alpha_user = get_user_model().objects.create_user(
+            username="alpha-member",
+            email="alpha-member@example.com",
+            password="Passw0rd!",
+        )
+        zulu_user = get_user_model().objects.create_user(
+            username="zulu-member",
+            email="zulu-member@example.com",
+            password="Passw0rd!",
+        )
+        role.users_add(alpha_user, zulu_user)
+
+        response = self.client.get(
+            f"/api/permafrost/v1/roles/{role.slug}/users/"
+            "?ordering=-username&page_size=1",
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data["count"], 2)
+        self.assertEqual(len(response.data["results"]), 1)
+        self.assertEqual(response.data["results"][0]["username"], "zulu-member")
+
+        response = self.client.get(
+            f"/api/permafrost/v1/roles/{role.slug}/users/?search=alpha-member",
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data["count"], 1)
+        self.assertEqual(response.data["results"][0]["id"], alpha_user.pk)
+
+    def test_api_user_list_rejects_invalid_ordering(self):
+        self.client.force_authenticate(user=self.adminuser)
+        role = PermafrostRole.objects.create(
+            category="user",
+            name="API Invalid User Ordering",
+            site=self.site_1,
+        )
+
+        response = self.client.get(
+            f"/api/permafrost/v1/roles/{role.slug}/users/?ordering=is_superuser",
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("ordering", response.data)
+
+    def test_api_add_users_returns_400_for_unknown_user_ids(self):
+        self.client.force_authenticate(user=self.adminuser)
+        role = PermafrostRole.objects.create(
+            category="user", name="API Unknown User", site=Site.objects.get_current()
+        )
+
+        response = self.client.post(
+            f"/api/permafrost/v1/roles/{role.slug}/users/",
+            data={"user_ids": [999999]},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("user_ids", response.data)
+
+    @override_settings(PERMAFROST_API_USER_LOOKUP_FIELD="username")
+    def test_api_can_add_and_remove_role_users_by_configured_identifier(self):
+        self.client.force_authenticate(user=self.adminuser)
+        role = PermafrostRole.objects.create(
+            category="user",
+            name="API Identifier User",
+            site=Site.objects.get_current(),
+        )
+
+        response = self.client.post(
+            f"/api/permafrost/v1/roles/{role.slug}/users/",
+            data={"user_identifiers": [self.user.username]},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(self.user, role.user_set())
+
+        response = self.client.delete(
+            f"/api/permafrost/v1/roles/{role.slug}/users/",
+            data={"user_identifiers": [self.user.username]},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 204)
+        self.assertNotIn(self.user, role.user_set())
+
+    def test_api_rejects_user_identifiers_when_lookup_is_not_configured(self):
+        self.client.force_authenticate(user=self.adminuser)
+        role = PermafrostRole.objects.create(
+            category="user",
+            name="API Disabled Identifier",
+            site=Site.objects.get_current(),
+        )
+
+        response = self.client.post(
+            f"/api/permafrost/v1/roles/{role.slug}/users/",
+            data={"user_identifiers": [self.user.username]},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("user_identifiers", response.data)
+
+    @override_settings(PERMAFROST_API_USER_LOOKUP_FIELD="username")
+    def test_api_rejects_mixed_user_ids_and_identifiers(self):
+        self.client.force_authenticate(user=self.adminuser)
+        role = PermafrostRole.objects.create(
+            category="user",
+            name="API Mixed Identifier",
+            site=Site.objects.get_current(),
+        )
+
+        response = self.client.post(
+            f"/api/permafrost/v1/roles/{role.slug}/users/",
+            data={
+                "user_ids": [self.user.pk],
+                "user_identifiers": [self.user.username],
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertNotIn(self.user, role.user_set())
+
+    @override_settings(PERMAFROST_API_USER_LOOKUP_FIELD="username")
+    def test_api_unknown_user_identifier_does_not_partially_add_memberships(self):
+        self.client.force_authenticate(user=self.adminuser)
+        role = PermafrostRole.objects.create(
+            category="user",
+            name="API Unknown Identifier",
+            site=Site.objects.get_current(),
+        )
+
+        response = self.client.post(
+            f"/api/permafrost/v1/roles/{role.slug}/users/",
+            data={
+                "user_identifiers": [self.user.username, "not-a-user"],
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("user_identifiers", response.data)
+        self.assertNotIn(self.user, role.user_set())
+
+    def test_api_bulk_user_removal_requires_membership_permission(self):
+        role = PermafrostRole.objects.create(
+            category="user",
+            name="API Protected Bulk Removal",
+            site=Site.objects.get_current(),
+        )
+        role.users_add(self.staffuser)
+        self.client.force_authenticate(user=self.user)
+
+        response = self.client.delete(
+            f"/api/permafrost/v1/roles/{role.slug}/users/",
+            data={"user_ids": [self.staffuser.pk]},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 403)
+        self.assertIn(self.staffuser, role.user_set())
+
+    def test_api_remove_unknown_user_returns_404(self):
+        self.client.force_authenticate(user=self.adminuser)
+        role = PermafrostRole.objects.create(
+            category="user",
+            name="API Remove Unknown User",
+            site=Site.objects.get_current(),
+        )
+
+        response = self.client.delete(
+            f"/api/permafrost/v1/roles/{role.slug}/users/999999/",
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 404)
+
+    def test_api_delete_soft_deletes_role(self):
+        self.client.force_authenticate(user=self.adminuser)
+        role = PermafrostRole.objects.create(
+            category="user", name="API Soft Delete", site=Site.objects.get_current()
+        )
+
+        response = self.client.delete(
+            f"/api/permafrost/v1/roles/{role.slug}/",
+            format="json",
+        )
+
+        role.refresh_from_db()
+        self.assertEqual(response.status_code, 204)
+        self.assertTrue(role.deleted)
+
+    def test_api_delete_does_not_soft_delete_locked_role(self):
+        self.client.force_authenticate(user=self.adminuser)
+        role = PermafrostRole.objects.create(
+            category="user",
+            name="API Locked Delete",
+            locked=True,
+            site=Site.objects.get_current(),
+        )
+
+        response = self.client.delete(
+            f"/api/permafrost/v1/roles/{role.slug}/",
+            format="json",
+        )
+
+        role.refresh_from_db()
+        self.assertEqual(response.status_code, 204)
+        self.assertFalse(role.deleted)
+
+    def test_api_object_routes_reject_foreign_context_slug(self):
+        self.client.force_authenticate(user=self.adminuser)
+        foreign_role = PermafrostRole.objects.create(
+            category="user",
+            name="Foreign API Role",
+            site=self.site_2,
+        )
+        original_permission_ids = set(
+            foreign_role.permissions().values_list("id", flat=True)
+        )
+
+        requests = [
+            ("get", f"/api/permafrost/v1/roles/{foreign_role.slug}/", None),
+            (
+                "patch",
+                f"/api/permafrost/v1/roles/{foreign_role.slug}/",
+                {"name": "Cross Context Rename"},
+            ),
+            ("delete", f"/api/permafrost/v1/roles/{foreign_role.slug}/", None),
+            (
+                "get",
+                f"/api/permafrost/v1/roles/{foreign_role.slug}/permissions/",
+                None,
+            ),
+            (
+                "put",
+                f"/api/permafrost/v1/roles/{foreign_role.slug}/permissions/",
+                {"permission_ids": []},
+            ),
+            (
+                "get",
+                f"/api/permafrost/v1/roles/{foreign_role.slug}/users/",
+                None,
+            ),
+            (
+                "post",
+                f"/api/permafrost/v1/roles/{foreign_role.slug}/users/",
+                {"user_ids": [self.user.pk]},
+            ),
+            (
+                "delete",
+                f"/api/permafrost/v1/roles/{foreign_role.slug}/users/{self.user.pk}/",
+                None,
+            ),
+        ]
+
+        for method, url, data in requests:
+            with self.subTest(method=method, url=url):
+                response = getattr(self.client, method)(url, data=data, format="json")
+                self.assertEqual(response.status_code, 404)
+
+        foreign_role.refresh_from_db()
+        self.assertEqual(foreign_role.name, "Foreign API Role")
+        self.assertFalse(foreign_role.deleted)
+        self.assertNotIn(self.user, foreign_role.user_set())
+        self.assertEqual(
+            set(foreign_role.permissions().values_list("id", flat=True)),
+            original_permission_ids,
+        )
 
 
 # @tag('admin_tests')
@@ -1168,6 +1869,45 @@ class PermafrostViewTests(TestCase):
         self.assertIn(allowed_permission.id, role_permission_ids)
         self.assertNotIn(disallowed_permission.id, role_permission_ids)
 
+    def test_html_object_routes_do_not_mutate_foreign_context_role(self):
+        foreign_role = PermafrostRole.objects.get(pk=3)
+        original_permission_ids = set(
+            foreign_role.permissions().values_list("id", flat=True)
+        )
+
+        scoped_routes = [
+            ("get", "permafrost:role-detail", None),
+            ("get", "permafrost:role-update", None),
+            ("post", "permafrost:role-update", {"name": "Cross Context Rename"}),
+            ("get", "permafrost:role-delete", None),
+            ("post", "permafrost:role-delete", {}),
+            ("get", "permafrost:custom-role-add-permissions", None),
+        ]
+
+        for method, route_name, data in scoped_routes:
+            with self.subTest(method=method, route_name=route_name):
+                url = reverse(route_name, kwargs={"slug": foreign_role.slug})
+                response = getattr(self.client, method)(url, data=data)
+                self.assertEqual(response.status_code, 404)
+
+        modal_url = reverse(
+            "permafrost:custom-role-add-permissions",
+            kwargs={"slug": foreign_role.slug},
+        )
+        response = self.client.post(
+            modal_url,
+            data={"permissions": [str(self.pf_role.optional_permissions()[0].pk)]},
+        )
+        self.assertEqual(response.status_code, 302)
+
+        foreign_role.refresh_from_db()
+        self.assertEqual(foreign_role.name, "Administrator")
+        self.assertFalse(foreign_role.deleted)
+        self.assertEqual(
+            set(foreign_role.permissions().values_list("id", flat=True)),
+            original_permission_ids,
+        )
+
 
 # @tag('admin_tests')
 class PermafrostFormClassTests(TestCase):
@@ -1233,6 +1973,37 @@ class PermafrostFormClassTests(TestCase):
         self.assertEqual(form["description"].value(), self.pf_role.description)
         self.assertEqual(form["deleted"].value(), self.pf_role.deleted)
 
+    def test_create_form_rejects_normalized_slug_collision(self):
+        form = PermafrostRoleCreateForm(
+            data={
+                "name": "Councilor!",
+                "description": "",
+                "category": "staff",
+                "permissions": [],
+            }
+        )
+
+        self.assertFalse(form.is_valid())
+        self.assertIn("name", form.errors)
+
+    def test_update_form_rejects_normalized_slug_collision(self):
+        other_role = PermafrostRole.objects.create(
+            name="Billing Team",
+            category="staff",
+        )
+        form = PermafrostRoleUpdateForm(
+            data={
+                "name": "Councilor!",
+                "description": other_role.description or "",
+                "category": other_role.category,
+                "permissions": [],
+            },
+            instance=other_role,
+        )
+
+        self.assertFalse(form.is_valid())
+        self.assertIn("name", form.errors)
+
 
 class PermafrostSiteMixinTests(TestCase):
 
@@ -1287,3 +2058,333 @@ class PermafrostSiteMixinTests(TestCase):
         response = PermafrostRoleListView.as_view()(request)
 
         self.assertEqual(response.status_code, 200)
+
+
+class PermafrostBackendTests(TestCase):
+
+    fixtures = ["unit_test"]
+
+    def setUp(self):
+        self.factory = RequestFactory()
+        self.user = get_user_model().objects.create_user(
+            username="context-user",
+            email="context-user@example.com",
+            password="top_secret",
+        )
+        self.site_1 = Site.objects.get(pk=1)
+        self.site_2 = Site.objects.get(pk=2)
+        self.permission_name = "permafrost.view_permafrostrole"
+        self.site_1_role = PermafrostRole.objects.get(pk=4)
+        self.site_1_role.users_add(self.user)
+
+    def test_backend_permission_cache_does_not_leak_between_contexts(self):
+        backend = PermafrostModelBackend()
+
+        with override_settings(SITE_ID=self.site_1.pk):
+            Site.objects.clear_cache()
+            self.assertTrue(backend.has_perm(self.user, self.permission_name))
+
+        with override_settings(SITE_ID=self.site_2.pk):
+            Site.objects.clear_cache()
+            self.assertFalse(backend.has_perm(self.user, self.permission_name))
+
+    def test_backend_accepts_explicit_context_without_cache_leakage(self):
+        backend = PermafrostModelBackend()
+
+        self.assertIn(
+            self.permission_name,
+            backend.get_all_permissions(self.user, context=self.site_1),
+        )
+        self.assertNotIn(
+            self.permission_name,
+            backend.get_all_permissions(self.user, context=self.site_2),
+        )
+
+    def test_request_aware_permission_check_uses_request_context(self):
+        request = self.factory.get("/")
+        request.user = self.user
+        request.site = self.site_1
+
+        self.assertTrue(has_all_permissions(request, [self.permission_name]))
+
+        request.site = self.site_2
+        self.assertFalse(has_all_permissions(request, [self.permission_name]))
+
+
+class PermafrostSystemCheckTests(TestCase):
+
+    fixtures = ["unit_test"]
+
+    @override_settings(
+        AUTHENTICATION_BACKENDS=["django.contrib.auth.backends.ModelBackend"]
+    )
+    def test_global_model_backend_emits_context_scope_warning(self):
+        message_ids = {
+            message.id for message in check_permafrost_settings(app_configs=None)
+        }
+
+        self.assertIn("permafrost.W002", message_ids)
+
+    @override_settings(
+        AUTHENTICATION_BACKENDS=["permafrost.backends.PermafrostModelBackend"]
+    )
+    def test_permafrost_backend_does_not_emit_context_scope_warning(self):
+        message_ids = {
+            message.id for message in check_permafrost_settings(app_configs=None)
+        }
+
+        self.assertNotIn("permafrost.W002", message_ids)
+
+    @override_settings(
+        PERMAFROST_CATEGORIES={
+            "broken": {
+                "label": "Broken",
+                "required": ["not-a-dictionary"],
+                "optional": [],
+            }
+        }
+    )
+    def test_non_dictionary_permission_entry_is_reported(self):
+        message_ids = {
+            message.id for message in check_permafrost_settings(app_configs=None)
+        }
+
+        self.assertIn("permafrost.E008", message_ids)
+
+    @override_settings(
+        PERMAFROST_CATEGORIES={
+            "broken": {
+                "required": [],
+                "optional": [],
+            }
+        }
+    )
+    def test_missing_category_label_is_reported(self):
+        message_ids = {
+            message.id for message in check_permafrost_settings(app_configs=None)
+        }
+
+        self.assertIn("permafrost.E009", message_ids)
+
+    @override_settings(
+        PERMAFROST_CATEGORIES={
+            "broken": {
+                "label": "Broken",
+                "required": [
+                    {"label": "Broken permission", "permission": ("too", "short")}
+                ],
+                "optional": [],
+            }
+        }
+    )
+    def test_malformed_permission_natural_key_is_reported(self):
+        message_ids = {
+            message.id for message in check_permafrost_settings(app_configs=None)
+        }
+
+        self.assertIn("permafrost.E010", message_ids)
+
+    @override_settings(
+        PERMAFROST_API_PAGE_SIZE=100,
+        PERMAFROST_API_MAX_PAGE_SIZE=50,
+    )
+    def test_invalid_api_page_size_settings_are_reported(self):
+        message_ids = {
+            message.id for message in check_permafrost_settings(app_configs=None)
+        }
+
+        self.assertIn("permafrost.E013", message_ids)
+
+    @override_settings(PERMAFROST_API_USER_LOOKUP_FIELD="missing_field")
+    def test_unknown_api_user_lookup_field_is_reported(self):
+        message_ids = {
+            message.id for message in check_permafrost_settings(app_configs=None)
+        }
+
+        self.assertIn("permafrost.E015", message_ids)
+
+    @override_settings(PERMAFROST_API_USER_LOOKUP_FIELD="email")
+    def test_non_unique_api_user_lookup_field_is_reported(self):
+        message_ids = {
+            message.id for message in check_permafrost_settings(app_configs=None)
+        }
+
+        self.assertIn("permafrost.E016", message_ids)
+
+
+@override_settings(
+    PERMAFROST_CONTEXT_MODEL="example.Team",
+    PERMAFROST_CONTEXT_REQUEST_ATTR="team",
+)
+class PermafrostTeamContextTests(TestCase):
+
+    fixtures = ["unit_test"]
+
+    def setUp(self):
+        from example.models import Team, TeamResource
+
+        self.Team = Team
+        self.TeamResource = TeamResource
+        self.factory = RequestFactory()
+        self.team_a = Team.objects.create(name="Team A", slug="team-a")
+        self.team_b = Team.objects.create(name="Team B", slug="team-b")
+        self.user = get_user_model().objects.create_user(
+            username="team-user",
+            email="team-user@example.com",
+            password="top_secret",
+        )
+        self.superuser = get_user_model().objects.create_superuser(
+            username="team-superuser",
+            email="team-superuser@example.com",
+            password="top_secret",
+        )
+        self.permission_name = "permafrost.view_permafrostrole"
+        self.team_a_role = services.create_role(
+            name="Team A Staff",
+            category="staff",
+            context_object=self.team_a,
+        )
+        self.team_b_role = services.create_role(
+            name="Team B Staff",
+            category="staff",
+            context_object=self.team_b,
+        )
+        services.add_role_users(self.team_a_role, [self.user])
+
+    def request_for(self, team, user=None):
+        request = self.factory.get("/permafrost/")
+        request.user = user or self.user
+        request.team = team
+        return request
+
+    def test_team_roles_do_not_require_placeholder_site(self):
+        self.assertIsNone(self.team_a_role.site_id)
+        self.assertEqual(self.team_a_role.context, self.team_a)
+        self.assertEqual(self.team_b_role.context, self.team_b)
+
+    def test_role_form_creates_team_role_without_placeholder_site(self):
+        form = PermafrostRoleCreateForm(
+            data={
+                "name": "Team Form Role",
+                "description": "",
+                "category": "staff",
+                "permissions": [],
+            },
+            context_object=self.team_a,
+        )
+
+        self.assertTrue(form.is_valid(), form.errors)
+        role = form.save()
+        self.assertEqual(role.context, self.team_a)
+        self.assertIsNone(role.site_id)
+
+    def test_request_permission_is_limited_to_active_team(self):
+        self.assertTrue(
+            has_all_permissions(
+                self.request_for(self.team_a),
+                [self.permission_name],
+            )
+        )
+        self.assertFalse(
+            has_all_permissions(
+                self.request_for(self.team_b),
+                [self.permission_name],
+            )
+        )
+
+    def test_html_view_permission_and_queryset_are_limited_to_active_team(self):
+        response = PermafrostRoleListView.as_view()(self.request_for(self.team_a))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(self.team_a_role, response.context_data["object_list"])
+        self.assertNotIn(self.team_b_role, response.context_data["object_list"])
+
+        with self.assertRaises(PermissionDenied):
+            PermafrostRoleListView.as_view()(self.request_for(self.team_b))
+
+    @skipIf(SKIP_DRF_TESTS, "Django Rest Framework not installed, skipping tests")
+    def test_http_api_permission_and_queryset_are_limited_to_active_team(self):
+        from rest_framework.test import APIRequestFactory, force_authenticate
+
+        from .api.views import PermafrostRoleViewSet
+
+        view = PermafrostRoleViewSet.as_view({"get": "list"})
+        request = APIRequestFactory().get("/api/permafrost/v1/roles/")
+        request.team = self.team_a
+        force_authenticate(request, user=self.user)
+
+        response = view(request)
+        returned_slugs = {role["slug"] for role in response.data["results"]}
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(self.team_a_role.slug, returned_slugs)
+        self.assertNotIn(self.team_b_role.slug, returned_slugs)
+
+        request = APIRequestFactory().get("/api/permafrost/v1/roles/")
+        request.team = self.team_b
+        force_authenticate(request, user=self.user)
+        response = view(request)
+        self.assertEqual(response.status_code, 403)
+
+    def test_service_default_context_uses_team_manager(self):
+        with override_settings(CURRENT_TEAM_ID=self.team_a.pk):
+            roles = services.list_roles()
+
+        self.assertIn(self.team_a_role, roles)
+        self.assertNotIn(self.team_b_role, roles)
+
+    def test_business_objects_must_be_filtered_by_request_team(self):
+        resource_a = self.TeamResource.objects.create(
+            team=self.team_a,
+            name="Team A Resource",
+        )
+        resource_b = self.TeamResource.objects.create(
+            team=self.team_b,
+            name="Team B Resource",
+        )
+        request = self.request_for(self.team_a)
+        resources = self.TeamResource.objects.filter(team=request.team)
+
+        self.assertIn(resource_a, resources)
+        self.assertNotIn(resource_b, resources)
+
+    def test_wrong_context_model_is_rejected(self):
+        request = self.request_for(Site.objects.get(pk=1))
+
+        with self.assertRaises(ImproperlyConfigured):
+            has_all_permissions(request, [self.permission_name])
+
+        with self.assertRaises(ImproperlyConfigured):
+            services.create_role(
+                name="Wrong Context",
+                category="staff",
+                context_object=Site.objects.get(pk=1),
+            )
+
+    def test_deleting_team_deletes_its_roles_and_groups_only(self):
+        team_a_role_id = self.team_a_role.pk
+        team_a_group_id = self.team_a_role.group_id
+        team_b_role_id = self.team_b_role.pk
+
+        self.team_a.delete()
+
+        self.assertFalse(PermafrostRole.objects.filter(pk=team_a_role_id).exists())
+        self.assertFalse(Group.objects.filter(pk=team_a_group_id).exists())
+        self.assertTrue(PermafrostRole.objects.filter(pk=team_b_role_id).exists())
+
+    def test_superuser_has_all_permissions_in_every_team(self):
+        team_a_request = self.request_for(self.team_a, user=self.superuser)
+        team_b_request = self.request_for(self.team_b, user=self.superuser)
+
+        self.assertTrue(has_all_permissions(team_a_request, [self.permission_name]))
+        self.assertTrue(has_all_permissions(team_b_request, [self.permission_name]))
+
+        backend = PermafrostModelBackend()
+        self.assertIn(
+            self.permission_name,
+            backend.get_all_permissions(self.superuser, context=self.team_a),
+        )
+        self.assertIn(
+            self.permission_name,
+            backend.get_all_permissions(self.superuser, context=self.team_b),
+        )

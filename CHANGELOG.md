@@ -1,16 +1,46 @@
 # Changelog
 
-## Unreleased
+## 0.5.0 - Unreleased
 
 ### Changed
 
 - Clarified package author/contributor metadata and project README attribution.
+- Made the legacy `PermafrostRole.site` relationship nullable so custom context models do not require placeholder Site records.
+- Updated Django admin role lists to display the configured context object instead of assuming Site.
+- Enforced exclusive one-to-one ownership between each Permafrost role and its Django Group.
+- Kept role slugs tied to role names while enforcing slug uniqueness within each context.
+- Bounded generated Group names to Django's field limit with deterministic hash suffixes for long names.
+- Defined the optional HTTP API dependency contract as Django REST Framework 3.16 through 3.18 and drf-spectacular 0.30.x.
 
 ### Added
 
 - Added a DRF-independent Python service API under `permafrost.api.services`.
 - Added optional Django REST Framework serializers, views, permissions, and URLs under `permafrost.api`.
 - Added a `django-permafrost[api]` optional dependency extra for HTTP API users.
+- Added API hardening tests for optional DRF behavior, context scoping, invalid payloads, soft deletion, and role membership changes.
+- Added a real Team context example and end-to-end Team A/Team B isolation tests for services, HTML views, the HTTP API, business objects, context deletion, and superusers.
+- Added a system-check warning for Django's global `ModelBackend` and a complete Team-context setup guide.
+- Added page-number pagination, search, exact filters, and controlled ordering for HTTP API role and membership collections.
+- Added configurable `PERMAFROST_API_PAGE_SIZE` and `PERMAFROST_API_MAX_PAGE_SIZE` settings with system checks.
+- Added opt-in membership lookup by a configured unique custom-user field, with bulk add/remove support and system checks.
+- Added an explicit `/v1/` HTTP API boundary and documented compatibility and deprecation policies.
+- Added a public OpenAPI 3.0 schema with typed operations, stable operation IDs, and request/response examples.
+- Added CI coverage that installs the base wheel without HTTP API extras and exercises checks, migrations, and service operations.
+- Added HTTP API compatibility jobs covering representative Django 5.2, 6.0, and 6.1 combinations across the supported DRF range.
+
+### Fixed
+
+- API payloads now return validation errors for unknown permission IDs or user IDs instead of silently ignoring them.
+- API role updates now keep `category` immutable after creation.
+- Prevented Django's user-wide permission caches from carrying Permafrost group permissions between tenant contexts.
+- Scoped service API role queries to the configured current context when callers do not pass a request or context explicitly.
+- Service and HTTP API permission updates now reject permissions outside the role category instead of silently dropping them.
+- Made role/group lifecycle and service-layer mutations transactional to prevent partially saved roles, groups, permissions, or memberships.
+- Reject context objects that do not match `PERMAFROST_CONTEXT_MODEL`.
+- Delete context-scoped roles and their Groups when the configured context object is deleted.
+- Reject role names that normalize to an existing context slug or an empty slug.
+- Prevent new roles from adopting unrelated existing Django Groups with matching generated names.
+- Report malformed category labels, permission entries, and permission natural keys through Django system checks instead of raising unexpected exceptions.
 
 ## 0.4.0
 
