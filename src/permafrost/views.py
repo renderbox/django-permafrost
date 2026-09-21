@@ -12,7 +12,13 @@ from django.shortcuts import redirect, render
 from django.urls import reverse_lazy
 from django.utils.translation import gettext_lazy as _
 from django.utils.translation import ngettext
-from django.views.generic import DeleteView, DetailView, ListView, UpdateView
+from django.views.generic import (
+    DeleteView,
+    DetailView,
+    ListView,
+    TemplateView,
+    UpdateView,
+)
 from django.views.generic.edit import CreateView
 
 from .api import services
@@ -20,9 +26,11 @@ from .context import get_context_filter, get_request_context_object
 from .forms import (
     PermafrostRoleCreateForm,
     PermafrostRoleUpdateForm,
+    PermissionRoleLookupForm,
     RoleMembershipAddForm,
     RoleMembershipRemoveForm,
     SelectPermafrostRoleTypeForm,
+    UserRoleLookupForm,
 )
 from .models import (
     PERMAFROST_EXCLUDED_ROLES,
@@ -478,8 +486,60 @@ class PermafrostRoleUsersView(
         return self.render_to_response(context)
 
 
-# Future Views
+class PermafrostRoleLookupView(PermafrostSiteMixin, TemplateView):
+    template_name = "permafrost/permafrostrole_lookups.html"
+    permission_required = ["permafrost.view_permafrostrole"]
 
-# TODO: User Roles on a given Site
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        lookup_kind = self.request.GET.get("lookup")
+        user_form = UserRoleLookupForm(
+            self.request.GET if lookup_kind == "user" else None
+        )
+        permission_form = PermissionRoleLookupForm(
+            self.request.GET if lookup_kind == "permission" else None
+        )
+        roles = None
+        result_label = None
 
-# TODO: Roles with a given permission
+        if lookup_kind == "user" and user_form.is_valid():
+            user = user_form.user
+            roles = services.list_user_roles(user, request=self.request)
+            result_label = _("Roles for %(user)s") % {"user": user.get_username()}
+        elif lookup_kind == "permission" and permission_form.is_valid():
+            permission = permission_form.cleaned_data["permission"]
+            roles = services.list_permission_roles(permission, request=self.request)
+            result_label = _("Roles granting %(permission)s") % {
+                "permission": permission.name
+            }
+
+        context.update(
+            {
+                "lookup_kind": lookup_kind,
+                "user_lookup_form": user_form,
+                "permission_lookup_form": permission_form,
+                "result_label": result_label,
+                "lookup_submitted": lookup_kind in {"user", "permission"},
+            }
+        )
+
+        lookup_query = self.request.GET.copy()
+        lookup_query.pop("page", None)
+        context["lookup_query"] = lookup_query.urlencode()
+
+        if roles is not None:
+            paginator = Paginator(
+                roles.order_by("category", "name", "pk"),
+                getattr(settings, "PERMAFROST_UI_PAGE_SIZE", 50),
+            )
+            page_obj = paginator.get_page(self.request.GET.get("page"))
+            context.update(
+                {
+                    "role_list": page_obj.object_list,
+                    "page_obj": page_obj,
+                    "paginator": paginator,
+                    "is_paginated": page_obj.has_other_pages(),
+                }
+            )
+
+        return context

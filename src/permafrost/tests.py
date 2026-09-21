@@ -22,14 +22,17 @@ from .checks import check_permafrost_settings
 from .forms import (
     PermafrostRoleCreateForm,
     PermafrostRoleUpdateForm,
+    PermissionRoleLookupForm,
     RoleMembershipAddForm,
     RoleMembershipRemoveForm,
     SelectPermafrostRoleTypeForm,
+    UserRoleLookupForm,
 )
 from .permissions import has_all_permissions
 from .views import (
     PermafrostRoleCreateView,
     PermafrostRoleListView,
+    PermafrostRoleLookupView,
     PermafrostRoleManageView,
     PermafrostRoleUpdateView,
     PermafrostRoleUsersView,
@@ -634,6 +637,50 @@ class PermafrostServiceAPITest(TestCase):
 
         services.remove_role_users(role, [self.user])
         self.assertNotIn(self.user, role.user_set())
+
+    def test_list_user_roles_is_scoped_to_context(self):
+        current_role = services.create_role(
+            name="Current User Lookup Role",
+            category="user",
+            context_object=self.site_1,
+        )
+        foreign_role = services.create_role(
+            name="Foreign User Lookup Role",
+            category="user",
+            context_object=self.site_2,
+        )
+        current_role.users_add(self.user)
+        foreign_role.users_add(self.user)
+
+        roles = services.list_user_roles(self.user, context_object=self.site_1)
+
+        self.assertIn(current_role, roles)
+        self.assertNotIn(foreign_role, roles)
+
+    def test_list_permission_roles_is_scoped_to_context(self):
+        current_role = services.create_role(
+            name="Current Permission Lookup Role",
+            category="staff",
+            context_object=self.site_1,
+        )
+        foreign_role = services.create_role(
+            name="Foreign Permission Lookup Role",
+            category="staff",
+            context_object=self.site_2,
+        )
+
+        roles = services.list_permission_roles(
+            self.allowed_permission, context_object=self.site_1
+        )
+
+        self.assertIn(current_role, roles)
+        self.assertNotIn(foreign_role, roles)
+
+    def test_exposed_permission_lookup_excludes_unconfigured_permissions(self):
+        permissions = services.list_exposed_permissions()
+
+        self.assertIn(self.allowed_permission, permissions)
+        self.assertNotIn(self.disallowed_permission, permissions)
 
     def test_unknown_permission_ids_raise_validation_error(self):
         with self.assertRaises(ValidationError):
@@ -1372,6 +1419,121 @@ class PermafrostViewTests(TestCase):
         found = resolve(f"/permafrost/role/{self.pf_role.slug}/users/")
         self.assertEqual(found.view_name, "permafrost:role-users")
         self.assertEqual(found.func.view_class, PermafrostRoleUsersView)
+
+    def test_role_lookups_url_resolves(self):
+        found = resolve("/permafrost/lookups/")
+        self.assertEqual(found.view_name, "permafrost:role-lookups")
+        self.assertEqual(found.func.view_class, PermafrostRoleLookupView)
+
+    def test_role_lookups_page_renders_both_forms(self):
+        response = self.client.get(reverse("permafrost:role-lookups"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "permafrost/permafrostrole_lookups.html")
+        self.assertIsInstance(response.context["user_lookup_form"], UserRoleLookupForm)
+        self.assertIsInstance(
+            response.context["permission_lookup_form"], PermissionRoleLookupForm
+        )
+
+    @override_settings(PERMAFROST_API_USER_LOOKUP_FIELD="username")
+    def test_user_role_lookup_returns_only_current_context_roles(self):
+        user = get_user_model().objects.create_user(
+            username="reverse-lookup-user", password="Passw0rd!"
+        )
+        self.pf_role.users_add(user)
+        foreign_role = PermafrostRole.objects.create(
+            category="staff",
+            name="Foreign Reverse User Role",
+            site=Site.objects.get(pk=2),
+        )
+        foreign_role.users_add(user)
+
+        response = self.client.get(
+            reverse("permafrost:role-lookups"),
+            {"lookup": "user", "identifier": user.username},
+        )
+
+        self.assertContains(response, self.pf_role.name)
+        self.assertNotContains(response, foreign_role.name)
+
+    def test_user_role_lookup_uses_primary_key_by_default(self):
+        user = get_user_model().objects.create_user(
+            username="reverse-primary-key-user", password="Passw0rd!"
+        )
+        self.pf_role.users_add(user)
+
+        response = self.client.get(
+            reverse("permafrost:role-lookups"),
+            {"lookup": "user", "identifier": str(user.pk)},
+        )
+
+        self.assertContains(response, self.pf_role.name)
+
+    @override_settings(PERMAFROST_API_USER_LOOKUP_FIELD="username")
+    def test_user_role_lookup_reports_unknown_identifier(self):
+        response = self.client.get(
+            reverse("permafrost:role-lookups"),
+            {"lookup": "user", "identifier": "missing-reverse-user"},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Unknown user identifiers")
+        self.assertContains(response, "Correct the lookup errors above.")
+
+    def test_permission_role_lookup_returns_only_current_context_roles(self):
+        permission = Permission.objects.get_by_natural_key(
+            "view_permafrostrole", "permafrost", "permafrostrole"
+        )
+        foreign_role = PermafrostRole.objects.create(
+            category="staff",
+            name="Foreign Reverse Permission Role",
+            site=Site.objects.get(pk=2),
+        )
+
+        response = self.client.get(
+            reverse("permafrost:role-lookups"),
+            {"lookup": "permission", "permission": str(permission.pk)},
+        )
+
+        self.assertContains(response, self.pf_role.name)
+        self.assertNotContains(response, foreign_role.name)
+
+    def test_permission_role_lookup_excludes_unconfigured_permissions(self):
+        disallowed_permission = Permission.objects.get_by_natural_key(
+            "add_logentry", "admin", "logentry"
+        )
+
+        response = self.client.get(reverse("permafrost:role-lookups"))
+        permission_queryset = (
+            response.context["permission_lookup_form"].fields["permission"].queryset
+        )
+
+        self.assertNotIn(disallowed_permission, permission_queryset)
+
+    @override_settings(
+        PERMAFROST_API_USER_LOOKUP_FIELD="username",
+        PERMAFROST_UI_PAGE_SIZE=1,
+    )
+    def test_user_role_lookup_results_are_paginated(self):
+        user = get_user_model().objects.create_user(
+            username="paginated-reverse-user", password="Passw0rd!"
+        )
+        self.pf_role.users_add(user)
+        second_role = PermafrostRole.objects.create(
+            category="staff",
+            name="Second Paginated Reverse Role",
+            site=Site.objects.get_current(),
+        )
+        second_role.users_add(user)
+
+        response = self.client.get(
+            reverse("permafrost:role-lookups"),
+            {"lookup": "user", "identifier": user.username},
+        )
+
+        self.assertTrue(response.context["is_paginated"])
+        self.assertEqual(response.context["paginator"].per_page, 1)
+        self.assertContains(response, "Page 1 of 2")
 
     def test_role_users_page_lists_current_members(self):
         member = get_user_model().objects.create_user(

@@ -8,8 +8,14 @@ from django.contrib.sites.models import Site
 from django.core.exceptions import ValidationError
 from django.forms import Form, ModelForm
 from django.forms.fields import BooleanField, CharField, ChoiceField
-from django.forms.models import ModelMultipleChoiceField
-from django.forms.widgets import CheckboxInput, CheckboxSelectMultiple, Textarea
+from django.forms.models import ModelChoiceField, ModelMultipleChoiceField
+from django.forms.widgets import (
+    CheckboxInput,
+    CheckboxSelectMultiple,
+    Select,
+    Textarea,
+    TextInput,
+)
 from django.utils.text import slugify
 from django.utils.translation import gettext_lazy as _
 
@@ -240,3 +246,50 @@ class RoleMembershipRemoveForm(Form):
     def __init__(self, *args, role, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields["users"].queryset = services.list_role_users(role)
+
+
+class UserRoleLookupForm(Form):
+    identifier = CharField(
+        label=_("User ID"),
+        widget=TextInput(attrs={"class": "form-control"}),
+    )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.lookup_field_name = getattr(
+            settings, "PERMAFROST_API_USER_LOOKUP_FIELD", None
+        )
+        if self.lookup_field_name:
+            lookup_field = services.get_user_lookup_field()
+            self.fields["identifier"].label = _("User %(field)s") % {
+                "field": lookup_field.verbose_name
+            }
+
+    def clean_identifier(self):
+        identifier = self.cleaned_data["identifier"].strip()
+        try:
+            if self.lookup_field_name:
+                users = services.get_users_from_identifiers([identifier])
+            else:
+                try:
+                    user_id = int(identifier)
+                except ValueError as exc:
+                    raise ValidationError(_("Enter a numeric user ID.")) from exc
+                users = services.get_users_from_ids([user_id])
+        except ValidationError as exc:
+            raise ValidationError(exc.messages) from exc
+
+        self.user = users.get()
+        return identifier
+
+
+class PermissionRoleLookupForm(Form):
+    permission = ModelChoiceField(
+        label=_("Permission"),
+        queryset=Permission.objects.none(),
+        widget=Select(attrs={"class": "form-control"}),
+    )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["permission"].queryset = services.list_exposed_permissions()

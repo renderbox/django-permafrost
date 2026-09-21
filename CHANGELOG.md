@@ -6,6 +6,7 @@
 
 - Added a context-scoped role-membership page with member search, configurable pagination, exact-identifier additions, and bulk removal.
 - Added `PERMAFROST_UI_PAGE_SIZE` for controlling the built-in membership list size.
+- Added context-scoped user-to-role and configured-permission-to-role lookup services and a read-only built-in lookup page.
 
 ## 0.5.0 - 2026-09-21
 

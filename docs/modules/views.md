@@ -93,6 +93,30 @@ page lists only existing members and does not expose a global user directory.
 Applications remain responsible for deciding which known user identifiers may
 be assigned to a context-scoped role.
 
+## Reverse Role Lookups
+
+The read-only lookup workflow is available at `lookups/` within the included
+URL namespace. It answers two context-scoped questions:
+
+- Which Permafrost roles does this exact user hold?
+- Which Permafrost roles grant this configured permission?
+
+The user lookup uses `PERMAFROST_API_USER_LOOKUP_FIELD` when configured and
+falls back to a numeric user primary key. It does not provide a global user
+list or partial-name search. The permission lookup offers only permissions
+declared by the developer in `PERMAFROST_CATEGORIES`.
+
+Both result sets exclude deleted and configured excluded roles, are limited to
+the current request context, use `PERMAFROST_UI_PAGE_SIZE`, and require
+`permafrost.view_permafrostrole`. The same behavior is available without the
+built-in templates through:
+
+```python
+services.list_user_roles(user, context_object=team)
+services.list_permission_roles(permission, context_object=team)
+services.list_exposed_permissions()
+```
+
 ## Permission Editing
 
 The role management views only expose permissions declared in `PERMAFROST_CATEGORIES`.

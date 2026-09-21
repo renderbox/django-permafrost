@@ -7,6 +7,7 @@ app_name = "permafrost"
 urlpatterns = [
     path("", views.PermafrostRoleListView.as_view(), name="role-list"),
     path("manage/", views.PermafrostRoleManageView.as_view(), name="roles-manage"),
+    path("lookups/", views.PermafrostRoleLookupView.as_view(), name="role-lookups"),
     path("role/create/", views.PermafrostRoleCreateView.as_view(), name="role-create"),
     path(
         "role/<slug:slug>/",

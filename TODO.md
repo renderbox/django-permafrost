@@ -16,7 +16,7 @@ Last reviewed: 2026-09-21 on `develop` at `68535f6`.
 - Remote development baseline: `GitHub/develop` at `68535f6` after the release bookkeeping pass
 - Remote release baseline: `GitHub/master` at `7740d4f` after pull request #104
 - Latest permission hardening commit: `b5328eb`, merged into `master` through pull request #104
-- Local test baseline: 142 passing tests on Python 3.14
+- Local test baseline: 153 passing tests on Python 3.14
 - Base-install baseline: isolated wheel passes without DRF or drf-spectacular
 - HTTP API baseline: DRF 3.16 through 3.18 tested against representative Django 5.2 through 6.1 combinations
 - Package baseline: wheel and source distribution build successfully and pass `twine check`
@@ -84,7 +84,7 @@ Completion criteria: the HTTP API has a documented stability contract and is ind
 ## P2 - Built-In UI And Admin
 
 - [x] Finish role-user list and bulk membership workflows, with pagination for large tenants.
-- [ ] Add user-to-role and permission-to-role lookup workflows if they remain in package scope.
+- [x] Add context-scoped user-to-role and configured-permission-to-role lookup workflows.
 - [ ] Replace the remaining template TODOs for role search/filtering and long-list behavior with implemented features or remove them from scope.
 - [ ] Review the bundled templates against current Django accessibility and form-rendering practices.
 - [ ] Decide whether Bootstrap-specific form mutation remains part of the reusable package or moves to example/project code.
