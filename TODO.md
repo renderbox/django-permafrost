@@ -7,13 +7,13 @@ This is the running source of truth for planned django-permafrost work.
 - Keep release notes in `CHANGELOG.md`; this file tracks work before and after releases.
 - Review priorities when opening a release branch or beginning a new feature.
 
-Last reviewed: 2026-09-19 on `new/openapi-schema`, based on `develop` at `2084491`.
+Last reviewed: 2026-09-21 on `develop` at `4dca14e`.
 
 ## Current Release State
 
 - Published PyPI release: `0.4.1`
 - In-development release: `0.5.0`, introducing the service and optional DRF APIs
-- Remote development baseline: `GitHub/develop` at `2084491` after pull request #102
+- Remote development baseline: `GitHub/develop` at `4dca14e` after pull request #103
 - Latest permission hardening commit: `b5328eb`, merged into `develop`
 - Local test baseline: 131 passing tests on Python 3.14
 - Base-install baseline: isolated wheel passes without DRF or drf-spectacular
@@ -102,9 +102,9 @@ Completion criteria: local and CI commands are documented, deterministic, and en
 
 ## P3 - Documentation And Release Operations
 
-- [ ] Add a complete custom-context tutorial with middleware and an Organization/Team model.
-- [ ] Add upgrade documentation from `0.4.x` to `0.5.x`, including schema and settings decisions.
-- [ ] Document authentication-backend setup and the boundary between global Django permissions and context-scoped Permafrost permissions.
+- [x] Add a complete custom-context tutorial with middleware and an Organization/Team model.
+- [x] Add upgrade documentation from `0.4.x` to `0.5.x`, including schema and settings decisions.
+- [x] Document authentication-backend setup and the boundary between global Django permissions and context-scoped Permafrost permissions.
 - [ ] Add API error-response and authorization examples.
 - [ ] Decide on a documentation builder and publishing target, then validate docs in CI.
 - [ ] Add a release checklist covering version consistency, changelog finalization, full matrix results, PyPI trusted publishing, Sigstore output, and GitHub Release verification.
