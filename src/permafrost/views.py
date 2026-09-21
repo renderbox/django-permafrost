@@ -1,33 +1,37 @@
 import logging
-from django.urls import reverse_lazy
-from django.contrib.auth.models import Permission
+
+from django.conf import settings
+from django.contrib import messages
+from django.contrib.auth import get_user_model
 from django.contrib.auth.mixins import PermissionRequiredMixin
-from django.shortcuts import render, redirect
-from django.views.generic import (
-    ListView,
-    DetailView,
-    UpdateView,
-    DeleteView,
-)
+from django.contrib.auth.models import Permission
 from django.core.exceptions import ImproperlyConfigured
+from django.core.paginator import Paginator
 from django.db.models import Q
+from django.shortcuts import redirect, render
+from django.urls import reverse_lazy
+from django.utils.translation import gettext_lazy as _
+from django.utils.translation import ngettext
+from django.views.generic import DeleteView, DetailView, ListView, UpdateView
 from django.views.generic.edit import CreateView
 
-from .models import (
-    PermafrostRole,
-    PERMAFROST_EXCLUDED_ROLES,
-    get_optional_by_category,
-    get_required_by_category,
-    get_all_perms_for_all_categories,
-)
-
+from .api import services
+from .context import get_context_filter, get_request_context_object
 from .forms import (
     PermafrostRoleCreateForm,
     PermafrostRoleUpdateForm,
+    RoleMembershipAddForm,
+    RoleMembershipRemoveForm,
     SelectPermafrostRoleTypeForm,
 )
+from .models import (
+    PERMAFROST_EXCLUDED_ROLES,
+    PermafrostRole,
+    get_all_perms_for_all_categories,
+    get_optional_by_category,
+    get_required_by_category,
+)
 from .permissions import has_all_permissions
-from .context import get_context_filter, get_request_context_object
 
 # --------------
 # UTILITIES
@@ -379,9 +383,102 @@ class PermafrostCustomRoleModalView(
         return None
 
 
-# Future Views
+class PermafrostRoleUsersView(
+    PermafrostSiteMixin, FilterByRequestSiteQuerysetMixin, DetailView
+):
+    model = PermafrostRole
+    template_name = "permafrost/permafrostrole_users.html"
+    permission_required = ["permafrost.view_permafrostrole"]
+    permission_required_post = ["permafrost.add_user_to_role"]
 
-# TODO: Role User List (For easier pagination) & bulk editing
+    def get_queryset(self):
+        return super().get_queryset().exclude(name__in=PERMAFROST_EXCLUDED_ROLES)
+
+    def get_members(self):
+        users = services.list_role_users(self.object)
+        user_model = get_user_model()
+        username_field = user_model.USERNAME_FIELD
+        field_names = {field.name for field in user_model._meta.get_fields()}
+        search = self.request.GET.get("q", "").strip()
+
+        if search:
+            search_query = Q(**{f"{username_field}__icontains": search})
+            if "email" in field_names:
+                search_query |= Q(email__icontains=search)
+            users = users.filter(search_query)
+
+        return users.order_by(username_field, "pk")
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        paginator = Paginator(
+            self.get_members(), getattr(settings, "PERMAFROST_UI_PAGE_SIZE", 50)
+        )
+        page_obj = paginator.get_page(self.request.GET.get("page"))
+        context.update(
+            {
+                "member_list": page_obj.object_list,
+                "page_obj": page_obj,
+                "paginator": paginator,
+                "is_paginated": page_obj.has_other_pages(),
+                "query": self.request.GET.get("q", "").strip(),
+                "can_manage_members": has_all_permissions(
+                    self.request, ["permafrost.add_user_to_role"]
+                ),
+            }
+        )
+        context.setdefault("add_form", RoleMembershipAddForm())
+        context.setdefault("remove_form", RoleMembershipRemoveForm(role=self.object))
+        return context
+
+    def post(self, request, *args, **kwargs):
+        self.object = self.get_object()
+        action = request.POST.get("action")
+        add_form = RoleMembershipAddForm()
+        remove_form = RoleMembershipRemoveForm(role=self.object)
+
+        if action == "add":
+            add_form = RoleMembershipAddForm(request.POST)
+            if add_form.is_valid():
+                users = add_form.users
+                services.add_role_users(self.object, users)
+                messages.success(
+                    request,
+                    ngettext(
+                        "Added %(count)d user to this role.",
+                        "Added %(count)d users to this role.",
+                        len(users),
+                    )
+                    % {"count": len(users)},
+                )
+                return redirect("permafrost:role-users", slug=self.object.slug)
+        elif action == "remove":
+            remove_form = RoleMembershipRemoveForm(request.POST, role=self.object)
+            if remove_form.is_valid():
+                users = list(remove_form.cleaned_data["users"])
+                services.remove_role_users(self.object, users)
+                messages.success(
+                    request,
+                    ngettext(
+                        "Removed %(count)d user from this role.",
+                        "Removed %(count)d users from this role.",
+                        len(users),
+                    )
+                    % {"count": len(users)},
+                )
+                return redirect("permafrost:role-users", slug=self.object.slug)
+        else:
+            add_form.add_error(None, _("Choose a membership action."))
+
+        context = self.get_context_data(
+            object=self.object,
+            add_form=add_form,
+            remove_form=remove_form,
+        )
+        return self.render_to_response(context)
+
+
+# Future Views
 
 # TODO: User Roles on a given Site
 

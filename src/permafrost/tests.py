@@ -1,34 +1,39 @@
 import importlib
-from unittest.mock import patch
 from unittest import skipIf
-from django.forms.models import model_to_dict
-from django.test import TestCase, RequestFactory, override_settings
-from django.contrib.sites.models import Site
+from unittest.mock import patch
+
 from django.contrib.auth import get_user_model
+from django.contrib.auth.models import Group, Permission
+from django.contrib.sites.models import Site
 from django.core.exceptions import (
     ImproperlyConfigured,
     PermissionDenied,
     ValidationError,
 )
-from django.contrib.auth.models import Group, Permission
+from django.forms.models import model_to_dict
+from django.test import RequestFactory, TestCase, override_settings
 from django.test.client import Client
 from django.test.utils import captured_stderr
 from django.urls.base import resolve, reverse
-from .views import (
-    PermafrostRoleCreateView,
-    PermafrostRoleManageView,
-    PermafrostRoleUpdateView,
-    PermafrostRoleListView,
-)
+
+from .api import services
+from .backends import PermafrostModelBackend
+from .checks import check_permafrost_settings
 from .forms import (
     PermafrostRoleCreateForm,
     PermafrostRoleUpdateForm,
+    RoleMembershipAddForm,
+    RoleMembershipRemoveForm,
     SelectPermafrostRoleTypeForm,
 )
-from .api import services
-from .backends import PermafrostModelBackend
 from .permissions import has_all_permissions
-from .checks import check_permafrost_settings
+from .views import (
+    PermafrostRoleCreateView,
+    PermafrostRoleListView,
+    PermafrostRoleManageView,
+    PermafrostRoleUpdateView,
+    PermafrostRoleUsersView,
+)
 
 try:
     from drf_spectacular.validation import validate_schema
@@ -39,12 +44,12 @@ except ImportError:
     SKIP_DRF_TESTS = True
 
 from permafrost.models import (
+    CATEGORIES,
+    PERMAFROST_EXCLUDED_ROLES,
     PermafrostRole,
     bounded_group_name,
-    get_current_site,
-    CATEGORIES,
     get_all_perms_for_all_categories,
-    PERMAFROST_EXCLUDED_ROLES,
+    get_current_site,
 )
 
 
@@ -1363,6 +1368,172 @@ class PermafrostViewTests(TestCase):
         self.assertEqual(found.view_name, "permafrost:roles-manage")
         self.assertEqual(found.func.view_class, PermafrostRoleManageView)
 
+    def test_role_users_url_resolves(self):
+        found = resolve(f"/permafrost/role/{self.pf_role.slug}/users/")
+        self.assertEqual(found.view_name, "permafrost:role-users")
+        self.assertEqual(found.func.view_class, PermafrostRoleUsersView)
+
+    def test_role_users_page_lists_current_members(self):
+        member = get_user_model().objects.create_user(
+            username="membership-list-user",
+            email="membership-list@example.com",
+            password="Passw0rd!",
+        )
+        self.pf_role.users_add(member)
+
+        response = self.client.get(
+            reverse("permafrost:role-users", kwargs={"slug": self.pf_role.slug})
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "permafrost/permafrostrole_users.html")
+        self.assertContains(response, member.get_username())
+        self.assertContains(response, member.email)
+        self.assertIsInstance(response.context["add_form"], RoleMembershipAddForm)
+        self.assertIsInstance(response.context["remove_form"], RoleMembershipRemoveForm)
+
+    @override_settings(PERMAFROST_UI_PAGE_SIZE=1)
+    def test_role_users_page_supports_search_and_pagination(self):
+        alpha = get_user_model().objects.create_user(
+            username="alpha-membership-user", password="Passw0rd!"
+        )
+        zulu = get_user_model().objects.create_user(
+            username="zulu-membership-user", password="Passw0rd!"
+        )
+        self.pf_role.users_add(alpha, zulu)
+        url = reverse("permafrost:role-users", kwargs={"slug": self.pf_role.slug})
+
+        first_page = self.client.get(url)
+        self.assertTrue(first_page.context["is_paginated"])
+        self.assertEqual(first_page.context["paginator"].per_page, 1)
+        self.assertContains(first_page, alpha.get_username())
+        self.assertNotContains(first_page, zulu.get_username())
+
+        search_response = self.client.get(url, {"q": "zulu-membership"})
+        self.assertContains(search_response, zulu.get_username())
+        self.assertNotContains(search_response, alpha.get_username())
+
+    @override_settings(PERMAFROST_API_USER_LOOKUP_FIELD="username")
+    def test_role_users_page_adds_members_by_configured_identifier(self):
+        user = get_user_model().objects.create_user(
+            username="membership-add-user", password="Passw0rd!"
+        )
+        url = reverse("permafrost:role-users", kwargs={"slug": self.pf_role.slug})
+
+        response = self.client.post(
+            url,
+            {"action": "add", "identifiers": user.username},
+            follow=True,
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(user, self.pf_role.user_set())
+        self.assertContains(response, "Added 1 user to this role.")
+
+    def test_role_users_page_adds_members_by_primary_key_by_default(self):
+        user = get_user_model().objects.create_user(
+            username="membership-id-user", password="Passw0rd!"
+        )
+        url = reverse("permafrost:role-users", kwargs={"slug": self.pf_role.slug})
+
+        self.client.post(url, {"action": "add", "identifiers": str(user.pk)})
+
+        self.assertIn(user, self.pf_role.user_set())
+
+    def test_role_users_page_rejects_nonnumeric_primary_keys(self):
+        url = reverse("permafrost:role-users", kwargs={"slug": self.pf_role.slug})
+
+        response = self.client.post(
+            url, {"action": "add", "identifiers": "not-a-primary-key"}
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Enter numeric user IDs.")
+
+    def test_role_users_page_bulk_removes_current_members(self):
+        first_user = get_user_model().objects.create_user(
+            username="membership-remove-one", password="Passw0rd!"
+        )
+        second_user = get_user_model().objects.create_user(
+            username="membership-remove-two", password="Passw0rd!"
+        )
+        self.pf_role.users_add(first_user, second_user)
+        url = reverse("permafrost:role-users", kwargs={"slug": self.pf_role.slug})
+
+        response = self.client.post(
+            url,
+            {
+                "action": "remove",
+                "users": [str(first_user.pk), str(second_user.pk)],
+            },
+            follow=True,
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertNotIn(first_user, self.pf_role.user_set())
+        self.assertNotIn(second_user, self.pf_role.user_set())
+        self.assertContains(response, "Removed 2 users from this role.")
+
+    def test_role_users_page_requires_membership_permission_for_changes(self):
+        operator = get_user_model().objects.create_user(
+            username="membership-view-only", password="Passw0rd!"
+        )
+        candidate = get_user_model().objects.create_user(
+            username="membership-candidate", password="Passw0rd!"
+        )
+        self.pf_role.users_add(operator)
+        self.client.force_login(operator)
+        url = reverse("permafrost:role-users", kwargs={"slug": self.pf_role.slug})
+
+        get_response = self.client.get(url)
+        post_response = self.client.post(
+            url, {"action": "add", "identifiers": str(candidate.pk)}
+        )
+
+        self.assertEqual(get_response.status_code, 200)
+        self.assertNotContains(get_response, 'name="action" value="add"')
+        self.assertNotContains(get_response, 'name="action" value="remove"')
+        self.assertEqual(post_response.status_code, 403)
+        self.assertNotIn(candidate, self.pf_role.user_set())
+
+    @override_settings(PERMAFROST_API_USER_LOOKUP_FIELD="username")
+    def test_role_users_page_rejects_unknown_identifiers_without_partial_add(self):
+        user = get_user_model().objects.create_user(
+            username="known-membership-user", password="Passw0rd!"
+        )
+        url = reverse("permafrost:role-users", kwargs={"slug": self.pf_role.slug})
+
+        response = self.client.post(
+            url,
+            {
+                "action": "add",
+                "identifiers": f"{user.username}, missing-membership-user",
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Unknown user identifiers")
+        self.assertNotIn(user, self.pf_role.user_set())
+
+    def test_role_users_page_does_not_expose_roles_from_another_context(self):
+        foreign_role = PermafrostRole.objects.create(
+            category="staff",
+            name="Foreign Membership Role",
+            site=Site.objects.get(pk=2),
+        )
+        url = reverse("permafrost:role-users", kwargs={"slug": foreign_role.slug})
+
+        with override_settings(SITE_ID=1):
+            Site.objects.clear_cache()
+            response = self.client.get(url)
+            post_response = self.client.post(
+                url, {"action": "add", "identifiers": str(self.super_user.pk)}
+            )
+
+        self.assertEqual(response.status_code, 404)
+        self.assertEqual(post_response.status_code, 404)
+        self.assertNotIn(self.super_user, foreign_role.user_set())
+
     def test_permaforst_manage_single_role_object_in_context(self):
         uri = reverse("permafrost:roles-manage")
         response = self.client.get(uri)
@@ -2194,6 +2365,14 @@ class PermafrostSystemCheckTests(TestCase):
         }
 
         self.assertIn("permafrost.E013", message_ids)
+
+    @override_settings(PERMAFROST_UI_PAGE_SIZE=0)
+    def test_invalid_ui_page_size_setting_is_reported(self):
+        message_ids = {
+            message.id for message in check_permafrost_settings(app_configs=None)
+        }
+
+        self.assertIn("permafrost.E017", message_ids)
 
     @override_settings(PERMAFROST_API_USER_LOOKUP_FIELD="missing_field")
     def test_unknown_api_user_lookup_field_is_reported(self):

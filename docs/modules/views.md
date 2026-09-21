@@ -62,6 +62,37 @@ urlpatterns = [
 
 The included namespace is `permafrost`.
 
+## Role Membership
+
+The built-in membership workflow is available at
+`role/<slug>/users/` within the included URL namespace. It provides:
+
+- a paginated, searchable list of current role members
+- bulk addition by exact user identifier or primary key
+- bulk removal of selected current members
+
+`GET` requires `permafrost.view_permafrostrole`. Membership changes also
+require `permafrost.add_user_to_role`. The role queryset is scoped to the
+configured request context, so a role slug from another Team, Organization,
+or Site is not available through this view.
+
+Set the number of displayed members per page with:
+
+```python
+PERMAFROST_UI_PAGE_SIZE = 50
+```
+
+The value must be a positive integer. When
+`PERMAFROST_API_USER_LOOKUP_FIELD` names a configured unique user field, the
+add form accepts exact values for that field. Otherwise it accepts numeric
+user primary keys. Multiple values may be separated by commas or line breaks;
+the complete submission is rejected if any value is unknown.
+
+Permafrost cannot infer which users belong to a host project's tenant. The
+page lists only existing members and does not expose a global user directory.
+Applications remain responsible for deciding which known user identifiers may
+be assigned to a context-scoped role.
+
 ## Permission Editing
 
 The role management views only expose permissions declared in `PERMAFROST_CATEGORIES`.

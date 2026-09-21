@@ -19,6 +19,11 @@ urlpatterns = [
         name="role-update",
     ),
     path(
+        "role/<slug:slug>/users/",
+        views.PermafrostRoleUsersView.as_view(),
+        name="role-users",
+    ),
+    path(
         "role/<slug:slug>/delete/",
         views.PermafrostRoleDeleteView.as_view(),
         name="role-delete",

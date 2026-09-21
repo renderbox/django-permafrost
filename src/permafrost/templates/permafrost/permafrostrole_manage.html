@@ -66,7 +66,10 @@
         {% if object %}
         <div class="d-flex mb-3">
             <h2>{{ object.name }}</h2>
-            <a class="ml-auto text-success" href="{{ object.get_update_url }}" alt="{% trans 'Edit Role' %}">
+            <a class="ml-auto mr-3 text-success" href="{% url 'permafrost:role-users' slug=object.slug %}">
+                {% trans 'Manage users' %}
+            </a>
+            <a class="text-success" href="{{ object.get_update_url }}" aria-label="{% trans 'Edit Role' %}">
                 <i class="fas fa-pen" aria-label="{% trans 'Edit Role' %}"></i>
             </a>
         </div>

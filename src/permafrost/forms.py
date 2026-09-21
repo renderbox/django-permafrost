@@ -1,16 +1,21 @@
 # Permafrost Forms
-# from django.conf import settings
+import re
+
+from django.conf import settings
+from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Permission
 from django.contrib.sites.models import Site
 from django.core.exceptions import ValidationError
-from django.forms import ModelForm
-from django.forms.fields import CharField, ChoiceField, BooleanField
+from django.forms import Form, ModelForm
+from django.forms.fields import BooleanField, CharField, ChoiceField
 from django.forms.models import ModelMultipleChoiceField
-from django.forms.widgets import CheckboxInput
-from django.utils.translation import gettext_lazy as _
+from django.forms.widgets import CheckboxInput, CheckboxSelectMultiple, Textarea
 from django.utils.text import slugify
+from django.utils.translation import gettext_lazy as _
+
+from .api import services
 from .context import get_default_context_object
-from .models import PermafrostRole, get_optional_by_category, get_choices
+from .models import PermafrostRole, get_choices, get_optional_by_category
 
 CHOICES = [("", _("Choose Role Type"))] + get_choices()
 
@@ -176,3 +181,62 @@ class PermafrostRoleUpdateForm(PermafrostRoleCreateForm):
             self.instance.deleted = self.cleaned_data["deleted"]
         instance = super().save(commit)
         return instance
+
+
+class RoleMembershipAddForm(Form):
+    identifiers = CharField(
+        label=_("User IDs"),
+        help_text=_("Enter one value per line or separate values with commas."),
+        widget=Textarea(attrs={"class": "form-control", "rows": 3}),
+    )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.lookup_field_name = getattr(
+            settings, "PERMAFROST_API_USER_LOOKUP_FIELD", None
+        )
+        if self.lookup_field_name:
+            lookup_field = services.get_user_lookup_field()
+            self.fields["identifiers"].label = _("User %(field)s values") % {
+                "field": lookup_field.verbose_name
+            }
+
+    def clean_identifiers(self):
+        raw_value = self.cleaned_data["identifiers"]
+        identifiers = list(
+            dict.fromkeys(
+                value.strip()
+                for value in re.split(r"[,\r\n]+", raw_value)
+                if value.strip()
+            )
+        )
+        if not identifiers:
+            raise ValidationError(_("Enter at least one user identifier."))
+
+        try:
+            if self.lookup_field_name:
+                users = services.get_users_from_identifiers(identifiers)
+            else:
+                try:
+                    user_ids = [int(identifier) for identifier in identifiers]
+                except ValueError as exc:
+                    raise ValidationError(_("Enter numeric user IDs.")) from exc
+                users = services.get_users_from_ids(user_ids)
+        except ValidationError as exc:
+            raise ValidationError(exc.messages) from exc
+
+        self.users = list(users)
+        return identifiers
+
+
+class RoleMembershipRemoveForm(Form):
+    users = ModelMultipleChoiceField(
+        queryset=get_user_model().objects.none(),
+        required=True,
+        widget=CheckboxSelectMultiple,
+        error_messages={"required": _("Select at least one role member.")},
+    )
+
+    def __init__(self, *args, role, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["users"].queryset = services.list_role_users(role)
