@@ -12,6 +12,7 @@ from django.core.exceptions import (
 )
 from django.contrib.auth.models import Group, Permission
 from django.test.client import Client
+from django.test.utils import captured_stderr
 from django.urls.base import resolve, reverse
 from .views import (
     PermafrostRoleCreateView,
@@ -30,6 +31,7 @@ from .permissions import has_all_permissions
 from .checks import check_permafrost_settings
 
 try:
+    from drf_spectacular.validation import validate_schema
     from rest_framework.test import APIClient
 
     SKIP_DRF_TESTS = False
@@ -704,8 +706,10 @@ class PermafrostServiceAPITest(TestCase):
 
     def test_services_do_not_require_drf_imports(self):
         def guarded_import(name, *args, **kwargs):
-            if name.startswith("rest_framework"):
-                raise AssertionError("permafrost.api.services imported DRF")
+            if name.startswith(("rest_framework", "drf_spectacular")):
+                raise AssertionError(
+                    "permafrost.api.services imported an optional HTTP API dependency"
+                )
             return original_import(name, *args, **kwargs)
 
         original_import = __import__
@@ -787,6 +791,63 @@ class PermafrostAPITest(TestCase):
         response = self.client.get("/api/permafrost/roles/", format="json")
 
         self.assertEqual(response.status_code, 404)
+
+    def test_openapi_schema_is_public_versioned_and_warning_free(self):
+        schema_url = reverse("permafrost_api:v1:schema")
+
+        with captured_stderr() as stderr:
+            response = self.client.get(f"{schema_url}?format=json")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(stderr.getvalue(), "")
+        self.assertEqual(response.data["openapi"], "3.0.3")
+        self.assertEqual(response.data["info"]["version"], "1.0.0")
+        self.assertEqual(
+            response.data["servers"],
+            [
+                {
+                    "url": "/api/permafrost/v1/",
+                    "description": "Permafrost v1 API",
+                }
+            ],
+        )
+        self.assertNotIn("/schema/", response.data["paths"])
+        validate_schema(response.data)
+
+    def test_openapi_schema_describes_custom_actions_and_examples(self):
+        response = self.client.get(f'{reverse("permafrost_api:v1:schema")}?format=json')
+        schema = response.data
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            schema["paths"]["/roles/{slug}/users/"]["delete"]["operationId"],
+            "roles_users_bulk_remove",
+        )
+        self.assertEqual(
+            schema["paths"]["/roles/{slug}/users/{user_id}/"]["delete"]["operationId"],
+            "roles_users_remove",
+        )
+        self.assertIn(
+            "RoleResponse",
+            schema["paths"]["/roles/"]["post"]["responses"]["201"]["content"][
+                "application/json"
+            ]["examples"],
+        )
+        membership_examples = schema["paths"]["/roles/{slug}/users/"]["post"][
+            "requestBody"
+        ]["content"]["application/json"]["examples"]
+        self.assertEqual(
+            set(membership_examples),
+            {"UsersByPrimaryKey", "UsersByConfiguredIdentifier"},
+        )
+        self.assertNotIn(
+            "PaginatedCategoryList",
+            schema["components"]["schemas"],
+        )
+        self.assertNotIn(
+            "PaginatedPermissionList",
+            schema["components"]["schemas"],
+        )
 
     def test_api_list_only_returns_current_context_roles(self):
         self.client.force_authenticate(user=self.adminuser)

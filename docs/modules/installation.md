@@ -29,6 +29,11 @@ To use the optional Django REST Framework HTTP API:
 python -m pip install "django-permafrost[api]"
 ```
 
+The HTTP extra supports Django REST Framework 3.16 through 3.18 and
+drf-spectacular 0.30.x. See the [API documentation](api.md) for the tested
+Django, Python, and DRF compatibility pairs. Neither dependency is required
+for the base package or Python service API.
+
 The project no longer uses a root `requirements.txt`. Runtime dependencies live in `pyproject.toml`, and optional groups are used for development, tests, and docs.
 
 ## Django Apps
