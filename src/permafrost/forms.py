@@ -1,16 +1,24 @@
 # Permafrost Forms
-# from django.conf import settings
+import re
+
+from django.conf import settings
+from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Permission
 from django.contrib.sites.models import Site
 from django.core.exceptions import ValidationError
-from django.forms import ModelForm
-from django.forms.fields import CharField, ChoiceField, BooleanField
-from django.forms.models import ModelMultipleChoiceField
-from django.forms.widgets import CheckboxInput
-from django.utils.translation import gettext_lazy as _
+from django.forms import Form, ModelForm
+from django.forms.fields import BooleanField, CharField, ChoiceField
+from django.forms.models import ModelChoiceField, ModelMultipleChoiceField
+from django.forms.widgets import (
+    CheckboxSelectMultiple,
+    Textarea,
+)
 from django.utils.text import slugify
+from django.utils.translation import gettext_lazy as _
+
+from .api import services
 from .context import get_default_context_object
-from .models import PermafrostRole, get_optional_by_category, get_choices
+from .models import PermafrostRole, get_choices, get_optional_by_category
 
 CHOICES = [("", _("Choose Role Type"))] + get_choices()
 
@@ -43,16 +51,6 @@ def assemble_optiongroups_for_widget(permissions):
     return choices
 
 
-def bootstrappify(fields):
-    for field in fields:
-        widget = fields[field].widget
-        if not isinstance(widget, CheckboxInput):
-            if "class" in widget.attrs:
-                widget.attrs["class"] = widget.attrs["class"] + " form-control"
-            else:
-                widget.attrs.update({"class": "form-control"})
-
-
 class SelectPermafrostRoleTypeForm(ModelForm):
     name = CharField(required=False)
     description = CharField(required=False)
@@ -66,10 +64,6 @@ class SelectPermafrostRoleTypeForm(ModelForm):
             "category",
         )
         labels = LABELS
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        bootstrappify(self.fields)
 
 
 class PermafrostRoleCreateForm(ModelForm):
@@ -103,8 +97,6 @@ class PermafrostRoleCreateForm(ModelForm):
             ids = [perm.pk for perm in all_optional_permissions]
 
             self.fields["permissions"].queryset = Permission.objects.filter(id__in=ids)
-
-        bootstrappify(self.fields)
 
     def save(self, commit=True):
         self.instance.set_context(self.context_object)
@@ -166,6 +158,9 @@ class PermafrostRoleUpdateForm(PermafrostRoleCreateForm):
         self.fields["category"].initial = self.instance.category
         ## limit choices to saved category
         self.fields["deleted"].initial = self.instance.deleted
+        if self.instance.is_default_role():
+            self.fields["name"].disabled = True
+            self.fields["description"].disabled = True
 
     def save(self, commit=True):
         if (
@@ -176,3 +171,114 @@ class PermafrostRoleUpdateForm(PermafrostRoleCreateForm):
             self.instance.deleted = self.cleaned_data["deleted"]
         instance = super().save(commit)
         return instance
+
+
+class RoleMembershipAddForm(Form):
+    identifiers = CharField(
+        label=_("User IDs"),
+        help_text=_("Enter one value per line or separate values with commas."),
+        widget=Textarea(attrs={"rows": 3}),
+    )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.lookup_field_name = getattr(
+            settings, "PERMAFROST_API_USER_LOOKUP_FIELD", None
+        )
+        if self.lookup_field_name:
+            lookup_field = services.get_user_lookup_field()
+            self.fields["identifiers"].label = _("User %(field)s values") % {
+                "field": lookup_field.verbose_name
+            }
+
+    def clean_identifiers(self):
+        raw_value = self.cleaned_data["identifiers"]
+        identifiers = list(
+            dict.fromkeys(
+                value.strip()
+                for value in re.split(r"[,\r\n]+", raw_value)
+                if value.strip()
+            )
+        )
+        if not identifiers:
+            raise ValidationError(_("Enter at least one user identifier."))
+
+        try:
+            if self.lookup_field_name:
+                users = services.get_users_from_identifiers(identifiers)
+            else:
+                try:
+                    user_ids = [int(identifier) for identifier in identifiers]
+                except ValueError as exc:
+                    raise ValidationError(_("Enter numeric user IDs.")) from exc
+                users = services.get_users_from_ids(user_ids)
+        except ValidationError as exc:
+            raise ValidationError(exc.messages) from exc
+
+        self.users = list(users)
+        return identifiers
+
+
+class RoleMembershipRemoveForm(Form):
+    users = ModelMultipleChoiceField(
+        queryset=get_user_model().objects.none(),
+        required=True,
+        widget=CheckboxSelectMultiple,
+        error_messages={"required": _("Select at least one role member.")},
+    )
+
+    def __init__(self, *args, role, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["users"].queryset = services.list_role_users(role)
+
+
+class UserRoleLookupForm(Form):
+    identifier = CharField(label=_("User ID"))
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.lookup_field_name = getattr(
+            settings, "PERMAFROST_API_USER_LOOKUP_FIELD", None
+        )
+        if self.lookup_field_name:
+            lookup_field = services.get_user_lookup_field()
+            self.fields["identifier"].label = _("User %(field)s") % {
+                "field": lookup_field.verbose_name
+            }
+
+    def clean_identifier(self):
+        identifier = self.cleaned_data["identifier"].strip()
+        try:
+            if self.lookup_field_name:
+                users = services.get_users_from_identifiers([identifier])
+            else:
+                try:
+                    user_id = int(identifier)
+                except ValueError as exc:
+                    raise ValidationError(_("Enter a numeric user ID.")) from exc
+                users = services.get_users_from_ids([user_id])
+        except ValidationError as exc:
+            raise ValidationError(exc.messages) from exc
+
+        self.user = users.get()
+        return identifier
+
+
+class PermissionRoleLookupForm(Form):
+    permission = ModelChoiceField(
+        label=_("Permission"),
+        queryset=Permission.objects.none(),
+    )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["permission"].queryset = services.list_exposed_permissions()
+
+
+class RoleListFilterForm(Form):
+    q = CharField(label=_("Search roles"), required=False)
+    category = ChoiceField(label=_("Role type"), required=False)
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["category"].choices = [("", _("All role types"))] + get_choices()

@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+
+{% block title %}Login{% endblock %}
+
+{% block content %}
+<main aria-labelledby="login-heading">
+  <h1 id="login-heading">Login</h1>
+  {% if form.errors %}
+  <p role="alert">Your username and password did not match. Please try again.</p>
+  {% endif %}
+  <form method="post">
+    {% csrf_token %}
+    <input type="hidden" name="next" value="{{ next }}">
+    <div class="form-group">
+      {{ form.username.label_tag }}
+      {{ form.username }}
+      {{ form.username.errors }}
+    </div>
+    <div class="form-group">
+      {{ form.password.label_tag }}
+      {{ form.password }}
+      {{ form.password.errors }}
+    </div>
+    <button class="btn btn-primary" type="submit">Login</button>
+  </form>
+</main>
+{% endblock %}

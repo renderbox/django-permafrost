@@ -1,33 +1,46 @@
 import logging
-from django.urls import reverse_lazy
-from django.contrib.auth.models import Permission
+
+from django.conf import settings
+from django.contrib import messages
+from django.contrib.auth import get_user_model
 from django.contrib.auth.mixins import PermissionRequiredMixin
-from django.shortcuts import render, redirect
-from django.views.generic import (
-    ListView,
-    DetailView,
-    UpdateView,
-    DeleteView,
-)
+from django.contrib.auth.models import Permission
 from django.core.exceptions import ImproperlyConfigured
+from django.core.paginator import Paginator
 from django.db.models import Q
+from django.shortcuts import redirect, render
+from django.urls import reverse_lazy
+from django.utils.translation import gettext_lazy as _
+from django.utils.translation import ngettext
+from django.views.generic import (
+    DeleteView,
+    DetailView,
+    ListView,
+    TemplateView,
+    UpdateView,
+)
 from django.views.generic.edit import CreateView
 
-from .models import (
-    PermafrostRole,
-    PERMAFROST_EXCLUDED_ROLES,
-    get_optional_by_category,
-    get_required_by_category,
-    get_all_perms_for_all_categories,
-)
-
+from .api import services
+from .context import get_context_filter, get_request_context_object
 from .forms import (
     PermafrostRoleCreateForm,
     PermafrostRoleUpdateForm,
+    PermissionRoleLookupForm,
+    RoleListFilterForm,
+    RoleMembershipAddForm,
+    RoleMembershipRemoveForm,
     SelectPermafrostRoleTypeForm,
+    UserRoleLookupForm,
+)
+from .models import (
+    PERMAFROST_EXCLUDED_ROLES,
+    PermafrostRole,
+    get_all_perms_for_all_categories,
+    get_optional_by_category,
+    get_required_by_category,
 )
 from .permissions import has_all_permissions
-from .context import get_context_filter, get_request_context_object
 
 # --------------
 # UTILITIES
@@ -173,6 +186,41 @@ class GetRoleExternalPermissionsMixin:
         return perms_excluding_current_role
 
 
+class RoleListContextMixin:
+    """Filter and paginate the role navigation without changing tenant scope."""
+
+    def get_role_filter_form(self):
+        if not hasattr(self, "_role_filter_form"):
+            self._role_filter_form = RoleListFilterForm(self.request.GET or None)
+        return self._role_filter_form
+
+    def filter_role_list(self, queryset):
+        form = self.get_role_filter_form()
+        if form.is_valid():
+            query = form.cleaned_data["q"].strip()
+            category = form.cleaned_data["category"]
+            if query:
+                queryset = queryset.filter(
+                    Q(name__icontains=query)
+                    | Q(slug__icontains=query)
+                    | Q(description__icontains=query)
+                )
+            if category:
+                queryset = queryset.filter(category=category)
+        return queryset.order_by("pk")
+
+    def get_role_list_query(self):
+        query = self.request.GET.copy()
+        query.pop("page", None)
+        return query.urlencode()
+
+    def add_role_list_context(self, context):
+        context["role_filter_form"] = self.get_role_filter_form()
+        context["role_list_query"] = self.get_role_list_query()
+        context["role_list_url_query"] = self.request.GET.urlencode()
+        return context
+
+
 # Create Permission Group
 class PermafrostRoleCreateView(PermafrostSiteMixin, CreateView):
     model = PermafrostRole
@@ -220,16 +268,26 @@ class PermafrostRoleCreateView(PermafrostSiteMixin, CreateView):
 
 # List Permission Groups
 class PermafrostRoleListView(
-    PermafrostSiteMixin, FilterByRequestSiteQuerysetMixin, ListView
+    RoleListContextMixin,
+    PermafrostSiteMixin,
+    FilterByRequestSiteQuerysetMixin,
+    ListView,
 ):
     model = PermafrostRole
     queryset = PermafrostRole.on_site.all()
     permission_required = ["permafrost.view_permafrostrole"]
 
+    def get_paginate_by(self, queryset):
+        return getattr(settings, "PERMAFROST_UI_PAGE_SIZE", 50)
+
     def get_queryset(self):
         qs = super(PermafrostRoleListView, self).get_queryset()
         # Should be reflected in TC
-        return qs.exclude(name__in=PERMAFROST_EXCLUDED_ROLES)
+        qs = qs.exclude(name__in=PERMAFROST_EXCLUDED_ROLES)
+        return self.filter_role_list(qs)
+
+    def get_context_data(self, **kwargs):
+        return self.add_role_list_context(super().get_context_data(**kwargs))
 
 
 class PermafrostRoleManageView(PermafrostRoleListView):
@@ -261,7 +319,10 @@ class PermafrostRoleManageView(PermafrostRoleListView):
 
 # Detail Permission Groups
 class PermafrostRoleDetailView(
-    PermafrostSiteMixin, FilterByRequestSiteQuerysetMixin, DetailView
+    RoleListContextMixin,
+    PermafrostSiteMixin,
+    FilterByRequestSiteQuerysetMixin,
+    DetailView,
 ):
     model = PermafrostRole
     template_name = "permafrost/permafrostrole_manage.html"
@@ -271,7 +332,20 @@ class PermafrostRoleDetailView(
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
 
-        context["object_list"] = self.get_queryset()
+        role_list = self.filter_role_list(self.get_queryset())
+        paginator = Paginator(
+            role_list, getattr(settings, "PERMAFROST_UI_PAGE_SIZE", 50)
+        )
+        page_obj = paginator.get_page(self.request.GET.get("page"))
+        context.update(
+            {
+                "object_list": page_obj.object_list,
+                "page_obj": page_obj,
+                "paginator": paginator,
+                "is_paginated": page_obj.has_other_pages(),
+            }
+        )
+        self.add_role_list_context(context)
 
         role = context["object"]
         context["permissions"] = (
@@ -379,10 +453,155 @@ class PermafrostCustomRoleModalView(
         return None
 
 
-# Future Views
+class PermafrostRoleUsersView(
+    PermafrostSiteMixin, FilterByRequestSiteQuerysetMixin, DetailView
+):
+    model = PermafrostRole
+    template_name = "permafrost/permafrostrole_users.html"
+    permission_required = ["permafrost.view_permafrostrole"]
+    permission_required_post = ["permafrost.add_user_to_role"]
 
-# TODO: Role User List (For easier pagination) & bulk editing
+    def get_queryset(self):
+        return super().get_queryset().exclude(name__in=PERMAFROST_EXCLUDED_ROLES)
 
-# TODO: User Roles on a given Site
+    def get_members(self):
+        users = services.list_role_users(self.object)
+        user_model = get_user_model()
+        username_field = user_model.USERNAME_FIELD
+        field_names = {field.name for field in user_model._meta.get_fields()}
+        search = self.request.GET.get("q", "").strip()
 
-# TODO: Roles with a given permission
+        if search:
+            search_query = Q(**{f"{username_field}__icontains": search})
+            if "email" in field_names:
+                search_query |= Q(email__icontains=search)
+            users = users.filter(search_query)
+
+        return users.order_by(username_field, "pk")
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        paginator = Paginator(
+            self.get_members(), getattr(settings, "PERMAFROST_UI_PAGE_SIZE", 50)
+        )
+        page_obj = paginator.get_page(self.request.GET.get("page"))
+        context.update(
+            {
+                "member_list": page_obj.object_list,
+                "page_obj": page_obj,
+                "paginator": paginator,
+                "is_paginated": page_obj.has_other_pages(),
+                "query": self.request.GET.get("q", "").strip(),
+                "can_manage_members": has_all_permissions(
+                    self.request, ["permafrost.add_user_to_role"]
+                ),
+            }
+        )
+        context.setdefault("add_form", RoleMembershipAddForm())
+        context.setdefault("remove_form", RoleMembershipRemoveForm(role=self.object))
+        return context
+
+    def post(self, request, *args, **kwargs):
+        self.object = self.get_object()
+        action = request.POST.get("action")
+        add_form = RoleMembershipAddForm()
+        remove_form = RoleMembershipRemoveForm(role=self.object)
+
+        if action == "add":
+            add_form = RoleMembershipAddForm(request.POST)
+            if add_form.is_valid():
+                users = add_form.users
+                services.add_role_users(self.object, users)
+                messages.success(
+                    request,
+                    ngettext(
+                        "Added %(count)d user to this role.",
+                        "Added %(count)d users to this role.",
+                        len(users),
+                    )
+                    % {"count": len(users)},
+                )
+                return redirect("permafrost:role-users", slug=self.object.slug)
+        elif action == "remove":
+            remove_form = RoleMembershipRemoveForm(request.POST, role=self.object)
+            if remove_form.is_valid():
+                users = list(remove_form.cleaned_data["users"])
+                services.remove_role_users(self.object, users)
+                messages.success(
+                    request,
+                    ngettext(
+                        "Removed %(count)d user from this role.",
+                        "Removed %(count)d users from this role.",
+                        len(users),
+                    )
+                    % {"count": len(users)},
+                )
+                return redirect("permafrost:role-users", slug=self.object.slug)
+        else:
+            add_form.add_error(None, _("Choose a membership action."))
+
+        context = self.get_context_data(
+            object=self.object,
+            add_form=add_form,
+            remove_form=remove_form,
+        )
+        return self.render_to_response(context)
+
+
+class PermafrostRoleLookupView(PermafrostSiteMixin, TemplateView):
+    template_name = "permafrost/permafrostrole_lookups.html"
+    permission_required = ["permafrost.view_permafrostrole"]
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        lookup_kind = self.request.GET.get("lookup")
+        user_form = UserRoleLookupForm(
+            self.request.GET if lookup_kind == "user" else None
+        )
+        permission_form = PermissionRoleLookupForm(
+            self.request.GET if lookup_kind == "permission" else None
+        )
+        roles = None
+        result_label = None
+
+        if lookup_kind == "user" and user_form.is_valid():
+            user = user_form.user
+            roles = services.list_user_roles(user, request=self.request)
+            result_label = _("Roles for %(user)s") % {"user": user.get_username()}
+        elif lookup_kind == "permission" and permission_form.is_valid():
+            permission = permission_form.cleaned_data["permission"]
+            roles = services.list_permission_roles(permission, request=self.request)
+            result_label = _("Roles granting %(permission)s") % {
+                "permission": permission.name
+            }
+
+        context.update(
+            {
+                "lookup_kind": lookup_kind,
+                "user_lookup_form": user_form,
+                "permission_lookup_form": permission_form,
+                "result_label": result_label,
+                "lookup_submitted": lookup_kind in {"user", "permission"},
+            }
+        )
+
+        lookup_query = self.request.GET.copy()
+        lookup_query.pop("page", None)
+        context["lookup_query"] = lookup_query.urlencode()
+
+        if roles is not None:
+            paginator = Paginator(
+                roles.order_by("category", "name", "pk"),
+                getattr(settings, "PERMAFROST_UI_PAGE_SIZE", 50),
+            )
+            page_obj = paginator.get_page(self.request.GET.get("page"))
+            context.update(
+                {
+                    "role_list": page_obj.object_list,
+                    "page_obj": page_obj,
+                    "paginator": paginator,
+                    "is_paginated": page_obj.has_other_pages(),
+                }
+            )
+
+        return context

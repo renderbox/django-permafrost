@@ -7,16 +7,16 @@ This is the running source of truth for planned django-permafrost work.
 - Keep release notes in `CHANGELOG.md`; this file tracks work before and after releases.
 - Review priorities when opening a release branch or beginning a new feature.
 
-Last reviewed: 2026-09-21 on `develop` at `3f1e7a6`.
+Last reviewed: 2026-09-21 on `develop` at `68535f6`.
 
 ## Current Release State
 
 - Published PyPI release: `0.5.0`, uploaded from `master` at `7740d4f`
-- Next planned feature release: `0.6.0`, focused on the built-in UI and admin workflows
-- Remote development baseline: `GitHub/develop` at `3f1e7a6` after pull request #103 and roadmap cleanup
+- In-development release: `0.6.0`, focused on the built-in UI and admin workflows
+- Remote development baseline: `GitHub/develop` at `68535f6` after the release bookkeeping pass
 - Remote release baseline: `GitHub/master` at `7740d4f` after pull request #104
 - Latest permission hardening commit: `b5328eb`, merged into `master` through pull request #104
-- Local test baseline: 131 passing tests on Python 3.14
+- Local test baseline: 153 passing tests on Python 3.14
 - Base-install baseline: isolated wheel passes without DRF or drf-spectacular
 - HTTP API baseline: DRF 3.16 through 3.18 tested against representative Django 5.2 through 6.1 combinations
 - Package baseline: wheel and source distribution build successfully and pass `twine check`
@@ -28,7 +28,7 @@ Last reviewed: 2026-09-21 on `develop` at `3f1e7a6`.
 - [x] Confirm the develop pull-request workflow passes at both supported compatibility endpoints.
 - [x] Promote the accumulated changes through the master compatibility matrix in pull request #104.
 - [x] Publish `0.5.0` from `master` at `7740d4f` after the API hardening changes and contributor metadata reached `master`.
-- [ ] Reconcile the `v0.5.0` Git tag and GitHub Release with published source commit `7740d4f`; the existing tag points to the earlier version-bump commit `faa2041`.
+- [x] Reconcile the `v0.5.0` Git tag and GitHub Release with the published source; tag commit `3f1e7a6` has the same Git tree as master release commit `7740d4f`.
 
 Completion criteria: the hardening commits are on `master`, all required GitHub Actions pass, the release is present on PyPI, `CHANGELOG.md` names the released version, and the release tag identifies the published source commit.
 
@@ -83,11 +83,11 @@ Completion criteria: the HTTP API has a documented stability contract and is ind
 
 ## P2 - Built-In UI And Admin
 
-- [ ] Finish role-user list and bulk membership workflows, with pagination for large tenants.
-- [ ] Add user-to-role and permission-to-role lookup workflows if they remain in package scope.
-- [ ] Replace the remaining template TODOs for role search/filtering and long-list behavior with implemented features or remove them from scope.
-- [ ] Review the bundled templates against current Django accessibility and form-rendering practices.
-- [ ] Decide whether Bootstrap-specific form mutation remains part of the reusable package or moves to example/project code.
+- [x] Finish role-user list and bulk membership workflows, with pagination for large tenants.
+- [x] Add context-scoped user-to-role and configured-permission-to-role lookup workflows.
+- [x] Replace the remaining template TODOs for role search/filtering and long-list behavior with implemented features or remove them from scope.
+- [x] Review the bundled templates against current Django accessibility and form-rendering practices.
+- [x] Decide whether Bootstrap-specific form mutation remains part of the reusable package or moves to example/project code.
 
 Completion criteria: the supported UI scope is explicit, tested, accessible, and independent of undocumented frontend assumptions.
 

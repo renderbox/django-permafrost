@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.6.0 - Unreleased
+
+### Added
+
+- Added a context-scoped role-membership page with member search, configurable pagination, exact-identifier additions, and bulk removal.
+- Added `PERMAFROST_UI_PAGE_SIZE` for controlling the built-in membership list size.
+- Added context-scoped user-to-role and configured-permission-to-role lookup services and a read-only built-in lookup page.
+- Added context-scoped role search, category filtering, and pagination to the bundled role lists.
+
+### Changed
+
+- Updated bundled templates with associated form labels and errors, semantic controls, accessible modal and pagination markup, and improved empty states.
+- Removed automatic Bootstrap class mutation from reusable Python forms; Bootstrap-specific presentation is now confined to the optional bundled templates.
+- Made the included development project runnable with secure localhost defaults and correctly parsed `DEBUG` environment values.
+
 ## 0.5.0 - 2026-09-21
 
 ### Changed

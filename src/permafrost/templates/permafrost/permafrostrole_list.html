@@ -1,14 +1,40 @@
 {% extends "permafrost/base.html" %}
 
-{% block title %}Permafrost - Roles{% endblock %}
+{% load i18n %}
+{% block title %}{% trans 'Roles' %}{% endblock %}
 
 {% block content %}
-<h1>Roles</h1>
+<h1>{% trans 'Roles' %}</h1>
+
+<form method="get" role="search">
+  <div>
+    {{ role_filter_form.q.label_tag }}
+    {{ role_filter_form.q }}
+    {{ role_filter_form.q.errors }}
+  </div>
+  <div>
+    {{ role_filter_form.category.label_tag }}
+    {{ role_filter_form.category }}
+    {{ role_filter_form.category.errors }}
+  </div>
+  <button type="submit">{% trans 'Filter roles' %}</button>
+  {% if role_list_query %}<a href="{% url 'permafrost:role-list' %}">{% trans 'Clear' %}</a>{% endif %}
+</form>
 
 <ul>
 {% for object in object_list %}
- <li><a href="{{object.get_update_url}}">{{object.name}}</a></li>
+ <li><a href="{{ object.get_absolute_url }}">{{ object.name }}</a></li>
+{% empty %}
+ <li>{% trans 'No roles match these filters.' %}</li>
 {% endfor %}
 </ul>
+
+{% if is_paginated %}
+<nav aria-label="{% trans 'Role pages' %}">
+  {% if page_obj.has_previous %}<a href="?{% if role_list_query %}{{ role_list_query }}&amp;{% endif %}page={{ page_obj.previous_page_number }}">{% trans 'Previous' %}</a>{% endif %}
+  <span>{% blocktrans with current=page_obj.number total=page_obj.paginator.num_pages %}Page {{ current }} of {{ total }}{% endblocktrans %}</span>
+  {% if page_obj.has_next %}<a href="?{% if role_list_query %}{{ role_list_query }}&amp;{% endif %}page={{ page_obj.next_page_number }}">{% trans 'Next' %}</a>{% endif %}
+</nav>
+{% endif %}
 
 {% endblock %}

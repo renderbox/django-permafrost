@@ -1,4 +1,6 @@
-# from django.test import TestCase
+from django.test import TestCase
+from django.urls import reverse
+
 # from django.core.management import call_command
 
 # class SystemTests(TestCase):
@@ -14,3 +16,17 @@
 
 #         result = call_command("makemigrations", check=True, dry_run=True)
 #         self.assertIsNone(result)
+
+
+class DevelopmentProjectTests(TestCase):
+    def test_home_page_renders(self):
+        response = self.client.get("/")
+
+        self.assertEqual(response.status_code, 200)
+
+    def test_login_page_renders(self):
+        response = self.client.get(reverse("login"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'name="username"')
+        self.assertContains(response, 'name="password"')

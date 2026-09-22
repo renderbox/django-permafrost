@@ -1,0 +1,129 @@
+{% extends "permafrost/base.html" %}
+
+{% load i18n %}
+
+{% block title %}{% blocktrans with role_name=object.name %}Members of {{ role_name }}{% endblocktrans %}{% endblock %}
+
+{% block content %}
+<div class="d-flex align-items-center justify-content-between my-3">
+    <div>
+        <a href="{{ object.get_absolute_url }}">{% trans 'Back to role' %}</a>
+        <h1 class="h2 mt-2 mb-0">{% blocktrans with role_name=object.name %}Members of {{ role_name }}{% endblocktrans %}</h1>
+    </div>
+</div>
+
+{% if can_manage_members %}
+<section class="border-bottom pb-4 mb-4" aria-labelledby="add-members-heading">
+    <h2 class="h4" id="add-members-heading">{% trans 'Add members' %}</h2>
+    <form method="post" class="mt-3">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="add">
+        {{ add_form.non_field_errors }}
+        <div class="form-group">
+            {{ add_form.identifiers.label_tag }}
+            {{ add_form.identifiers }}
+            {% if add_form.identifiers.help_text %}
+            <div class="form-text text-muted" id="{{ add_form.identifiers.id_for_label }}_helptext">{{ add_form.identifiers.help_text }}</div>
+            {% endif %}
+            {{ add_form.identifiers.errors }}
+        </div>
+        <button type="submit" class="btn btn-primary">{% trans 'Add members' %}</button>
+    </form>
+</section>
+{% endif %}
+
+<section aria-labelledby="current-members-heading">
+    <div class="d-flex flex-wrap align-items-end justify-content-between mb-3">
+        <div>
+            <h2 class="h4 mb-1" id="current-members-heading">{% trans 'Current members' %}</h2>
+            <p class="text-muted mb-0">
+                {% blocktrans count member_count=paginator.count %}{{ member_count }} member{% plural %}{{ member_count }} members{% endblocktrans %}
+            </p>
+        </div>
+        <form method="get" class="form-inline mt-3 mt-md-0" role="search">
+            <label class="sr-only" for="member-search">{% trans 'Search members' %}</label>
+            <input
+                class="form-control mr-2"
+                id="member-search"
+                name="q"
+                type="search"
+                value="{{ query }}"
+                placeholder="{% trans 'Search members' %}"
+            >
+            <button type="submit" class="btn btn-outline-secondary">{% trans 'Search' %}</button>
+        </form>
+    </div>
+
+    {% if can_manage_members %}<form method="post">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="remove">
+        {{ remove_form.non_field_errors }}
+        {{ remove_form.users.errors }}
+    {% endif %}
+
+        {% if member_list %}
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        {% if can_manage_members %}<th scope="col"><span class="sr-only">{% trans 'Select' %}</span></th>{% endif %}
+                        <th scope="col">{% trans 'User' %}</th>
+                        <th scope="col">{% trans 'Email' %}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for member in member_list %}
+                    <tr>
+                        {% if can_manage_members %}<td>
+                            <input
+                                id="member-{{ member.pk }}"
+                                name="users"
+                                type="checkbox"
+                                value="{{ member.pk }}"
+                                aria-label="{% blocktrans with username=member.get_username %}Select {{ username }}{% endblocktrans %}"
+                            >
+                        </td>{% endif %}
+                        <td>{% if can_manage_members %}<label for="member-{{ member.pk }}" class="mb-0">{{ member.get_username }}</label>{% else %}{{ member.get_username }}{% endif %}</td>
+                        <td>{{ member.email|default:"" }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% if can_manage_members %}
+        <button type="submit" class="btn btn-outline-danger">{% trans 'Remove selected' %}</button>
+        {% endif %}
+        {% else %}
+        <p class="border-top pt-3">
+            {% if query %}
+                {% trans 'No members match this search.' %}
+            {% else %}
+                {% trans 'This role has no members.' %}
+            {% endif %}
+        </p>
+        {% endif %}
+    {% if can_manage_members %}</form>{% endif %}
+
+    {% if is_paginated %}
+    <nav aria-label="{% trans 'Member pages' %}" class="mt-4">
+        <ul class="pagination">
+            {% if page_obj.has_previous %}
+            <li class="page-item">
+                <a class="page-link" href="?q={{ query|urlencode }}&amp;page={{ page_obj.previous_page_number }}">{% trans 'Previous' %}</a>
+            </li>
+            {% endif %}
+            <li class="page-item disabled">
+                <span class="page-link">
+                    {% blocktrans with current=page_obj.number total=page_obj.paginator.num_pages %}Page {{ current }} of {{ total }}{% endblocktrans %}
+                </span>
+            </li>
+            {% if page_obj.has_next %}
+            <li class="page-item">
+                <a class="page-link" href="?q={{ query|urlencode }}&amp;page={{ page_obj.next_page_number }}">{% trans 'Next' %}</a>
+            </li>
+            {% endif %}
+        </ul>
+    </nav>
+    {% endif %}
+</section>
+{% endblock %}

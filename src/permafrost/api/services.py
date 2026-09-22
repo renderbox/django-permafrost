@@ -17,6 +17,7 @@ from permafrost.models import (
     CATEGORIES,
     PERMAFROST_EXCLUDED_ROLES,
     PermafrostRole,
+    get_all_perms_for_all_categories,
     get_optional_by_category,
     get_required_by_category,
 )
@@ -216,6 +217,30 @@ def list_role_permissions(role):
 
 def list_role_users(role):
     return role.user_set()
+
+
+def list_user_roles(user, request=None, context_object=None):
+    group_ids = user.groups.values_list("pk", flat=True)
+    return get_role_queryset(request=request, context_object=context_object).filter(
+        group_id__in=group_ids
+    )
+
+
+def list_permission_roles(permission, request=None, context_object=None):
+    return (
+        get_role_queryset(request=request, context_object=context_object)
+        .filter(group__permissions=permission)
+        .distinct()
+    )
+
+
+def list_exposed_permissions():
+    permission_ids = {
+        permission.pk for permission in get_all_perms_for_all_categories()
+    }
+    return Permission.objects.filter(pk__in=permission_ids).order_by(
+        "content_type__app_label", "content_type__model", "codename"
+    )
 
 
 def get_users_from_ids(user_ids):

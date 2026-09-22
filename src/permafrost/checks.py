@@ -1,5 +1,5 @@
-from django.conf import settings
 from django.apps import apps
+from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Permission
 from django.core.checks import Error, Warning, register
@@ -68,6 +68,19 @@ def check_permafrost_settings(app_configs, **kwargs):
             Error(
                 "PERMAFROST_API_PAGE_SIZE cannot exceed PERMAFROST_API_MAX_PAGE_SIZE.",
                 id="permafrost.E013",
+            )
+        )
+
+    ui_page_size = getattr(settings, "PERMAFROST_UI_PAGE_SIZE", 50)
+    if (
+        isinstance(ui_page_size, bool)
+        or not isinstance(ui_page_size, int)
+        or ui_page_size <= 0
+    ):
+        messages.append(
+            Error(
+                "PERMAFROST_UI_PAGE_SIZE must be a positive integer.",
+                id="permafrost.E017",
             )
         )
 

@@ -1,128 +1,84 @@
 {% extends "permafrost/base.html" %}
-
 {% load i18n %}
-{% load static %}
+
+{% block title %}{% trans 'Roles & Permissions' %}{% endblock %}
 
 {% block content %}
-
-<h1 class="my-3 text-gray-800">{% trans 'Roles & Permissions' %}</h1>
+<div class="d-flex align-items-center justify-content-between my-3">
+    <h1 class="text-gray-800 mb-0">{% trans 'Roles & Permissions' %}</h1>
+    <a href="{% url 'permafrost:role-lookups' %}">{% trans 'Look up roles' %}</a>
+</div>
 
 <div class="row no-gutters shadow bg-white vh-main">
-    <div class="col-3 d-flex flex-column flex-shrink-0 h-100 px-2 border-right-gray-300">
-
-        {% comment %}
-        TODO: add administration search filters
-        1. replace p tag (line 38 belwo) with form below
-        2. hook up to django filter form
-        <form class="flex-shrink-0 px-1">
-            <h4 class="my-3">{% trans 'Roles' %}</h4>
-            <p class="text-success d-flex">
-                <i class="fas fa-search disabled text-success" aria-label="{% trans 'Search' %}"></i>
-                <i class="fas fa-filter" aria-label="{% trans 'Filter' %}"></i>
-                <a class="ml-auto text-success font-weight-bold" href="{% url 'permafrost:role-create' %}"
-                    role="button"><i class="fas fa-plus mr-2" aria-label="{% trans 'Add Role' %}"></i> {% trans 'Add
-                    Role' %}</a>
-            </p>
-            <div class="form-group mb-0">
-                <div class="input-group  flex-nowrap">
-                    <input type="text" name="user_filter" class="textinput textInput form-control" id="id_user_filter">
-                    <div class="input-group-append">
-                        <button class="btn bg-transparent close" type="button" role="close" aria-role="close"
-                            id="search_close" style="margin-left: -1.5rem; z-index: 10;"> <i class="fas fa-times"></i>
-                        </button>
-                    </div>
-                    <div class="input-group-append"> <button class="btn btn-success" type="submit" style="z-index: 15;">
-                            <i class="fas fa-search"></i>
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </form>
-        {% endcomment %}
-
-        <p class="text-success d-flex px-1">
-            <h4>{% trans 'Roles' %}</h4>
-            <a class="ml-auto text-success font-weight-bold" href="{% url 'permafrost:role-create' %}" role="button">
-                <i class="fas fa-plus mr-2" aria-label="{% trans 'Add Role' %}"></i> {% trans 'Add Role' %}
+    <aside class="col-12 col-md-4 col-lg-3 d-flex flex-column flex-shrink-0 h-100 px-2 border-right-gray-300" aria-labelledby="role-navigation-heading">
+        <div class="d-flex align-items-center px-1 my-3">
+            <h2 class="h4 mb-0" id="role-navigation-heading">{% trans 'Roles' %}</h2>
+            <a class="ml-auto text-success font-weight-bold" href="{% url 'permafrost:role-create' %}">
+                <i class="fas fa-plus mr-2" aria-hidden="true"></i>{% trans 'Add Role' %}
             </a>
-        </p>
+        </div>
+
+        <form method="get" class="px-1 mb-3" role="search">
+            <div class="form-group mb-2">
+                {{ role_filter_form.q.label_tag }}
+                {{ role_filter_form.q }}
+                {{ role_filter_form.q.errors }}
+            </div>
+            <div class="form-group mb-2">
+                {{ role_filter_form.category.label_tag }}
+                {{ role_filter_form.category }}
+                {{ role_filter_form.category.errors }}
+            </div>
+            <button class="btn btn-success btn-sm" type="submit">{% trans 'Filter roles' %}</button>
+            {% if role_list_query %}<a class="btn btn-link btn-sm" href="{% url 'permafrost:roles-manage' %}">{% trans 'Clear' %}</a>{% endif %}
+        </form>
+
         <ul class="list-group list-group-flush border-radius-0 flex-grow-1 overflow-auto">
-            {# TODO: Add infinite scroll to this list #}
             {% for role in object_list %}
             <li class="px-2 list-group-item border-radius-0{% if object == role %} bg-gray-200{% endif %}">
-                <a class="d-block text-gray-800" href="{{ role.get_absolute_url }}">
-                    <div class="font-weight-bold">
-                        {{ role }}
-                    </div>
-                    <label class="small-meta mb-0 text-gray-600">{{ role.get_category_display }}</label>
+                <a class="d-block text-gray-800" href="{{ role.get_absolute_url }}{% if role_list_url_query %}?{{ role_list_url_query }}{% endif %}"{% if object == role %} aria-current="page"{% endif %}>
+                    <span class="d-block font-weight-bold">{{ role }}</span>
+                    <span class="small-meta text-gray-600">{{ role.get_category_display }}</span>
                 </a>
             </li>
+            {% empty %}
+            <li class="px-2 list-group-item border-radius-0 text-muted">{% trans 'No roles match these filters.' %}</li>
             {% endfor %}
         </ul>
 
-    </div>
+        {% if is_paginated %}
+        <nav aria-label="{% trans 'Role pages' %}" class="px-1 pt-3">
+            <ul class="pagination pagination-sm">
+                {% if page_obj.has_previous %}<li class="page-item"><a class="page-link" href="?{% if role_list_query %}{{ role_list_query }}&amp;{% endif %}page={{ page_obj.previous_page_number }}">{% trans 'Previous' %}</a></li>{% endif %}
+                <li class="page-item disabled"><span class="page-link">{% blocktrans with current=page_obj.number total=page_obj.paginator.num_pages %}Page {{ current }} of {{ total }}{% endblocktrans %}</span></li>
+                {% if page_obj.has_next %}<li class="page-item"><a class="page-link" href="?{% if role_list_query %}{{ role_list_query }}&amp;{% endif %}page={{ page_obj.next_page_number }}">{% trans 'Next' %}</a></li>{% endif %}
+            </ul>
+        </nav>
+        {% endif %}
+    </aside>
 
-    <div class="col-9 px-4 py-3 flex-column h-100 overflow-auto text-gray-800">
+    <main class="col-12 col-md-8 col-lg-9 px-4 py-3 flex-column h-100 overflow-auto text-gray-800">
         {% if object %}
         <div class="d-flex mb-3">
             <h2>{{ object.name }}</h2>
-            <a class="ml-auto text-success" href="{{ object.get_update_url }}" alt="{% trans 'Edit Role' %}">
-                <i class="fas fa-pen" aria-label="{% trans 'Edit Role' %}"></i>
-            </a>
+            <a class="ml-auto mr-3 text-success" href="{% url 'permafrost:role-users' slug=object.slug %}">{% trans 'Manage users' %}</a>
+            <a class="text-success" href="{{ object.get_update_url }}" aria-label="{% trans 'Edit Role' %}"><i class="fas fa-pen" aria-hidden="true"></i></a>
         </div>
-        {% if object.description %}
-        <p>{{ object.description }}</p>
-        {% endif %}
+        {% if object.description %}<p>{{ object.description }}</p>{% endif %}
         <p>{% trans 'Role Type' %}: <span class="font-weight-bold">{{ object.get_category_display }}</span></p>
 
         {% regroup permissions by content_type as content_type_list %}
-
-        <div class="masonry d-flex flex-column flex-wrap h-100"> 
+        <div class="masonry d-flex flex-column flex-wrap h-100">
             {% for content_type, permission_list in content_type_list %}
-            <div class="masonry-brick w-50 mb-3 mr-3 d-inline-block">
-                <p class="text-capitalize small font-weight-bold mb-1 text-gray-600">{{ content_type.name }}</p>
-                <p>
-                    {% for permission in permission_list %}
-                    {{ permission.name }}
-                    {% if not forloop.last %}
-                    <br>
-                    {% endif %}
-                    {% endfor %}
-                </p>
-            </div>
-            {% endfor %}
-
-        </div> 
+            <section class="masonry-brick w-50 mb-3 mr-3 d-inline-block" aria-labelledby="permission-group-{{ content_type.pk }}">
+                <h3 class="h6 text-capitalize font-weight-bold mb-1 text-gray-600" id="permission-group-{{ content_type.pk }}">{{ content_type.name }}</h3>
+                <ul class="list-unstyled">{% for permission in permission_list %}<li>{{ permission.name }}</li>{% endfor %}</ul>
+            </section>
+            {% empty %}<p>{% trans 'This role has no configured permissions.' %}</p>{% endfor %}
+        </div>
+        {% else %}
+        <p>{% trans 'Choose a role to view its permissions.' %}</p>
         {% endif %}
-    </div>
+    </main>
 </div>
-{% endblock %}
-{% block extra_js %}
-
-{% comment %}
-# Possible placeholder for infinite scroll
-<!-- <script>
-    const contextmenu = document.getElementById('contextmenu');
-    const contextmenusb = document.querySelector('#contextmenu .scrollbox');
-    let contextmenuIsScrolling = false;
-
-    function setFade(event) {
-    if (!contextmenuIsScrolling) {
-        window.requestAnimationFrame(function() {
-        if (event.target.scrollTop < 160) {
-            contextmenu.classList.add('off-bottom');
-        }
-        else {
-            contextmenu.classList.remove('off-bottom');
-        }
-        contextmenuIsScrolling = false;
-        });
-        contextmenuIsScrolling = true;
-    }
-    }
-
-    contextmenusb.addEventListener('scroll', setFade);
-</script>  -->
-{% endcomment %}
-
 {% endblock %}
