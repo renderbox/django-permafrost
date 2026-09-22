@@ -20,10 +20,10 @@
         <input type="hidden" name="action" value="add">
         {{ add_form.non_field_errors }}
         <div class="form-group">
-            <label for="{{ add_form.identifiers.id_for_label }}">{{ add_form.identifiers.label }}</label>
+            {{ add_form.identifiers.label_tag }}
             {{ add_form.identifiers }}
             {% if add_form.identifiers.help_text %}
-            <small class="form-text text-muted">{{ add_form.identifiers.help_text }}</small>
+            <div class="form-text text-muted" id="{{ add_form.identifiers.id_for_label }}_helptext">{{ add_form.identifiers.help_text }}</div>
             {% endif %}
             {{ add_form.identifiers.errors }}
         </div>
@@ -83,7 +83,7 @@
                                 aria-label="{% blocktrans with username=member.get_username %}Select {{ username }}{% endblocktrans %}"
                             >
                         </td>{% endif %}
-                        <td><label for="member-{{ member.pk }}" class="mb-0">{{ member.get_username }}</label></td>
+                        <td>{% if can_manage_members %}<label for="member-{{ member.pk }}" class="mb-0">{{ member.get_username }}</label>{% else %}{{ member.get_username }}{% endif %}</td>
                         <td>{{ member.email|default:"" }}</td>
                     </tr>
                     {% endfor %}

@@ -27,6 +27,7 @@ from .forms import (
     PermafrostRoleCreateForm,
     PermafrostRoleUpdateForm,
     PermissionRoleLookupForm,
+    RoleListFilterForm,
     RoleMembershipAddForm,
     RoleMembershipRemoveForm,
     SelectPermafrostRoleTypeForm,
@@ -185,6 +186,41 @@ class GetRoleExternalPermissionsMixin:
         return perms_excluding_current_role
 
 
+class RoleListContextMixin:
+    """Filter and paginate the role navigation without changing tenant scope."""
+
+    def get_role_filter_form(self):
+        if not hasattr(self, "_role_filter_form"):
+            self._role_filter_form = RoleListFilterForm(self.request.GET or None)
+        return self._role_filter_form
+
+    def filter_role_list(self, queryset):
+        form = self.get_role_filter_form()
+        if form.is_valid():
+            query = form.cleaned_data["q"].strip()
+            category = form.cleaned_data["category"]
+            if query:
+                queryset = queryset.filter(
+                    Q(name__icontains=query)
+                    | Q(slug__icontains=query)
+                    | Q(description__icontains=query)
+                )
+            if category:
+                queryset = queryset.filter(category=category)
+        return queryset.order_by("pk")
+
+    def get_role_list_query(self):
+        query = self.request.GET.copy()
+        query.pop("page", None)
+        return query.urlencode()
+
+    def add_role_list_context(self, context):
+        context["role_filter_form"] = self.get_role_filter_form()
+        context["role_list_query"] = self.get_role_list_query()
+        context["role_list_url_query"] = self.request.GET.urlencode()
+        return context
+
+
 # Create Permission Group
 class PermafrostRoleCreateView(PermafrostSiteMixin, CreateView):
     model = PermafrostRole
@@ -232,16 +268,26 @@ class PermafrostRoleCreateView(PermafrostSiteMixin, CreateView):
 
 # List Permission Groups
 class PermafrostRoleListView(
-    PermafrostSiteMixin, FilterByRequestSiteQuerysetMixin, ListView
+    RoleListContextMixin,
+    PermafrostSiteMixin,
+    FilterByRequestSiteQuerysetMixin,
+    ListView,
 ):
     model = PermafrostRole
     queryset = PermafrostRole.on_site.all()
     permission_required = ["permafrost.view_permafrostrole"]
 
+    def get_paginate_by(self, queryset):
+        return getattr(settings, "PERMAFROST_UI_PAGE_SIZE", 50)
+
     def get_queryset(self):
         qs = super(PermafrostRoleListView, self).get_queryset()
         # Should be reflected in TC
-        return qs.exclude(name__in=PERMAFROST_EXCLUDED_ROLES)
+        qs = qs.exclude(name__in=PERMAFROST_EXCLUDED_ROLES)
+        return self.filter_role_list(qs)
+
+    def get_context_data(self, **kwargs):
+        return self.add_role_list_context(super().get_context_data(**kwargs))
 
 
 class PermafrostRoleManageView(PermafrostRoleListView):
@@ -273,7 +319,10 @@ class PermafrostRoleManageView(PermafrostRoleListView):
 
 # Detail Permission Groups
 class PermafrostRoleDetailView(
-    PermafrostSiteMixin, FilterByRequestSiteQuerysetMixin, DetailView
+    RoleListContextMixin,
+    PermafrostSiteMixin,
+    FilterByRequestSiteQuerysetMixin,
+    DetailView,
 ):
     model = PermafrostRole
     template_name = "permafrost/permafrostrole_manage.html"
@@ -283,7 +332,20 @@ class PermafrostRoleDetailView(
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
 
-        context["object_list"] = self.get_queryset()
+        role_list = self.filter_role_list(self.get_queryset())
+        paginator = Paginator(
+            role_list, getattr(settings, "PERMAFROST_UI_PAGE_SIZE", 50)
+        )
+        page_obj = paginator.get_page(self.request.GET.get("page"))
+        context.update(
+            {
+                "object_list": page_obj.object_list,
+                "page_obj": page_obj,
+                "paginator": paginator,
+                "is_paginated": page_obj.has_other_pages(),
+            }
+        )
+        self.add_role_list_context(context)
 
         role = context["object"]
         context["permissions"] = (

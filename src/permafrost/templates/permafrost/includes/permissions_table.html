@@ -6,19 +6,16 @@
         <p class="small font-weight-bold text-gray-600 mt-3 text-capitalize">{{ category.name }}</p>
         {% for permission in category.optional %}
         <div class="d-flex align-items-center">
-            <span class="text-gray-900">{{ permission.name }}</span>
+            <label class="text-gray-900 mb-0" for="modal-permission-{{ permission.id }}">{{ permission.name }}</label>
 
-            {% if permission.short_description %}
-            <i class="ml-2 fas fa-info-circle text-gray-600" aria-label="{% trans 'Info' %}"></i>
-            {% endif %}
             <input
                 class="ml-auto"
                 type="checkbox"
                 name="permissions"
                 value="{{ permission.id }}"
+                id="modal-permission-{{ permission.id }}"
                 {% if permission.selected %} checked{% endif %}
             >
-            <input hidden="true" name="selected_permissions" value="" id="selected_permissions">
         </div>
         {% endfor %}
     </div>
@@ -26,7 +23,7 @@
 {% empty %}
 <div class="row">
     <div class="col">
-        <p class="mt-3">{% trans 'Sorry there are no permissions matching your query' %}</p>
+        <p class="mt-3">{% trans 'No permissions match this search.' %}</p>
     </div>
 </div>
 {% endfor %}

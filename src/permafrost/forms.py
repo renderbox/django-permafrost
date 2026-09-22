@@ -10,11 +10,8 @@ from django.forms import Form, ModelForm
 from django.forms.fields import BooleanField, CharField, ChoiceField
 from django.forms.models import ModelChoiceField, ModelMultipleChoiceField
 from django.forms.widgets import (
-    CheckboxInput,
     CheckboxSelectMultiple,
-    Select,
     Textarea,
-    TextInput,
 )
 from django.utils.text import slugify
 from django.utils.translation import gettext_lazy as _
@@ -54,16 +51,6 @@ def assemble_optiongroups_for_widget(permissions):
     return choices
 
 
-def bootstrappify(fields):
-    for field in fields:
-        widget = fields[field].widget
-        if not isinstance(widget, CheckboxInput):
-            if "class" in widget.attrs:
-                widget.attrs["class"] = widget.attrs["class"] + " form-control"
-            else:
-                widget.attrs.update({"class": "form-control"})
-
-
 class SelectPermafrostRoleTypeForm(ModelForm):
     name = CharField(required=False)
     description = CharField(required=False)
@@ -77,10 +64,6 @@ class SelectPermafrostRoleTypeForm(ModelForm):
             "category",
         )
         labels = LABELS
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        bootstrappify(self.fields)
 
 
 class PermafrostRoleCreateForm(ModelForm):
@@ -114,8 +97,6 @@ class PermafrostRoleCreateForm(ModelForm):
             ids = [perm.pk for perm in all_optional_permissions]
 
             self.fields["permissions"].queryset = Permission.objects.filter(id__in=ids)
-
-        bootstrappify(self.fields)
 
     def save(self, commit=True):
         self.instance.set_context(self.context_object)
@@ -177,6 +158,9 @@ class PermafrostRoleUpdateForm(PermafrostRoleCreateForm):
         self.fields["category"].initial = self.instance.category
         ## limit choices to saved category
         self.fields["deleted"].initial = self.instance.deleted
+        if self.instance.is_default_role():
+            self.fields["name"].disabled = True
+            self.fields["description"].disabled = True
 
     def save(self, commit=True):
         if (
@@ -193,7 +177,7 @@ class RoleMembershipAddForm(Form):
     identifiers = CharField(
         label=_("User IDs"),
         help_text=_("Enter one value per line or separate values with commas."),
-        widget=Textarea(attrs={"class": "form-control", "rows": 3}),
+        widget=Textarea(attrs={"rows": 3}),
     )
 
     def __init__(self, *args, **kwargs):
@@ -249,10 +233,7 @@ class RoleMembershipRemoveForm(Form):
 
 
 class UserRoleLookupForm(Form):
-    identifier = CharField(
-        label=_("User ID"),
-        widget=TextInput(attrs={"class": "form-control"}),
-    )
+    identifier = CharField(label=_("User ID"))
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -287,9 +268,17 @@ class PermissionRoleLookupForm(Form):
     permission = ModelChoiceField(
         label=_("Permission"),
         queryset=Permission.objects.none(),
-        widget=Select(attrs={"class": "form-control"}),
     )
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields["permission"].queryset = services.list_exposed_permissions()
+
+
+class RoleListFilterForm(Form):
+    q = CharField(label=_("Search roles"), required=False)
+    category = ChoiceField(label=_("Role type"), required=False)
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["category"].choices = [("", _("All role types"))] + get_choices()

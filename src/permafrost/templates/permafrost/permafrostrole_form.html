@@ -37,67 +37,32 @@
             {{ form.non_field_errors }}
             <div class="form-row">
                 <div class="form-group col-12 col-md-4">
-                    <label class="text-gray-600" for="{{ form.name.id_for_label }}">
-                        {{ form.name.label }}
-                    </label>
-                    {% if form.name.required %}<span class="required">*</span>{% endif %}
+                    {{ form.name.label_tag }}
                     <div class="{% if object and object.is_default_role %}disabled-select-wrapper{% endif %}">
-                        <input
-                        name="{{ form.name.name }}"
-                        type="text"
-                        id="{{form.name.id_for_label}}"
-                        class="form-control{% if form.name.errors %} is-invalid{% endif %}"
-                        placeholder="{{ form.name.help_text }}" value="{% firstof form.initial.name form.data.name form.instance.name '' %}"
-                        {% if object and object.is_default_role %}disabled{% endif %}
-                        >
+                        {{ form.name }}
                         {% if object and object.is_default_role %}
-                        <i class="fas fa-lock"></i>
+                        <i class="fas fa-lock" aria-hidden="true"></i>
                         {% endif %}
                     </div>
-                    {% if form.name.errors %}
-                        <div class="invalid-feedback">
-                            {% for error in form.name.errors %}
-                                {{ error }}
-                            {% endfor %}
-                        </div>
-                    {% endif %}
+                    {{ form.name.errors }}
                         
                 </div>
             </div>
             <div class="form-row">
                 <div class="form-group col">
-                    <label class="text-gray-600" for="{{ form.description.id_for_label }}">
-                        {{ form.description.label }}
-                    </label>
-                    {% if form.description.required %}<span class="required">*</span>{% endif %}
+                    {{ form.description.label_tag }}
                     <div class="{% if object and object.is_default_role %}disabled-select-wrapper{% endif %}">
-                        <input
-                        name="{{ form.description.name }}"
-                        type="text" id="{{ form.description.id_for_label }}"
-                        class="form-control{% if form.description.errors %} is-invalid{% endif %}"
-                        placeholder="{{ form.description.help_text }}"
-                        value="{% firstof form.initial.description form.data.description form.instance.description '' %}"
-                        {% if object and object.is_default_role %}disabled{% endif %}
-                        >
+                        {{ form.description }}
                         {% if object and object.is_default_role %}
-                        <i class="fas fa-lock"></i>
+                        <i class="fas fa-lock" aria-hidden="true"></i>
                         {% endif %}
                     </div>
-                    {% if form.description.errors %}
-                        <div class="invalid-feedback">
-                            {% for error in form.description.errors %}
-                                {{ error }}
-                            {% endfor %}
-                        </div>
-                    {% endif %}
+                    {{ form.description.errors }}
                 </div>
             </div>
             <div class="form-row">
                 <div class="form-group col-6 col-md-4">
-                    <label class="text-gray-600" for="{{ form.category.id_for_label }}">
-                        {{ form.category.label }}
-                    </label>
-                    {% if form.category.required %}<span class="required">*</span>{% endif %}
+                    {{ form.category.label_tag }}
                     
                     {% if object %}
                     <div class="disabled-select-wrapper">
@@ -106,17 +71,11 @@
                     {{ form.category }}
                     
                     {% if object %}
-                        <i class="fas fa-lock"></i>
+                        <i class="fas fa-lock" aria-hidden="true"></i>
                     </div> {# end disabled-select-wrapper #}
                     {% endif %}
                         
-                    {% if form.category.errors %}
-                        <div class="invalid-feedback">
-                            {% for error in form.category.errors %}
-                                {{ error }}
-                            {% endfor %}
-                        </div>
-                    {% endif %}
+                    {{ form.category.errors }}
                 </div>
             </div>
             <div class="form-row border-bottom-gray-300">
@@ -124,16 +83,12 @@
                 <p class="col-4 font-weight-bold">{% trans 'Optional Permissions' %}</p>
                 {% if object and not object.is_default_role %}
                 <a class="ml-auto text-success font-weight-bold text-right" data-toggle="modal" data-target="#form_modal" href="{% url 'permafrost:custom-role-add-permissions' slug=object.slug %}"
-                    role="button"><i class="fas fa-plus mr-2" aria-label="{% trans 'Add Permissions' %}"></i> {% trans 'Add Permissions' %}</a>
+                    role="button"><i class="fas fa-plus mr-2" aria-hidden="true"></i> {% trans 'Add Permissions' %}</a>
                 {% endif %}
             </div>
             <div class="form-row">
                 {% if form.permissions.errors %}
-                    <div class="invalid-feedback">
-                        {% for error in form.permissions.errors %}
-                            {{ error }}
-                        {% endfor %}
-                    </div>
+                    {{ form.permissions.errors }}
                 {% endif %}
             </div>
             {% for content_type, category in permission_categories.items %}
@@ -143,10 +98,7 @@
                         {% for permission in category.required %}
                         <div class="d-flex align-items-center">
                             <span>{{ permission.name }}</span>
-                            {% if permission.short_description %} {# TODO: extend permission to include short_description for tooltip #}
-                            <i class="ml-2 fas fa-info-circle text-gray-600" aria-label="{% trans 'Info' %}"></i>
-                            {% endif %}
-                            <i class="ml-auto fas fa-lock" aria-label="{% trans 'Default Permission' %}"></i>
+                            <i class="ml-auto fas fa-lock" aria-hidden="true"></i><span class="sr-only">{% trans 'Required permission' %}</span>
                         </div>
                         {% endfor %}
                     </div>
@@ -155,9 +107,6 @@
                         <div class="d-flex align-items-center">
                             <label for="permission-{{ permission.id }}">{{ permission.name }}</label>
 
-                            {% if permission.short_description %}
-                            <i class="ml-2 fas fa-info-circle text-gray-600" aria-label="{% trans 'Info' %}"></i>
-                            {% endif %}
                             <input
                                 class="ml-auto"
                                 type="checkbox"
@@ -177,9 +126,9 @@
     </div>
 </form>
 
-<div class="modal fade" tabindex="-1" role="dialog" id="form_modal">
+<div class="modal fade" tabindex="-1" role="dialog" aria-modal="true" aria-labelledby="form-modal-title" id="form_modal">
   <div class="modal-dialog" role="document">
-    <div class="modal-content">
+    <div class="modal-content" aria-live="polite">
 
     </div>
   </div>
@@ -192,9 +141,9 @@
         document.addEventListener("DOMContentLoaded", function(event) { 
             $('#id_category').on('change', function(){
                 if ($(this).val()){
-                    $form = $(this).closest('form')
-                    $form.append('<input type="hidden" name="select_role" value="on"/>')
-                    $form.submit()
+                    var form = $(this).closest('form');
+                    form.append('<input type="hidden" name="select_role" value="on"/>');
+                    form.submit();
                 }
             })
 
@@ -225,5 +174,3 @@
         });
         </script>
 {% endblock %}
-
-

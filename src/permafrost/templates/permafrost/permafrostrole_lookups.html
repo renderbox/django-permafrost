@@ -16,7 +16,7 @@
         <form method="get" class="mt-3">
             <input type="hidden" name="lookup" value="user">
             <div class="form-group">
-                <label for="{{ user_lookup_form.identifier.id_for_label }}">{{ user_lookup_form.identifier.label }}</label>
+                {{ user_lookup_form.identifier.label_tag }}
                 {{ user_lookup_form.identifier }}
                 {{ user_lookup_form.identifier.errors }}
             </div>
@@ -29,7 +29,7 @@
         <form method="get" class="mt-3">
             <input type="hidden" name="lookup" value="permission">
             <div class="form-group">
-                <label for="{{ permission_lookup_form.permission.id_for_label }}">{{ permission_lookup_form.permission.label }}</label>
+                {{ permission_lookup_form.permission.label_tag }}
                 {{ permission_lookup_form.permission }}
                 {{ permission_lookup_form.permission.errors }}
             </div>

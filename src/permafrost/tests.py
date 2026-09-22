@@ -23,6 +23,7 @@ from .forms import (
     PermafrostRoleCreateForm,
     PermafrostRoleUpdateForm,
     PermissionRoleLookupForm,
+    RoleListFilterForm,
     RoleMembershipAddForm,
     RoleMembershipRemoveForm,
     SelectPermafrostRoleTypeForm,
@@ -1725,6 +1726,87 @@ class PermafrostViewTests(TestCase):
         for object in objects:
             self.assertContains(response, html.escape(f"{object}"))
 
+    def test_role_manage_filters_roles_by_search_without_crossing_contexts(self):
+        matching_role = PermafrostRole.objects.create(
+            category="staff",
+            name="Invoice Reviewer",
+            description="Approves quarterly billing",
+            site=Site.objects.get_current(),
+        )
+        nonmatching_role = PermafrostRole.objects.create(
+            category="staff",
+            name="Support Operator",
+            site=Site.objects.get_current(),
+        )
+        foreign_role = PermafrostRole.objects.create(
+            category="staff",
+            name="Foreign Invoice Reviewer",
+            site=Site.objects.get(pk=2),
+        )
+
+        response = self.client.get(
+            reverse("permafrost:roles-manage"), {"q": "quarterly billing"}
+        )
+
+        self.assertIsInstance(response.context["role_filter_form"], RoleListFilterForm)
+        self.assertEqual(list(response.context["object_list"]), [matching_role])
+        self.assertNotContains(response, nonmatching_role.name)
+        self.assertNotContains(response, foreign_role.name)
+
+    def test_role_manage_filters_roles_by_category(self):
+        staff_role = PermafrostRole.objects.create(
+            category="staff",
+            name="Filtered Staff Role",
+            site=Site.objects.get_current(),
+        )
+        administration_role = PermafrostRole.objects.create(
+            category="administration",
+            name="Filtered Administration Role",
+            site=Site.objects.get_current(),
+        )
+
+        response = self.client.get(
+            reverse("permafrost:roles-manage"), {"category": "administration"}
+        )
+
+        self.assertIn(administration_role, response.context["object_list"])
+        self.assertNotIn(staff_role, response.context["object_list"])
+
+    @override_settings(PERMAFROST_UI_PAGE_SIZE=1)
+    def test_role_manage_paginates_roles_and_preserves_filters(self):
+        PermafrostRole.objects.create(
+            category="staff",
+            name="Paginated Role A",
+            site=Site.objects.get_current(),
+        )
+        PermafrostRole.objects.create(
+            category="staff",
+            name="Paginated Role B",
+            site=Site.objects.get_current(),
+        )
+
+        response = self.client.get(
+            reverse("permafrost:roles-manage"),
+            {"q": "Paginated Role", "page": 2},
+        )
+
+        self.assertTrue(response.context["is_paginated"])
+        self.assertEqual(response.context["paginator"].per_page, 1)
+        self.assertEqual(response.context["role_list_query"], "q=Paginated+Role")
+        self.assertContains(response, "Page 2 of 2")
+        self.assertContains(response, "q=Paginated+Role&amp;page=1")
+        self.assertContains(response, "q=Paginated+Role&amp;page=2")
+
+    def test_role_manage_filter_reports_invalid_category(self):
+        response = self.client.get(
+            reverse("permafrost:roles-manage"), {"category": "unknown"}
+        )
+
+        self.assertFalse(response.context["role_filter_form"].is_valid())
+        self.assertContains(response, "Select a valid choice")
+        self.assertContains(response, 'aria-invalid="true"')
+        self.assertContains(response, 'aria-describedby="id_category_error"')
+
     def test_permafrostrole_manage_template_displays_selected_role_details(self):
         uri = reverse("permafrost:roles-manage")
         response = self.client.get(uri)
@@ -2255,6 +2337,17 @@ class PermafrostFormClassTests(TestCase):
             self.create_form.fields["category"].choices[0], ("", "Choose Role Type")
         )
 
+    def test_reusable_forms_do_not_impose_bootstrap_widget_classes(self):
+        for form in (
+            SelectPermafrostRoleTypeForm(),
+            PermafrostRoleCreateForm(),
+            UserRoleLookupForm(),
+            PermissionRoleLookupForm(),
+            RoleListFilterForm(),
+        ):
+            for field in form.fields.values():
+                self.assertNotIn("form-control", field.widget.attrs.get("class", ""))
+
     def test_create_form_optional_required_permission_field_dynamic_based_initial_selected_category(
         self,
     ):
@@ -2296,6 +2389,12 @@ class PermafrostFormClassTests(TestCase):
         form = PermafrostRoleUpdateForm(instance=self.pf_role)
         self.assertTrue(form.fields["category"].widget.attrs["readonly"])
         self.assertTrue(form.fields["category"].disabled)
+
+    def test_update_form_disables_default_role_identity_fields(self):
+        form = PermafrostRoleUpdateForm(instance=self.pf_role)
+
+        self.assertTrue(form.fields["name"].disabled)
+        self.assertTrue(form.fields["description"].disabled)
 
     def test_update_form_field_values_when_passed_model_instance(self):
 

@@ -85,9 +85,9 @@ Completion criteria: the HTTP API has a documented stability contract and is ind
 
 - [x] Finish role-user list and bulk membership workflows, with pagination for large tenants.
 - [x] Add context-scoped user-to-role and configured-permission-to-role lookup workflows.
-- [ ] Replace the remaining template TODOs for role search/filtering and long-list behavior with implemented features or remove them from scope.
-- [ ] Review the bundled templates against current Django accessibility and form-rendering practices.
-- [ ] Decide whether Bootstrap-specific form mutation remains part of the reusable package or moves to example/project code.
+- [x] Replace the remaining template TODOs for role search/filtering and long-list behavior with implemented features or remove them from scope.
+- [x] Review the bundled templates against current Django accessibility and form-rendering practices.
+- [x] Decide whether Bootstrap-specific form mutation remains part of the reusable package or moves to example/project code.
 
 Completion criteria: the supported UI scope is explicit, tested, accessible, and independent of undocumented frontend assumptions.
 

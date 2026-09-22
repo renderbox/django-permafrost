@@ -1,12 +1,7 @@
 {% extends "admin/base_site.html" %}
 
 {% block content %}
-Compiled permissions based on your selection.  This can be copied and pasted directly (or placed in a sepreate .py file and imported) into your settings.py.
-<div>
-<pre>
-<code>
-{{ data }}
-</code>
-</pre>
-</div>
+<h1>Compiled permissions</h1>
+<p>Copy this configuration into <code>settings.py</code>, or place it in a separate Python module and import it.</p>
+<pre><code>{{ data }}</code></pre>
 {% endblock %}

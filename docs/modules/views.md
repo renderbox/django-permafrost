@@ -48,6 +48,12 @@ Permafrost includes class-based views for the common role workflow:
 
 These views filter roles to the current context object and exclude names listed in `PERMAFROST_EXCLUDED_ROLES`.
 
+The role list and management sidebar support case-insensitive search across
+role name, slug, and description, plus exact category filtering. Results use
+`PERMAFROST_UI_PAGE_SIZE` and retain filter state while moving between pages
+and role details. Filtering is applied only after the queryset has been
+limited to the current request context.
+
 ## URLs
 
 Include the package URLs in a project URLconf:
@@ -122,3 +128,17 @@ services.list_exposed_permissions()
 The role management views only expose permissions declared in `PERMAFROST_CATEGORIES`.
 
 When optional permissions are submitted, updates are routed through the role permission helper methods. This keeps the UI aligned with the same permission allow-list enforced by the model.
+
+## Bundled Template Scope
+
+The built-in templates provide an optional, server-rendered management UI.
+The default `permafrost/base.html` includes Bootstrap 4-compatible CSS and
+JavaScript plus jQuery so the bundled modal workflow works without host
+project setup. Applications with their own design system should override the
+templates under the `permafrost/` template namespace.
+
+Permafrost's Python form classes are framework-neutral: they use Django's
+native widgets and do not add Bootstrap classes. This preserves Django's
+generated required, disabled, validation, help-text, and ARIA attributes and
+lets a host project style widgets through its own form renderer or template
+overrides. Bootstrap-specific classes are confined to the bundled templates.

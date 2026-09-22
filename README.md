@@ -52,6 +52,28 @@ Then migrate:
 python manage.py migrate
 ```
 
+### Local development project
+
+The repository includes an integration project under `develop/`. From the
+repository root, prepare and run it with:
+
+```shell
+cd develop
+../venv/bin/python manage.py migrate
+../venv/bin/python manage.py createsuperuser
+../venv/bin/python manage.py runserver
+```
+
+It defaults to `DEBUG=True` and accepts only localhost hostnames. Environment
+values can override those defaults, for example:
+
+```shell
+DEBUG=false ALLOWED_HOSTS=localhost,127.0.0.1 ../venv/bin/python manage.py runserver
+```
+
+The development server exposes the example page at `/`, role management at
+`/permafrost/manage/`, and Django administration at `/admin/`.
+
 ## Setup
 
 The goal of Django Permafrost is to allow clients to create their own Permafrost roles under developer-defined categories with developer-defined required and optional permissions.
